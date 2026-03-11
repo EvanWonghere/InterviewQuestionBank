@@ -1,0 +1,38 @@
+name: Deploy Quiz to Hugo
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Push dist to Hugo repository
+        uses: cpina/github-action-push-to-another-repository@main
+        with:
+          source-directory: 'dist'
+          destination-github-username: 'EvanWonghere'
+          destination-repository-name: 'EvanWonghere.github.io'
+          target-directory: 'static/quiz'
+          target-branch: 'main'
+          user-name: 'github-actions[bot]'
+          user-email: 'github-actions[bot]@users.noreply.github.com'
