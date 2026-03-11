@@ -27,8 +27,21 @@ export default function Sidebar({ categories, questions = [] }) {
     return counts;
   }, [questions, progress]);
 
+  const goToBlog = () => {
+    window.location.href = '/';
+  };
+
   return (
-    <aside className="w-full shrink-0 border-b border-neutral-200 bg-neutral-50 p-4 md:w-56 md:border-b-0 md:border-r dark:border-neutral-700 dark:bg-neutral-900">
+    <aside className="flex w-full shrink-0 flex-col border-b border-neutral-200 bg-neutral-50 p-4 md:w-56 md:border-b-0 md:border-r dark:border-neutral-700 dark:bg-neutral-900">
+      <button
+        type="button"
+        onClick={goToBlog}
+        className="mb-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+        title="返回博客主页"
+      >
+        <span aria-hidden>🏠</span>
+        返回博客
+      </button>
       <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
         <Link
           to="/"
