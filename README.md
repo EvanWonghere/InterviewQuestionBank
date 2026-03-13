@@ -11,12 +11,13 @@ npm run dev
 
 ## 构建与预览
 
+因站点配置了 `base: '/quiz/'`，直接 `serve dist` 会导致请求 `/quiz/assets/...` 时 404（服务器在 dist 根下找不到 `quiz/` 子路径）。需先让产物落在「子目录」再起服务：
+
 ```bash
-npm run build
-npx serve dist -p 5000
+npm run preview:quiz
 ```
 
-访问 `http://localhost:5000/quiz/` 与 `http://localhost:5000/quiz/#/quiz` 验证子目录与 Hash 路由。
+会先执行 `build`，再把 `dist` 拷到 `dist-preview/quiz/` 并用 serve 托管，端口 5000。浏览器访问 **`http://localhost:5000/quiz/`** 与 `http://localhost:5000/quiz/#/quiz` 验证子目录与 Hash 路由。
 
 ## 部署方式
 

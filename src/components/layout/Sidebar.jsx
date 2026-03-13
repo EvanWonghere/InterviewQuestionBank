@@ -44,6 +44,15 @@ export default function Sidebar({ categories, questions = [] }) {
       </button>
       <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
         <Link
+          to="/mock-interview"
+          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            path === '/mock-interview' ? 'bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-white' : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+          }`}
+        >
+          <span className="mr-1.5" aria-hidden>👨‍💼</span>
+          模拟面试
+        </Link>
+        <Link
           to="/"
           className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             path === '/' ? 'bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-white' : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
