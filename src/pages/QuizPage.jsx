@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import QuestionCard from '@/components/quiz/QuestionCard';
 import { useProgressStore } from '@/store/progressStore';
@@ -17,8 +17,20 @@ const DIFFICULTY_OPTIONS = [
   { value: 'hard', label: '困难' },
 ];
 
+function matchKeyword(question, keyword) {
+  if (!keyword || !keyword.trim()) return true;
+  const k = keyword.trim().toLowerCase();
+  const title = (question.title ?? '').toLowerCase();
+  const q = (question.question ?? '').toLowerCase();
+  const answer = (question.answer ?? '').toLowerCase();
+  const tags = (question.tags ?? []).join(' ').toLowerCase();
+  return title.includes(k) || q.includes(k) || answer.includes(k) || tags.includes(k);
+}
+
 export default function QuizPage() {
   const { categoryId, status: listStatus } = useParams();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
   const cardContainerRef = useRef(null);
@@ -35,10 +47,15 @@ export default function QuizPage() {
     return sorted;
   }, [allQuestions, categoryId, listStatus, progress]);
 
+  const questionsFilteredBySearch = useMemo(() => {
+    if (!searchQuery.trim()) return questionsByCategoryOrList;
+    return questionsByCategoryOrList.filter((q) => matchKeyword(q, searchQuery));
+  }, [questionsByCategoryOrList, searchQuery]);
+
   const questions = useMemo(() => {
-    if (!difficultyFilter) return questionsByCategoryOrList;
-    return questionsByCategoryOrList.filter((q) => q.difficulty === difficultyFilter);
-  }, [questionsByCategoryOrList, difficultyFilter]);
+    if (!difficultyFilter) return questionsFilteredBySearch;
+    return questionsFilteredBySearch.filter((q) => q.difficulty === difficultyFilter);
+  }, [questionsFilteredBySearch, difficultyFilter]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -58,7 +75,7 @@ export default function QuizPage() {
     setCurrentIndex(0);
     setShowAnswer(false);
     setDifficultyFilter('');
-  }, [categoryId, listStatus]);
+  }, [categoryId, listStatus, searchQuery]);
 
   useEffect(() => {
     setCurrentIndex((i) => Math.min(i, Math.max(0, questions.length - 1)));
@@ -125,6 +142,22 @@ export default function QuizPage() {
     );
   }
 
+  if (searchQuery.trim() && !questionsFilteredBySearch.length) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <p className="text-neutral-500 dark:text-neutral-400">
+          未找到包含「{searchQuery}」的题目，可尝试其他关键词或清除搜索
+        </p>
+        <Link
+          to="/quiz"
+          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
+          清除搜索
+        </Link>
+      </div>
+    );
+  }
+
   if (!questions.length) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
@@ -154,7 +187,9 @@ export default function QuizPage() {
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
       <div className="w-full shrink-0 md:w-64">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">题目列表</h3>
+          <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
+            {searchQuery.trim() ? `搜索「${searchQuery}」 (${questionsFilteredBySearch.length})` : '题目列表'}
+          </h3>
         </div>
         <div className="mb-3 flex flex-wrap gap-1">
           {DIFFICULTY_OPTIONS.map(({ value, label }) => (

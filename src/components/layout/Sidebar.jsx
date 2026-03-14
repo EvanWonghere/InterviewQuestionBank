@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useProgressStore } from '@/store/progressStore';
 
 const LIST_ENTRIES = [
@@ -13,8 +13,26 @@ const LIST_ENTRIES = [
  */
 export default function Sidebar({ categories, questions = [] }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const path = location.pathname;
   const progress = useProgressStore((s) => s.progress);
+  const searchQuery = path === '/quiz' ? (searchParams.get('q') ?? '') : '';
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchSubmit = useCallback(
+    (e) => {
+      e?.preventDefault();
+      const trimmed = searchInput?.trim() ?? '';
+      if (trimmed) navigate(`/quiz?q=${encodeURIComponent(trimmed)}`);
+      else navigate('/quiz');
+    },
+    [navigate, searchInput]
+  );
 
   const listCounts = useMemo(() => {
     const counts = { wrong: 0, review: 0, mastered: 0 };
@@ -42,6 +60,24 @@ export default function Sidebar({ categories, questions = [] }) {
         <span aria-hidden>🏠</span>
         返回博客
       </button>
+      <form onSubmit={handleSearchSubmit} className="mb-3">
+        <div className="flex gap-1">
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="搜索题目…"
+            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400 dark:border-neutral-600 dark:bg-neutral-800 dark:placeholder:text-neutral-500 dark:focus:border-neutral-500 dark:focus:ring-neutral-500"
+            aria-label="按关键词搜索题目"
+          />
+          <button
+            type="submit"
+            className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-200 dark:text-neutral-900 dark:hover:bg-neutral-300"
+          >
+            搜索
+          </button>
+        </div>
+      </form>
       <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
         <Link
           to="/mock-interview"
