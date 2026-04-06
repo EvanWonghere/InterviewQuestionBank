@@ -28,6 +28,11 @@ export const useProgressStore = create(
         });
       },
 
+      /** Overwrite the entire progress map (used by cloud sync pull). */
+      setProgressBulk(progressMap) {
+        set({ progress: progressMap });
+      },
+
       getProgress(questionId) {
         return get().progress[questionId];
       },

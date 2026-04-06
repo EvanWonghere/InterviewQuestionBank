@@ -11,10 +11,10 @@ const LIST_STATUS_LABELS = {
 };
 
 const DIFFICULTY_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: 'easy', label: '简单' },
-  { value: 'medium', label: '中等' },
-  { value: 'hard', label: '困难' },
+  { value: '', label: '全部', activeClass: 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900', inactiveClass: 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600' },
+  { value: 'easy', label: '简单', activeClass: 'bg-green-600 text-white dark:bg-green-500 dark:text-white', inactiveClass: 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' },
+  { value: 'medium', label: '中等', activeClass: 'bg-amber-500 text-white dark:bg-amber-500 dark:text-white', inactiveClass: 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' },
+  { value: 'hard', label: '困难', activeClass: 'bg-red-600 text-white dark:bg-red-500 dark:text-white', inactiveClass: 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50' },
 ];
 
 function matchKeyword(question, keyword) {
@@ -192,15 +192,13 @@ export default function QuizPage() {
           </h3>
         </div>
         <div className="mb-3 flex flex-wrap gap-1">
-          {DIFFICULTY_OPTIONS.map(({ value, label }) => (
+          {DIFFICULTY_OPTIONS.map(({ value, label, activeClass, inactiveClass }) => (
             <button
               key={value || 'all'}
               type="button"
               onClick={() => setDifficultyFilter(value)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                difficultyFilter === value
-                  ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600'
+                difficultyFilter === value ? activeClass : inactiveClass
               }`}
             >
               {label}
@@ -230,31 +228,36 @@ export default function QuizPage() {
         </ul>
       </div>
       <div className="min-w-0 flex-1">
-        <QuestionCard
-          question={current}
-          showAnswer={showAnswer}
-          onToggleAnswer={toggleAnswer}
-          cardRef={cardContainerRef}
-        />
+        <div key={current?.id} className="question-card-enter">
+          <QuestionCard
+            question={current}
+            showAnswer={showAnswer}
+            onToggleAnswer={toggleAnswer}
+            cardRef={cardContainerRef}
+          />
+        </div>
         <div className="mt-4 flex items-center gap-3">
           <button
             type="button"
             onClick={goPrev}
             disabled={currentIndex === 0}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-neutral-600"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium transition-all active:scale-95 disabled:opacity-50 dark:border-neutral-600"
           >
             上一题
           </button>
+          <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums text-neutral-500 dark:text-neutral-400">
+            {currentIndex + 1} / {questions.length}
+          </span>
           <button
             type="button"
             onClick={goNext}
             disabled={currentIndex === questions.length - 1}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-neutral-600"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium transition-all active:scale-95 disabled:opacity-50 dark:border-neutral-600"
           >
             下一题
           </button>
-          <span className="text-xs text-neutral-400 dark:text-neutral-500">
-            方向键 ← → 翻页，空格 展开/收起答案
+          <span className="hidden text-xs text-neutral-400 sm:inline dark:text-neutral-500">
+            ← → 翻页，空格 展开/收起
           </span>
         </div>
       </div>

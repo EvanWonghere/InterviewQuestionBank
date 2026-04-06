@@ -44,7 +44,7 @@ export default function ActionButtons({ questionId }) {
             key={status}
             type="button"
             onClick={() => handleClick(status)}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${isActive ? active : base}`}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-95 ${isActive ? active : base}`}
             title={isActive ? '点击取消选中' : `点击标记为「${label}」`}
           >
             {isActive ? labelActive : label}

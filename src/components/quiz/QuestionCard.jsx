@@ -59,13 +59,13 @@ export default function QuestionCard({ question, showAnswer: controlledShow, onT
           <button
             type="button"
             onClick={toggleAnswer}
-            className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 transition-all duration-150 hover:bg-neutral-100 active:scale-95 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
           >
             {showAnswer ? '收起答案' : '展开答案'}
           </button>
           {showAnswer && (
-            <div className="answer-block mt-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800/50">
-              <p className="mb-2 text-sm font-medium text-neutral-500 dark:text-neutral-400">参考答案</p>
+            <div className="answer-block mt-4 rounded-lg border border-l-4 border-neutral-200 border-l-green-500 bg-neutral-50 p-4 dark:border-neutral-700 dark:border-l-green-500 dark:bg-neutral-800/50">
+              <p className="mb-2 text-sm font-medium text-green-700 dark:text-green-400">参考答案</p>
               <QuestionContent content={question.answer} />
             </div>
           )}

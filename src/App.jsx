@@ -4,10 +4,18 @@ import Layout from '@/components/layout/Layout';
 import DashboardPage from '@/pages/DashboardPage';
 import QuizPage from '@/pages/QuizPage';
 import MockInterviewPage from '@/pages/MockInterviewPage';
+import { useGistSync } from '@/hooks/useGistSync';
+
+// Mounts cloud sync at the app root; renders nothing
+function GistSyncInit() {
+  useGistSync();
+  return null;
+}
 
 export default function App() {
   return (
     <QuestionsProvider>
+      <GistSyncInit />
       <HashRouter>
         <Routes>
           <Route path="mock-interview" element={<MockInterviewPage />} />
