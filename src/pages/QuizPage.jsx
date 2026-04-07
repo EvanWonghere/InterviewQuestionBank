@@ -11,10 +11,10 @@ const LIST_STATUS_LABELS = {
 };
 
 const DIFFICULTY_OPTIONS = [
-  { value: '', label: '全部', activeClass: 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900', inactiveClass: 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600' },
-  { value: 'easy', label: '简单', activeClass: 'bg-green-600 text-white dark:bg-green-500 dark:text-white', inactiveClass: 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50' },
-  { value: 'medium', label: '中等', activeClass: 'bg-amber-500 text-white dark:bg-amber-500 dark:text-white', inactiveClass: 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' },
-  { value: 'hard', label: '困难', activeClass: 'bg-red-600 text-white dark:bg-red-500 dark:text-white', inactiveClass: 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50' },
+  { value: '', label: '全部', activeClass: 'border border-white/80 bg-white/85 text-slate-800 dark:border-white/20 dark:bg-white/15 dark:text-slate-100', inactiveClass: 'border border-white/65 bg-white/55 text-slate-600 hover:bg-white/75 dark:border-white/10 dark:bg-white/6 dark:text-slate-300 dark:hover:bg-white/10' },
+  { value: 'easy', label: '简单', activeClass: 'border border-emerald-300 bg-emerald-200/80 text-emerald-800 dark:border-emerald-400/60 dark:bg-emerald-500/25 dark:text-emerald-100', inactiveClass: 'border border-emerald-200/80 bg-emerald-100/65 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/18' },
+  { value: 'medium', label: '中等', activeClass: 'border border-amber-300 bg-amber-200/80 text-amber-800 dark:border-amber-400/60 dark:bg-amber-500/25 dark:text-amber-100', inactiveClass: 'border border-amber-200/80 bg-amber-100/65 text-amber-700 hover:bg-amber-100 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/18' },
+  { value: 'hard', label: '困难', activeClass: 'border border-rose-300 bg-rose-200/80 text-rose-800 dark:border-rose-400/60 dark:bg-rose-500/25 dark:text-rose-100', inactiveClass: 'border border-rose-200/80 bg-rose-100/65 text-rose-700 hover:bg-rose-100 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/18' },
 ];
 
 function matchKeyword(question, keyword) {
@@ -33,6 +33,7 @@ export default function QuizPage() {
   const searchQuery = searchParams.get('q') ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
+  const setProgress = useProgressStore((s) => s.setProgress);
   const cardContainerRef = useRef(null);
 
   const [difficultyFilter, setDifficultyFilter] = useState('');
@@ -60,6 +61,7 @@ export default function QuizPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const current = questions[currentIndex] ?? null;
+  const currentId = current?.id ?? null;
 
   const goPrev = useCallback(() => {
     setCurrentIndex((i) => Math.max(0, i - 1));
@@ -70,7 +72,6 @@ export default function QuizPage() {
     setShowAnswer(false);
   }, [questions.length]);
   const toggleAnswer = useCallback(() => setShowAnswer((v) => !v), []);
-
   useEffect(() => {
     setCurrentIndex(0);
     setShowAnswer(false);
@@ -84,7 +85,7 @@ export default function QuizPage() {
   useEffect(() => {
     if (!cardContainerRef.current || !current) return;
     cardContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [current?.id]);
+  }, [current]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -103,18 +104,30 @@ export default function QuizPage() {
           e.preventDefault();
           toggleAnswer();
           break;
+        case '1':
+          e.preventDefault();
+          if (currentId) setProgress(currentId, 'mastered');
+          break;
+        case '2':
+          e.preventDefault();
+          if (currentId) setProgress(currentId, 'review');
+          break;
+        case '3':
+          e.preventDefault();
+          if (currentId) setProgress(currentId, 'wrong');
+          break;
         default:
           break;
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [current, goPrev, goNext, toggleAnswer]);
+  }, [current, currentId, goPrev, goNext, setProgress, toggleAnswer]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-neutral-500 dark:text-neutral-400">加载题目中…</p>
+        <p className="text-slate-500 dark:text-slate-400">加载题目中…</p>
       </div>
     );
   }
@@ -129,12 +142,12 @@ export default function QuizPage() {
     const listMeta = listStatus ? LIST_STATUS_LABELS[listStatus] : null;
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <p className="text-neutral-500 dark:text-neutral-400">
+        <p className="text-slate-500 dark:text-slate-400">
           {listMeta ? listMeta.empty : '该分类下暂无题目'}
         </p>
         <Link
           to="/quiz"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
         >
           {listMeta ? listMeta.cta : '查看全部题目'}
         </Link>
@@ -145,12 +158,12 @@ export default function QuizPage() {
   if (searchQuery.trim() && !questionsFilteredBySearch.length) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <p className="text-neutral-500 dark:text-neutral-400">
+        <p className="text-slate-500 dark:text-slate-400">
           未找到包含「{searchQuery}」的题目，可尝试其他关键词或清除搜索
         </p>
         <Link
           to="/quiz"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
         >
           清除搜索
         </Link>
@@ -161,13 +174,13 @@ export default function QuizPage() {
   if (!questions.length) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <p className="text-neutral-500 dark:text-neutral-400">
+        <p className="text-slate-500 dark:text-slate-400">
           当前筛选下暂无题目，试试切换难度或分类
         </p>
         <button
           type="button"
           onClick={() => setDifficultyFilter('')}
-          className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
         >
           清除难度筛选
         </button>
@@ -185,9 +198,9 @@ export default function QuizPage() {
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-      <div className="w-full shrink-0 md:w-64">
+      <div className="panel-surface w-full shrink-0 rounded-xl p-3 md:w-72">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             {searchQuery.trim() ? `搜索「${searchQuery}」 (${questionsFilteredBySearch.length})` : '题目列表'}
           </h3>
         </div>
@@ -216,8 +229,8 @@ export default function QuizPage() {
                 }}
                 className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                   i === currentIndex
-                    ? 'bg-neutral-200 font-medium dark:bg-neutral-700 dark:text-white'
-                    : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                    ? 'bg-white/85 font-medium text-slate-900 ring-1 ring-white/75 dark:bg-white/15 dark:text-slate-100 dark:ring-white/20'
+                    : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
                 }`}
               >
                 <span className="mr-2">{statusIcon(q)}</span>
@@ -241,23 +254,23 @@ export default function QuizPage() {
             type="button"
             onClick={goPrev}
             disabled={currentIndex === 0}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium transition-all active:scale-95 disabled:opacity-50 dark:border-neutral-600"
+            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 transition-all active:scale-95 disabled:opacity-50 dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
           >
             上一题
           </button>
-          <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums text-neutral-500 dark:text-neutral-400">
+          <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums text-slate-500 dark:text-slate-400">
             {currentIndex + 1} / {questions.length}
           </span>
           <button
             type="button"
             onClick={goNext}
             disabled={currentIndex === questions.length - 1}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium transition-all active:scale-95 disabled:opacity-50 dark:border-neutral-600"
+            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 transition-all active:scale-95 disabled:opacity-50 dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
           >
             下一题
           </button>
-          <span className="hidden text-xs text-neutral-400 sm:inline dark:text-neutral-500">
-            ← → 翻页，空格 展开/收起
+          <span className="hidden text-xs text-slate-400 sm:inline dark:text-slate-500">
+            ← → 翻页，空格 展开/收起，1 已掌握，2 需复习，3 加入错题本
           </span>
         </div>
       </div>

@@ -8,7 +8,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-neutral-500 dark:text-neutral-400">加载中…</p>
+        <p className="text-slate-500 dark:text-slate-400">加载中…</p>
       </div>
     );
   }
@@ -23,13 +23,24 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Unity 刷题进度</h1>
-        <Link
-          to="/quiz"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-        >
-          开始刷题
-        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Unity 刷题进度</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Liquid Glass：更柔和、更有层次的阅读质感</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/random-practice"
+            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
+          >
+            随机刷题
+          </Link>
+          <Link
+            to="/quiz"
+            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
+          >
+            开始刷题
+          </Link>
+        </div>
       </div>
       <ProgressPanel categories={categories} questions={questions} />
     </div>
