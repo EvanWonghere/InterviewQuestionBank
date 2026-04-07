@@ -5,22 +5,22 @@ const BUTTON_CONFIG = [
     status: 'mastered',
     label: '已掌握',
     labelActive: '取消已掌握',
-    base: 'border-green-500 text-green-700 hover:bg-green-50 dark:text-green-300 dark:hover:bg-green-950',
-    active: 'border-green-500 bg-green-500 text-white dark:border-green-600 dark:bg-green-600',
+    base: 'border-emerald-200/80 bg-emerald-100/70 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/18',
+    active: 'border-emerald-300 bg-emerald-200/80 text-emerald-800 dark:border-emerald-400/60 dark:bg-emerald-500/25 dark:text-emerald-100',
   },
   {
     status: 'review',
     label: '需复习',
     labelActive: '取消需复习',
-    base: 'border-amber-500 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950',
-    active: 'border-amber-500 bg-amber-500 text-white dark:border-amber-600 dark:bg-amber-600',
+    base: 'border-amber-200/80 bg-amber-100/70 text-amber-700 hover:bg-amber-100 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/18',
+    active: 'border-amber-300 bg-amber-200/80 text-amber-800 dark:border-amber-400/60 dark:bg-amber-500/25 dark:text-amber-100',
   },
   {
     status: 'wrong',
     label: '加入错题本',
     labelActive: '移出错题本',
-    base: 'border-red-500 text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950',
-    active: 'border-red-500 bg-red-500 text-white dark:border-red-600 dark:bg-red-600',
+    base: 'border-rose-200/80 bg-rose-100/70 text-rose-700 hover:bg-rose-100 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/18',
+    active: 'border-rose-300 bg-rose-200/80 text-rose-800 dark:border-rose-400/60 dark:bg-rose-500/25 dark:text-rose-100',
   },
 ];
 
