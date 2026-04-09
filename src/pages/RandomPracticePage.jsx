@@ -459,29 +459,49 @@ export default function RandomPracticePage() {
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => markCurrent('mastered')}
-                className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
-              >
-                已掌握（1） ✅
-              </button>
-              <button
-                type="button"
-                onClick={() => markCurrent('review')}
-                className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-              >
-                需要复习（2） 🔄
-              </button>
-              <button
-                type="button"
-                onClick={() => markCurrent('wrong')}
-                className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
-              >
-                加入错题本（3） ❌
-              </button>
-            </div>
+            {(() => {
+              const currentStatus = sessionRecord[currentQuestionId] ?? null;
+              const MARK_BUTTONS = [
+                {
+                  status: 'mastered',
+                  label: '已掌握',
+                  shortcut: '1',
+                  icon: '✅',
+                  activeClass: 'border-emerald-500 bg-emerald-500 text-white dark:border-emerald-600 dark:bg-emerald-600',
+                  inactiveClass: 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20',
+                },
+                {
+                  status: 'review',
+                  label: '需要复习',
+                  shortcut: '2',
+                  icon: '🔄',
+                  activeClass: 'border-amber-500 bg-amber-500 text-white dark:border-amber-600 dark:bg-amber-600',
+                  inactiveClass: 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20',
+                },
+                {
+                  status: 'wrong',
+                  label: '加入错题本',
+                  shortcut: '3',
+                  icon: '❌',
+                  activeClass: 'border-rose-500 bg-rose-500 text-white dark:border-rose-600 dark:bg-rose-600',
+                  inactiveClass: 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20',
+                },
+              ];
+              return (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {MARK_BUTTONS.map(({ status, label, shortcut, icon, activeClass, inactiveClass }) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => markCurrent(status)}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-95 ${currentStatus === status ? activeClass : inactiveClass}`}
+                    >
+                      {label}（{shortcut}） {icon}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </>
         ) : (
           <p className="text-slate-500 dark:text-slate-400">没有可用题目</p>
