@@ -29,7 +29,7 @@ const BUTTON_CONFIG = [
  */
 export default function ActionButtons({ questionId }) {
   const setProgress = useProgressStore((s) => s.setProgress);
-  const current = useProgressStore((s) => s.getProgress(questionId));
+  const current = useProgressStore((s) => s.progress[questionId]);
 
   const handleClick = (status) => {
     setProgress(questionId, current === status ? null : status);
