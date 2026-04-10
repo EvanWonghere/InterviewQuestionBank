@@ -31,7 +31,11 @@ export async function findOrCreateGist(token) {
     body: JSON.stringify({
       description: GIST_DESCRIPTION,
       public: false,
-      files: { [GIST_FILENAME]: { content: JSON.stringify({ progress: {} }) } },
+      files: {
+        [GIST_FILENAME]: {
+          content: JSON.stringify({ progress: {}, notes: {} }),
+        },
+      },
     }),
   });
   if (!createRes.ok) throw new Error(`创建 Gist 失败 ${createRes.status}`);
@@ -39,28 +43,45 @@ export async function findOrCreateGist(token) {
   return created.id;
 }
 
-/** Pull progress data from Gist. Returns { progress: Record<string, string> } */
+/**
+ * Pull synced data from Gist.
+ * Returns `{ progress, notes }`. Backwards-compatible with older gists that
+ * only contain a `progress` field — missing fields default to `{}`.
+ */
 export async function pullGist(token, gistId) {
   const res = await fetch(`https://api.github.com/gists/${gistId}`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error(`拉取 Gist 失败 ${res.status}`);
   const data = await res.json();
-  const content = data.files[GIST_FILENAME]?.content ?? '{"progress":{}}';
+  const content = data.files[GIST_FILENAME]?.content ?? '{}';
   try {
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    return {
+      progress: parsed?.progress && typeof parsed.progress === 'object' ? parsed.progress : {},
+      notes: parsed?.notes && typeof parsed.notes === 'object' ? parsed.notes : {},
+    };
   } catch {
-    return { progress: {} };
+    return { progress: {}, notes: {} };
   }
 }
 
-/** Push progress data to Gist. */
-export async function pushGist(token, gistId, progress) {
+/**
+ * Push synced data to Gist.
+ * @param {string} token
+ * @param {string} gistId
+ * @param {{ progress: Record<string, string>, notes: Record<string, string> }} payload
+ */
+export async function pushGist(token, gistId, payload) {
+  const body = {
+    progress: payload?.progress ?? {},
+    notes: payload?.notes ?? {},
+  };
   const res = await fetch(`https://api.github.com/gists/${gistId}`, {
     method: 'PATCH',
     headers: { ...headers(token), 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      files: { [GIST_FILENAME]: { content: JSON.stringify({ progress }) } },
+      files: { [GIST_FILENAME]: { content: JSON.stringify(body) } },
     }),
   });
   if (!res.ok) throw new Error(`推送 Gist 失败 ${res.status}`);

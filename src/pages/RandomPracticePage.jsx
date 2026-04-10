@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
+import NoteEditor from '@/components/quiz/NoteEditor';
 
 /**
  * @param {string[]} ids
@@ -480,18 +481,21 @@ export default function RandomPracticePage() {
             </div>
 
             {showAnswer && (
-              <div
-                className="answer-block mt-5 rounded-2xl p-6"
-                style={{
-                  background: 'var(--filter-bg)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
-                  参考答案
-                </p>
-                <QuestionContent content={currentQuestion.answer} />
-              </div>
+              <>
+                <div
+                  className="answer-block mt-5 rounded-2xl p-6"
+                  style={{
+                    background: 'var(--filter-bg)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
+                    参考答案
+                  </p>
+                  <QuestionContent content={currentQuestion.answer} />
+                </div>
+                <NoteEditor questionId={currentQuestion.id} />
+              </>
             )}
 
             <div className="mt-6 flex flex-wrap gap-2">

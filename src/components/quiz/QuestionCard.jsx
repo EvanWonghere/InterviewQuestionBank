@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import QuestionContent from './QuestionContent';
 import ActionButtons from './ActionButtons';
+import NoteEditor from './NoteEditor';
 
 /**
  * @param {{
@@ -68,21 +69,24 @@ export default function QuestionCard({ question, showAnswer: controlledShow, onT
           </button>
 
           {showAnswer && (
-            <div
-              className="answer-block mt-5 rounded-2xl p-6"
-              style={{
-                background: 'var(--filter-bg)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <p
-                className="type-eyebrow mb-3"
-                style={{ color: 'var(--apple-blue)' }}
+            <>
+              <div
+                className="answer-block mt-5 rounded-2xl p-6"
+                style={{
+                  background: 'var(--filter-bg)',
+                  border: '1px solid var(--border-subtle)',
+                }}
               >
-                参考答案
-              </p>
-              <QuestionContent content={question.answer} />
-            </div>
+                <p
+                  className="type-eyebrow mb-3"
+                  style={{ color: 'var(--apple-blue)' }}
+                >
+                  参考答案
+                </p>
+                <QuestionContent content={question.answer} />
+              </div>
+              <NoteEditor questionId={question.id} />
+            </>
           )}
         </div>
 

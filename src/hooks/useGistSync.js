@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSyncStore } from '@/store/syncStore';
 import { useProgressStore } from '@/store/progressStore';
+import { useNotesStore } from '@/store/notesStore';
 import { findOrCreateGist, pullGist, pushGist } from '@/lib/gistApi';
 
 const PUSH_DEBOUNCE_MS = 1500;
@@ -8,7 +9,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 /**
  * Mount once at the app root. Handles:
  * - Pull on startup (when token is configured)
- * - Debounced push on every progress change
+ * - Debounced push on every progress or notes change
  */
 export function useGistSync() {
   const token = useSyncStore((s) => s.token);
@@ -18,6 +19,9 @@ export function useGistSync() {
 
   const progress = useProgressStore((s) => s.progress);
   const setProgressBulk = useProgressStore((s) => s.setProgressBulk);
+
+  const notes = useNotesStore((s) => s.notes);
+  const setNotesBulk = useNotesStore((s) => s.setNotesBulk);
 
   // True while a pull is in progress — suppresses the push effect for that cycle
   const isPullingRef = useRef(false);
@@ -46,6 +50,9 @@ export function useGistSync() {
         if (data.progress && typeof data.progress === 'object') {
           setProgressBulk(data.progress);
         }
+        if (data.notes && typeof data.notes === 'object') {
+          setNotesBulk(data.notes);
+        }
         setSyncStatus('synced');
       } catch (e) {
         if (!cancelled) setSyncStatus('error', e.message);
@@ -64,7 +71,7 @@ export function useGistSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // ── Debounced push on progress changes ───────────────────────────────────
+  // ── Debounced push on progress / notes changes ───────────────────────────
   useEffect(() => {
     // Skip if not configured, pull is in flight, or initial pull hasn't finished
     if (!token || !gistId || isPullingRef.current || !initialPullDoneRef.current) return;
@@ -74,7 +81,7 @@ export function useGistSync() {
 
     pushTimerRef.current = setTimeout(async () => {
       try {
-        await pushGist(token, gistId, progress);
+        await pushGist(token, gistId, { progress, notes });
         setSyncStatus('synced');
       } catch (e) {
         setSyncStatus('error', e.message);
@@ -82,7 +89,7 @@ export function useGistSync() {
     }, PUSH_DEBOUNCE_MS);
 
     return () => clearTimeout(pushTimerRef.current);
-    // progress is the only trigger; token/gistId changes are handled by the pull effect
+    // progress / notes are the triggers; token/gistId changes are handled by the pull effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progress]);
+  }, [progress, notes]);
 }

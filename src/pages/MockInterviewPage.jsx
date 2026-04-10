@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
+import NoteEditor from '@/components/quiz/NoteEditor';
 
 const COUNT_OPTIONS = [5, 10, 20];
 const DEFAULT_COUNT = 10;
@@ -253,21 +254,24 @@ export default function MockInterviewPage() {
                     {showAnswer ? '收起答案' : '查看答案解析'}
                   </button>
                   {showAnswer && (
-                    <div
-                      className="answer-block mt-5 rounded-2xl p-6"
-                      style={{
-                        background: 'var(--filter-bg)',
-                        border: '1px solid var(--border-subtle)',
-                      }}
-                    >
-                      <p
-                        className="type-eyebrow mb-3"
-                        style={{ color: 'var(--apple-blue)' }}
+                    <>
+                      <div
+                        className="answer-block mt-5 rounded-2xl p-6"
+                        style={{
+                          background: 'var(--filter-bg)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
                       >
-                        参考答案
-                      </p>
-                      <QuestionContent content={currentQuestion.answer} />
-                    </div>
+                        <p
+                          className="type-eyebrow mb-3"
+                          style={{ color: 'var(--apple-blue)' }}
+                        >
+                          参考答案
+                        </p>
+                        <QuestionContent content={currentQuestion.answer} />
+                      </div>
+                      <NoteEditor questionId={currentQuestion.id} />
+                    </>
                   )}
                 </div>
               </article>
