@@ -7,14 +7,17 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-slate-500 dark:text-slate-400">加载中…</p>
+      <div className="flex items-center justify-center py-24">
+        <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>加载中…</p>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+      <div
+        className="rounded-2xl p-5 type-body"
+        style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
+      >
         {error}
       </div>
     );
@@ -22,26 +25,36 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Unity 刷题进度</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Liquid Glass：更柔和、更有层次的阅读质感</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/random-practice"
-            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-          >
-            随机刷题
-          </Link>
-          <Link
-            to="/quiz"
-            className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-          >
+      {/* Hero */}
+      <section className="mb-12">
+        <p
+          className="type-eyebrow mb-4"
+          style={{ color: 'var(--apple-blue)' }}
+        >
+          Interview Question Bank
+        </p>
+        <h1 className="type-display-lg mb-3" style={{ color: 'var(--text-primary)' }}>
+          专注每一题，<br />积累每一寸进步。
+        </h1>
+        <p
+          className="type-body-lg max-w-xl"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          按分类系统化刷题，标记错题与待复习，模拟面试与随机抽题让节奏更接近真实场景。
+        </p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Link to="/quiz" className="btn-blue-large">
             开始刷题
           </Link>
+          <Link to="/random-practice" className="btn-blue-outline">
+            随机刷题
+          </Link>
+          <Link to="/mock-interview" className="btn-blue-outline">
+            模拟面试
+          </Link>
         </div>
-      </div>
+      </section>
+
       <ProgressPanel categories={categories} questions={questions} />
     </div>
   );

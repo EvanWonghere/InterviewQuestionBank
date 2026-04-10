@@ -13,7 +13,6 @@ const DEFAULT_COUNT = 10;
  * @param {Array<{ id: string, order: number }>} categories
  * @param {Record<string, string>} progress
  * @param {number} count
- * @returns {Array<{ id: string, categoryId: string, title: string, question: string, answer: string, difficulty?: string, tags?: string[], order?: number }>}
  */
 function pickQuestions(allQuestions, categories, progress, count) {
   if (!allQuestions?.length || count <= 0) return [];
@@ -114,43 +113,57 @@ export default function MockInterviewPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-        <p className="text-neutral-500 dark:text-neutral-400">加载题目中…</p>
+      <div className="flex min-h-screen items-center justify-center surface-page">
+        <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>加载题目中…</p>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="flex min-h-screen items-center justify-center surface-page">
+        <p className="type-body" style={{ color: 'var(--error-fg)' }}>{error}</p>
       </div>
     );
   }
 
   if (phase === 'setup') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
-        <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-          <h1 className="mb-2 text-center text-xl font-semibold text-neutral-900 dark:text-white">
-            👨‍💼 模拟面试
-          </h1>
-          <p className="mb-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
-            按分类抽题，优先未掌握题目
+      <div className="flex min-h-screen items-center justify-center surface-page p-5">
+        <div className="w-full max-w-md surface-card-elevated p-8">
+          <p
+            className="type-eyebrow mb-3 text-center"
+            style={{ color: 'var(--apple-blue)' }}
+          >
+            Mock Interview
           </p>
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <h1
+            className="type-display-sm mb-2 text-center"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            模拟面试
+          </h1>
+          <p
+            className="type-caption mb-7 text-center"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            按分类抽题，优先未掌握题目。
+          </p>
+
+          <div className="mb-7">
+            <p
+              className="type-eyebrow mb-3"
+              style={{ color: 'var(--text-quaternary)' }}
+            >
               题目数量
-            </label>
+            </p>
             <div className="flex gap-2">
               {COUNT_OPTIONS.map((n) => (
                 <button
                   key={n}
                   type="button"
                   onClick={() => setCount(n)}
-                  className={`flex-1 rounded-lg border py-2.5 text-sm font-medium transition-colors ${
-                    count === n
-                      ? 'border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900'
-                      : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                  className={`filter-pill flex-1 justify-center py-2.5 ${
+                    count === n ? 'is-active' : ''
                   }`}
                 >
                   {n} 题
@@ -158,13 +171,21 @@ export default function MockInterviewPage() {
               ))}
             </div>
           </div>
+
           <button
             type="button"
             onClick={startInterview}
             disabled={!allQuestions?.length}
-            className="w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+            className="btn-blue-large w-full"
           >
             开始模拟面试
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn-ghost mt-2 w-full type-caption"
+          >
+            返回主页
           </button>
         </div>
       </div>
@@ -173,134 +194,189 @@ export default function MockInterviewPage() {
 
   if (phase === 'interviewing') {
     return (
-      <div className="flex min-h-screen flex-col bg-neutral-50 dark:bg-neutral-950">
-        <div className="shrink-0 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900">
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
-            <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+      <div className="flex min-h-screen flex-col surface-page">
+        {/* Top bar */}
+        <header
+          className="shrink-0 px-5 py-4"
+          style={{
+            background: 'var(--surface-sidebar)',
+            backdropFilter: 'saturate(180%) blur(20px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+            <span
+              className="type-body-emphasis"
+              style={{ color: 'var(--text-primary)' }}
+            >
               模拟面试
             </span>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-32 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+            <div className="flex items-center gap-3">
+              <div className="progress-track w-32">
                 <div
-                  className="h-full rounded-full bg-neutral-700 transition-all dark:bg-neutral-300"
-                  style={{ width: `${total ? (currentIndex + 1) / total * 100 : 0}%` }}
+                  className="progress-fill"
+                  style={{ width: `${total ? ((currentIndex + 1) / total) * 100 : 0}%` }}
                 />
               </div>
-              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <span
+                className="type-caption-bold tabular-nums"
+                style={{ color: 'var(--text-secondary)' }}
+              >
                 {currentIndex + 1} / {total}
               </span>
             </div>
           </div>
-        </div>
-        <div className="flex-1 overflow-auto p-4">
+        </header>
+
+        {/* Question */}
+        <div className="flex-1 overflow-auto px-5 py-8">
           <div className="mx-auto max-w-3xl">
             {currentQuestion && (
-              <article className="rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-                <div className="p-6">
-                  <h2 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-white">
-                    {currentQuestion.title}
-                  </h2>
-                  <div className="text-neutral-700 dark:text-neutral-300">
-                    <QuestionContent content={currentQuestion.question} />
-                  </div>
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={toggleAnswer}
-                      className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              <article className="surface-card-elevated p-6 lg:p-8">
+                <h2
+                  className="type-card-title mb-4"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {currentQuestion.title}
+                </h2>
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  <QuestionContent content={currentQuestion.question} />
+                </div>
+
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={toggleAnswer}
+                    className={showAnswer ? 'btn-neutral' : 'btn-blue'}
+                  >
+                    {showAnswer ? '收起答案' : '查看答案解析'}
+                  </button>
+                  {showAnswer && (
+                    <div
+                      className="answer-block mt-5 rounded-2xl p-6"
+                      style={{
+                        background: 'var(--filter-bg)',
+                        border: '1px solid var(--border-subtle)',
+                      }}
                     >
-                      {showAnswer ? '收起答案' : '查看答案解析'}
-                    </button>
-                    {showAnswer && (
-                      <div className="answer-block mt-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800/50">
-                        <p className="mb-2 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                          参考答案
-                        </p>
-                        <QuestionContent content={currentQuestion.answer} />
-                      </div>
-                    )}
-                  </div>
+                      <p
+                        className="type-eyebrow mb-3"
+                        style={{ color: 'var(--apple-blue)' }}
+                      >
+                        参考答案
+                      </p>
+                      <QuestionContent content={currentQuestion.answer} />
+                    </div>
+                  )}
                 </div>
               </article>
             )}
           </div>
         </div>
-        <div className="shrink-0 border-t border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+
+        {/* Bottom action bar */}
+        <footer
+          className="shrink-0 px-5 py-5"
+          style={{
+            background: 'var(--surface-sidebar)',
+            backdropFilter: 'saturate(180%) blur(20px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+            borderTop: '1px solid var(--border-subtle)',
+          }}
+        >
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={() => markAndNext('wrong')}
-              className="rounded-lg border border-red-500 px-5 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950"
+              className="btn-status btn-status-wrong is-active"
             >
-              忘了/答错 ❌
+              <span className="dot" />
+              忘了 / 答错
             </button>
             <button
               type="button"
               onClick={() => markAndNext('mastered')}
-              className="rounded-lg border border-green-500 px-5 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-50 dark:text-green-300 dark:hover:bg-green-950"
+              className="btn-status btn-status-mastered is-active"
             >
-              掌握了 ✅
+              <span className="dot" />
+              掌握了
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     );
   }
 
   // phase === 'summary'
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
-      <div className="w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-        <h1 className="mb-2 text-center text-xl font-semibold text-neutral-900 dark:text-white">
-          👨‍💼 模拟面试 · 复盘
+    <div className="flex min-h-screen items-center justify-center surface-page p-5">
+      <div className="w-full max-w-lg surface-card-elevated p-8">
+        <p
+          className="type-eyebrow mb-3 text-center"
+          style={{ color: 'var(--apple-blue)' }}
+        >
+          Session Recap
+        </p>
+        <h1
+          className="type-display-sm mb-7 text-center"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          模拟面试 · 复盘
         </h1>
-        <div className="mb-6 flex justify-center gap-6 text-center">
+
+        <div className="mb-7 grid grid-cols-2 gap-6 text-center">
           <div>
-            <p className="text-2xl font-semibold text-green-600 dark:text-green-400">
+            <p className="type-display-md" style={{ color: 'var(--success-fg)' }}>
               {summaryStats.mastered}
             </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">掌握</p>
+            <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              掌握
+            </p>
           </div>
           <div>
-            <p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
+            <p className="type-display-md" style={{ color: 'var(--warning-fg)' }}>
               {summaryStats.wrong}
             </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">待复习</p>
+            <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              待复习
+            </p>
           </div>
         </div>
+
         {wrongQuestions.length > 0 && (
-          <div className="mb-6">
-            <p className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <div className="mb-7">
+            <p
+              className="type-eyebrow mb-2"
+              style={{ color: 'var(--text-quaternary)' }}
+            >
               本次答错 / 待复习
             </p>
-            <ul className="space-y-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-800/50">
+            <ul
+              className="space-y-1 rounded-xl p-2"
+              style={{ background: 'var(--filter-bg)' }}
+            >
               {wrongQuestions.map((q) => (
                 <li key={q.id}>
                   <button
                     type="button"
                     onClick={() => navigate(`/quiz/${q.categoryId}`)}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    className="quiz-list-item"
                   >
-                    {q.title}
+                    <span className="status-dot s-wrong" />
+                    <span className="truncate">{q.title}</span>
                   </button>
                 </li>
               ))}
             </ul>
           </div>
         )}
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={resetToSetup}
-            className="w-full rounded-xl border border-neutral-300 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800"
-          >
+
+        <div className="flex flex-col gap-2.5">
+          <button type="button" onClick={resetToSetup} className="btn-blue w-full">
             再来一轮
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white hover:opacity-90 dark:bg-neutral-100 dark:text-neutral-900"
-          >
+          <button type="button" onClick={() => navigate('/')} className="btn-neutral w-full">
             返回首页
           </button>
         </div>

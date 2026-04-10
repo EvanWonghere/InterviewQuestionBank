@@ -185,15 +185,18 @@ export default function RandomPracticePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-slate-500 dark:text-slate-400">加载题目中…</p>
+      <div className="flex items-center justify-center py-24">
+        <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>加载题目中…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+      <div
+        className="rounded-2xl p-5 type-body"
+        style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
+      >
         {error}
       </div>
     );
@@ -201,75 +204,95 @@ export default function RandomPracticePage() {
 
   if (!allQuestions.length) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <p className="text-slate-500 dark:text-slate-400">当前没有可用题目</p>
-        <Link
-          to="/quiz"
-          className="rounded-lg border border-white/75 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-        >
-          去题库看看
-        </Link>
+      <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
+        <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>当前没有可用题目</p>
+        <Link to="/quiz" className="btn-blue-outline">去题库看看</Link>
       </div>
     );
   }
 
   if (phase === 'setup') {
     return (
-      <div className="mx-auto w-full max-w-xl rounded-2xl border border-white/65 bg-white/70 p-6 shadow-sm dark:border-white/15 dark:bg-white/6">
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">🎲 随机刷题</h1>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          题目分类和难度随机抽取，必须先标记本题结果，才能进入下一题。
-        </p>
+      <div className="mx-auto w-full max-w-2xl">
+        <header className="mb-8">
+          <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
+            Random Practice
+          </p>
+          <h1 className="type-display-md mb-2" style={{ color: 'var(--text-primary)' }}>
+            随机刷题
+          </h1>
+          <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>
+            题目分类和难度随机抽取，必须先标记本题结果，才能进入下一题。
+          </p>
+        </header>
 
-        <div className="mt-6 space-y-3">
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/65 bg-white/65 p-3 dark:border-white/10 dark:bg-white/5">
-            <input
-              type="checkbox"
-              checked={endlessMode}
-              onChange={(e) => {
-                const next = e.target.checked;
-                setEndlessMode(next);
-                if (!next) setAllowRepeat(false);
-              }}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400 dark:border-slate-500 dark:bg-slate-700"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">无尽模式</span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">
-                开启后不会结束，直到你主动退出。
+        <section className="surface-card-elevated p-7 space-y-5">
+          {/* Mode toggles */}
+          <div className="space-y-3">
+            <label
+              className="flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3"
+              style={{ background: 'var(--filter-bg)' }}
+            >
+              <input
+                type="checkbox"
+                checked={endlessMode}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setEndlessMode(next);
+                  if (!next) setAllowRepeat(false);
+                }}
+                className="mt-1 h-4 w-4"
+                style={{ accentColor: 'var(--apple-blue)' }}
+              />
+              <span>
+                <span className="type-body-emphasis block" style={{ color: 'var(--text-primary)' }}>
+                  无尽模式
+                </span>
+                <span className="type-caption block mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  开启后不会结束，直到你主动退出。
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/65 bg-white/65 p-3 dark:border-white/10 dark:bg-white/5">
-            <input
-              type="checkbox"
-              checked={allowRepeat}
-              disabled={!endlessMode}
-              onChange={(e) => setAllowRepeat(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-400 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-700"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
-                允许重复抽题
+            <label
+              className="flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3"
+              style={{ background: 'var(--filter-bg)' }}
+            >
+              <input
+                type="checkbox"
+                checked={allowRepeat}
+                disabled={!endlessMode}
+                onChange={(e) => setAllowRepeat(e.target.checked)}
+                className="mt-1 h-4 w-4 disabled:opacity-50"
+                style={{ accentColor: 'var(--apple-blue)' }}
+              />
+              <span>
+                <span
+                  className="type-body-emphasis block"
+                  style={{ color: endlessMode ? 'var(--text-primary)' : 'var(--text-quaternary)' }}
+                >
+                  允许重复抽题
+                </span>
+                <span className="type-caption block mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {endlessMode
+                    ? '关闭后每轮刷完全部题目之前不会重复。'
+                    : '该开关仅在无尽模式下生效。'}
+                </span>
               </span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">
-                {endlessMode
-                  ? '关闭后每轮刷完全部题目之前不会重复。'
-                  : '该开关仅在无尽模式下生效。'}
-              </span>
-            </span>
-          </label>
+            </label>
+          </div>
 
-          <div className="rounded-lg border border-white/65 bg-white/65 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+          {/* Category filter */}
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="type-eyebrow" style={{ color: 'var(--text-quaternary)' }}>
                 分类过滤（可选）
               </p>
               <button
                 type="button"
                 onClick={() => setSelectedCategoryIds([])}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                className="type-micro-bold"
+                style={{ color: 'var(--apple-link)' }}
               >
                 清空
               </button>
@@ -284,31 +307,29 @@ export default function RandomPracticePage() {
                       key={cat.id}
                       type="button"
                       onClick={() => setSelectedCategoryIds((prev) => toggleSelection(prev, cat.id))}
-                      className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-                        active
-                          ? 'border-sky-300 bg-sky-200/80 text-sky-800 dark:border-sky-400/60 dark:bg-sky-500/25 dark:text-sky-100'
-                          : 'border-white/70 bg-white/70 text-slate-600 hover:bg-white dark:border-white/15 dark:bg-white/8 dark:text-slate-300 dark:hover:bg-white/12'
-                      }`}
+                      className={`filter-pill ${active ? 'is-active' : ''}`}
                     >
                       {cat.name}
                     </button>
                   );
                 })}
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              不选表示全部分类。
+            <p className="type-micro mt-2" style={{ color: 'var(--text-quaternary)' }}>
+              不选表示全部分类
             </p>
           </div>
 
-          <div className="rounded-lg border border-white/65 bg-white/65 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+          {/* Difficulty filter */}
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="type-eyebrow" style={{ color: 'var(--text-quaternary)' }}>
                 难度过滤（可选）
               </p>
               <button
                 type="button"
                 onClick={() => setSelectedDifficulties([])}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                className="type-micro-bold"
+                style={{ color: 'var(--apple-link)' }}
               >
                 清空
               </button>
@@ -323,188 +344,172 @@ export default function RandomPracticePage() {
                     onClick={() =>
                       setSelectedDifficulties((prev) => toggleSelection(prev, opt.value))
                     }
-                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-                      active
-                        ? 'border-indigo-300 bg-indigo-200/80 text-indigo-800 dark:border-indigo-400/60 dark:bg-indigo-500/25 dark:text-indigo-100'
-                        : 'border-white/70 bg-white/70 text-slate-600 hover:bg-white dark:border-white/15 dark:bg-white/8 dark:text-slate-300 dark:hover:bg-white/12'
-                    }`}
+                    className={`filter-pill ${active ? 'is-active' : ''}`}
                   >
                     {opt.label}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              不选表示全部难度。
+            <p className="type-micro mt-2" style={{ color: 'var(--text-quaternary)' }}>
+              不选表示全部难度
             </p>
           </div>
-        </div>
 
-        {totalCount === 0 && (
-          <p className="mt-4 text-sm text-rose-600 dark:text-rose-300">
-            当前过滤条件下没有题目，请调整分类或难度。
-          </p>
-        )}
+          {totalCount === 0 && (
+            <p
+              className="type-caption rounded-xl px-3 py-2"
+              style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
+            >
+              当前过滤条件下没有题目，请调整分类或难度。
+            </p>
+          )}
 
-        <button
-          type="button"
-          onClick={startPractice}
-          disabled={totalCount === 0}
-          className="mt-6 w-full rounded-xl bg-slate-900 py-3 text-sm font-medium text-white hover:opacity-90 dark:bg-slate-100 dark:text-slate-900"
-        >
-          开始随机刷题（共 {totalCount} 题）
-        </button>
+          <button
+            type="button"
+            onClick={startPractice}
+            disabled={totalCount === 0}
+            className="btn-blue-large w-full"
+          >
+            开始随机刷题（共 {totalCount} 题）
+          </button>
+        </section>
       </div>
     );
   }
 
   if (phase === 'finished') {
     return (
-      <div className="mx-auto w-full max-w-xl rounded-2xl border border-white/65 bg-white/70 p-6 shadow-sm dark:border-white/15 dark:bg-white/6">
-        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">✅ 本轮随机刷题完成</h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          你已完成一整轮随机刷题，可继续新开一轮或返回首页。
-        </p>
-        <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg border border-emerald-200/80 bg-emerald-100/60 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
-            <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">{summary.mastered}</p>
-            <p className="text-xs text-emerald-700/80 dark:text-emerald-300/90">掌握</p>
+      <div className="mx-auto w-full max-w-xl">
+        <header className="mb-8 text-center">
+          <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
+            Session Complete
+          </p>
+          <h2 className="type-display-md" style={{ color: 'var(--text-primary)' }}>
+            本轮随机刷题完成
+          </h2>
+          <p className="type-body mt-2" style={{ color: 'var(--text-tertiary)' }}>
+            你已完成一整轮随机刷题，可继续新开一轮或返回首页。
+          </p>
+        </header>
+
+        <section className="surface-card-elevated p-7">
+          <div className="grid grid-cols-3 gap-6 text-center">
+            {[
+              { label: '已掌握', value: summary.mastered, color: 'var(--success-fg)' },
+              { label: '需复习', value: summary.review, color: 'var(--warning-fg)' },
+              { label: '答错', value: summary.wrong, color: 'var(--error-fg)' },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="type-display-md" style={{ color: s.color }}>{s.value}</p>
+                <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                  {s.label}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="rounded-lg border border-amber-200/80 bg-amber-100/60 p-3 dark:border-amber-500/20 dark:bg-amber-500/10">
-            <p className="text-lg font-semibold text-amber-700 dark:text-amber-300">{summary.review}</p>
-            <p className="text-xs text-amber-700/80 dark:text-amber-300/90">需复习</p>
+
+          <div className="mt-7 flex flex-col gap-2.5">
+            <button type="button" onClick={resetToSetup} className="btn-blue w-full">
+              再来一轮
+            </button>
+            <button type="button" onClick={() => navigate('/')} className="btn-neutral w-full">
+              返回首页
+            </button>
           </div>
-          <div className="rounded-lg border border-rose-200/80 bg-rose-100/60 p-3 dark:border-rose-500/20 dark:bg-rose-500/10">
-            <p className="text-lg font-semibold text-rose-700 dark:text-rose-300">{summary.wrong}</p>
-            <p className="text-xs text-rose-700/80 dark:text-rose-300/90">答错</p>
-          </div>
-        </div>
-        <div className="mt-6 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={resetToSetup}
-            className="w-full rounded-lg border border-white/70 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-          >
-            再来一轮
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 dark:bg-slate-100 dark:text-slate-900"
-          >
-            返回首页
-          </button>
-        </div>
+        </section>
       </div>
     );
   }
 
+  const currentStatus = sessionRecord[currentQuestionId] ?? null;
+  const MARK_BUTTONS = [
+    { status: 'mastered', label: '已掌握', shortcut: '1', className: 'btn-status btn-status-mastered' },
+    { status: 'review', label: '需要复习', shortcut: '2', className: 'btn-status btn-status-review' },
+    { status: 'wrong', label: '加入错题本', shortcut: '3', className: 'btn-status btn-status-wrong' },
+  ];
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <div className="rounded-xl border border-white/65 bg-white/70 px-4 py-3 dark:border-white/15 dark:bg-white/6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-semibold text-slate-800 dark:text-slate-100">随机刷题</span>
-            <span className="mx-2">·</span>
-            {endlessMode ? (
-              <>
-                <span>无尽模式</span>
-                <span className="mx-2">·</span>
-                <span>{allowRepeat ? '允许重复' : `第 ${cycle} 轮（本轮不重复）`}</span>
-              </>
-            ) : (
-              <span>
-                进度 {completedCount} / {totalCount}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={resetToSetup}
-            className="rounded-md border border-white/70 bg-white/75 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-          >
-            退出随机刷题
-          </button>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      {/* Status bar */}
+      <div className="surface-card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div className="type-caption" style={{ color: 'var(--text-secondary)' }}>
+          <span className="type-body-emphasis" style={{ color: 'var(--text-primary)' }}>
+            随机刷题
+          </span>
+          <span className="mx-2" style={{ color: 'var(--text-quaternary)' }}>·</span>
+          {endlessMode ? (
+            <>
+              <span>无尽模式</span>
+              <span className="mx-2" style={{ color: 'var(--text-quaternary)' }}>·</span>
+              <span>{allowRepeat ? '允许重复' : `第 ${cycle} 轮`}</span>
+            </>
+          ) : (
+            <span>
+              进度 {completedCount} / {totalCount} · 剩余 {remainingCount}
+            </span>
+          )}
         </div>
-        {!endlessMode && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">剩余 {remainingCount} 题未完成</p>
-        )}
+        <button type="button" onClick={resetToSetup} className="btn-ghost type-caption">
+          退出
+        </button>
       </div>
 
-      <article className="rounded-xl border border-white/65 bg-white/75 p-6 shadow-sm dark:border-white/15 dark:bg-white/8">
+      {/* Question card */}
+      <article className="surface-card-elevated p-6 lg:p-8">
         {currentQuestion ? (
           <>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{currentQuestion.title}</h2>
-            <div className="mt-3 text-slate-700 dark:text-slate-300">
+            <h2 className="type-card-title mb-4" style={{ color: 'var(--text-primary)' }}>
+              {currentQuestion.title}
+            </h2>
+            <div style={{ color: 'var(--text-secondary)' }}>
               <QuestionContent content={currentQuestion.question} />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => setShowAnswer((v) => !v)}
-                className="rounded-lg border border-white/70 bg-white/75 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
+                className={showAnswer ? 'btn-neutral' : 'btn-blue'}
               >
                 {showAnswer ? '收起答案' : '展开答案'}
               </button>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                先标记答题结果，再进入下一题（快捷键：1 已掌握 / 2 需复习 / 3 加入错题本）
+              <span className="type-micro" style={{ color: 'var(--text-quaternary)' }}>
+                先标记结果再进入下一题（1 已掌握 / 2 需复习 / 3 加入错题本）
               </span>
             </div>
 
             {showAnswer && (
-              <div className="answer-block mt-4 rounded-lg border border-l-4 border-sky-200/80 border-l-sky-400 bg-white/70 p-4 dark:border-sky-500/30 dark:border-l-sky-400 dark:bg-white/6">
-                <p className="mb-2 text-sm font-medium text-sky-700 dark:text-sky-300">参考答案</p>
+              <div
+                className="answer-block mt-5 rounded-2xl p-6"
+                style={{
+                  background: 'var(--filter-bg)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
+                  参考答案
+                </p>
                 <QuestionContent content={currentQuestion.answer} />
               </div>
             )}
 
-            {(() => {
-              const currentStatus = sessionRecord[currentQuestionId] ?? null;
-              const MARK_BUTTONS = [
-                {
-                  status: 'mastered',
-                  label: '已掌握',
-                  shortcut: '1',
-                  icon: '✅',
-                  activeClass: 'border-emerald-500 bg-emerald-500 text-white dark:border-emerald-600 dark:bg-emerald-600',
-                  inactiveClass: 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20',
-                },
-                {
-                  status: 'review',
-                  label: '需要复习',
-                  shortcut: '2',
-                  icon: '🔄',
-                  activeClass: 'border-amber-500 bg-amber-500 text-white dark:border-amber-600 dark:bg-amber-600',
-                  inactiveClass: 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20',
-                },
-                {
-                  status: 'wrong',
-                  label: '加入错题本',
-                  shortcut: '3',
-                  icon: '❌',
-                  activeClass: 'border-rose-500 bg-rose-500 text-white dark:border-rose-600 dark:bg-rose-600',
-                  inactiveClass: 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20',
-                },
-              ];
-              return (
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {MARK_BUTTONS.map(({ status, label, shortcut, icon, activeClass, inactiveClass }) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => markCurrent(status)}
-                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-95 ${currentStatus === status ? activeClass : inactiveClass}`}
-                    >
-                      {label}（{shortcut}） {icon}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {MARK_BUTTONS.map(({ status, label, shortcut, className }) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => markCurrent(status)}
+                  className={`${className} ${currentStatus === status ? 'is-active' : ''}`}
+                >
+                  <span className="dot" />
+                  {label}（{shortcut}）
+                </button>
+              ))}
+            </div>
           </>
         ) : (
-          <p className="text-slate-500 dark:text-slate-400">没有可用题目</p>
+          <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>没有可用题目</p>
         )}
       </article>
 
@@ -513,7 +518,7 @@ export default function RandomPracticePage() {
           type="button"
           onClick={goNext}
           disabled={!answeredCurrent}
-          className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-100 dark:text-slate-900"
+          className="btn-blue"
         >
           下一题
         </button>

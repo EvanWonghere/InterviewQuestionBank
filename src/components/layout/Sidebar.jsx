@@ -2,18 +2,37 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useProgressStore } from '@/store/progressStore';
 import { useSyncStore } from '@/store/syncStore';
+import { useThemeStore } from '@/store/themeStore';
 import { findOrCreateGist, pullGist } from '@/lib/gistApi';
 
+const THEME_OPTIONS = [
+  { value: 'auto', label: '系统' },
+  { value: 'light', label: '浅色' },
+  { value: 'dark', label: '深色' },
+];
+
 const LIST_ENTRIES = [
-  { path: 'wrong', label: '错题本', emoji: '🎯' },
-  { path: 'review', label: '需复习', emoji: '🔄' },
-  { path: 'mastered', label: '已掌握', emoji: '✅' },
+  { path: 'wrong', label: '错题本' },
+  { path: 'review', label: '需复习' },
+  { path: 'mastered', label: '已掌握' },
+];
+
+const TOP_LINKS = [
+  { to: '/', label: '进度总览', match: (p) => p === '/' },
+  { to: '/quiz', label: '全部题目', match: (p) => p === '/quiz' },
+  { to: '/random-practice', label: '随机刷题', match: (p) => p === '/random-practice' },
+  { to: '/mock-interview', label: '模拟面试', match: (p) => p === '/mock-interview' },
 ];
 
 /**
- * @param {{ categories: Array<{ id: string, name: string, order: number }>, questions: Array<{ id: string, categoryId: string }> }} props
+ * @param {{
+ *   categories: Array<{ id: string, name: string, order: number }>,
+ *   questions: Array<{ id: string, categoryId: string }>,
+ *   className?: string,
+ *   onClose?: () => void,
+ * }} props
  */
-export default function Sidebar({ categories, questions = [] }) {
+export default function Sidebar({ categories, questions = [], className = '', onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -59,7 +78,7 @@ export default function Sidebar({ categories, questions = [] }) {
     window.location.href = '/';
   };
 
-  // ── Cloud sync panel state ────────────────────────────────────────────────
+  // ── Cloud sync ──────────────────────────────────────────────
   const token = useSyncStore((s) => s.token);
   const gistId = useSyncStore((s) => s.gistId);
   const syncStatus = useSyncStore((s) => s.syncStatus);
@@ -71,6 +90,10 @@ export default function Sidebar({ categories, questions = [] }) {
 
   const [syncOpen, setSyncOpen] = useState(false);
   const [tokenDraft, setTokenDraft] = useState('');
+
+  // ── Theme ───────────────────────────────────────────────────
+  const themeMode = useThemeStore((s) => s.mode);
+  const setThemeMode = useThemeStore((s) => s.setMode);
 
   const handleSaveToken = useCallback(async () => {
     const t = tokenDraft.trim();
@@ -99,85 +122,83 @@ export default function Sidebar({ categories, questions = [] }) {
   }, [setToken, setGistId, setSyncStatus]);
 
   const syncStatusMeta = {
-    idle: { dot: 'bg-slate-400', label: '未配置' },
-    syncing: { dot: 'bg-blue-500 animate-pulse', label: '同步中…' },
-    synced: { dot: 'bg-emerald-500', label: '已同步' },
-    error: { dot: 'bg-rose-500', label: '同步失败' },
-  }[syncStatus] ?? { dot: 'bg-slate-400', label: '' };
+    idle: { dot: '#86868b', label: '未配置' },
+    syncing: { dot: '#0071e3', label: '同步中' },
+    synced: { dot: '#30d158', label: '已同步' },
+    error: { dot: '#ff453a', label: '同步失败' },
+  }[syncStatus] ?? { dot: '#86868b', label: '' };
 
   return (
-    <aside className="panel-surface flex w-full shrink-0 flex-col border-b border-white/45 p-4 md:w-64 md:border-b-0 md:border-r">
-      <div className="mb-3 rounded-xl border border-white/65 bg-white/55 px-3 py-2 text-xs text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-300">
-        <p className="font-semibold">学习状态</p>
-        <p className="mt-0.5 text-slate-500 dark:text-slate-400">继续保持节奏，今天再完成一轮题目。</p>
-      </div>
-      <button
-        type="button"
-        onClick={goToBlog}
-        className="sidebar-nav-item mb-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10"
-        title="返回博客主页"
-      >
-        <span aria-hidden>🏠</span>
-        返回博客
-      </button>
-      <form onSubmit={handleSearchSubmit} className="mb-3">
-        <div className="flex gap-1">
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="搜索题目…"
-            className="w-full rounded-lg border border-white/65 bg-white/65 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-500/50"
-            aria-label="按关键词搜索题目"
-          />
+    <aside className={className}>
+      {/* Brand */}
+      <div className="mb-6 flex items-start justify-between gap-2 px-3">
+        <div className="min-w-0">
           <button
-            type="submit"
-            className="shrink-0 rounded-lg border border-white/70 bg-white/70 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
+            type="button"
+            onClick={goToBlog}
+            className="font-display text-left text-[19px] font-semibold leading-tight tracking-tight"
+            style={{ color: 'var(--text-primary)' }}
+            title="返回博客"
           >
-            搜索
+            Interview Bank
           </button>
+          <p className="type-micro mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+            Unity · C++ · Algorithms
+          </p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="关闭菜单"
+            className="menu-button -mr-1 lg:hidden"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearchSubmit} className="mb-5">
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="搜索题目"
+          className="input-apple"
+          aria-label="按关键词搜索题目"
+        />
       </form>
-      <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
-        <Link
-          to="/mock-interview"
-          className={`sidebar-nav-item rounded-lg px-3 py-2 text-sm font-medium ${
-            path === '/mock-interview' ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-          }`}
-        >
-          <span className="mr-1.5" aria-hidden>👨‍💼</span>
-          模拟面试
-        </Link>
-        <Link
-          to="/random-practice"
-          className={`sidebar-nav-item rounded-lg px-3 py-2 text-sm font-medium ${
-            path === '/random-practice' ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-          }`}
-        >
-          <span className="mr-1.5" aria-hidden>🎲</span>
-          随机刷题
-        </Link>
-        <Link
-          to="/"
-          className={`sidebar-nav-item rounded-lg px-3 py-2 text-sm font-medium ${
-            path === '/' ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-          }`}
-        >
-          进度总览
-        </Link>
-        <Link
-          to="/quiz"
-          className={`sidebar-nav-item rounded-lg px-3 py-2 text-sm font-medium ${
-            path === '/quiz' ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-          }`}
-        >
-          全部题目
-        </Link>
-        <div className="my-2 w-full border-t border-white/45 dark:border-white/10" />
-        <span className="w-full px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          智能列表
-        </span>
-        {LIST_ENTRIES.map(({ path: statusPath, label, emoji }) => {
+
+      {/* Primary nav */}
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
+        {TOP_LINKS.map((link) => {
+          const isActive = link.match(path);
+          return (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
+            >
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+
+        <SectionLabel>智能列表</SectionLabel>
+        {LIST_ENTRIES.map(({ path: statusPath, label }) => {
           const listPath = `/list/${statusPath}`;
           const isActive = path === listPath;
           const count = listCounts[statusPath] ?? 0;
@@ -185,24 +206,15 @@ export default function Sidebar({ categories, questions = [] }) {
             <Link
               key={statusPath}
               to={listPath}
-              className={`sidebar-nav-item rounded-lg px-3 py-2 text-sm font-medium ${
-                isActive ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-              }`}
+              className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
             >
-              <span className="mr-1.5">{emoji}</span>
-              {label}
-              {count > 0 && (
-                <span className="ml-1.5 rounded-full border border-slate-200/80 bg-white/75 px-1.5 py-0.5 text-xs text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-slate-300">
-                  {count}
-                </span>
-              )}
+              <span>{label}</span>
+              {count > 0 && <span className="sidebar-count">{count}</span>}
             </Link>
           );
         })}
-        <div className="my-2 w-full border-t border-white/45 dark:border-white/10" />
-        <span className="w-full px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          分类
-        </span>
+
+        <SectionLabel>分类</SectionLabel>
         {[...(categories || [])]
           .sort((a, b) => a.order - b.order)
           .map((cat) => {
@@ -211,97 +223,136 @@ export default function Sidebar({ categories, questions = [] }) {
               <Link
                 key={cat.id}
                 to={`/quiz/${cat.id}`}
-                className={`sidebar-nav-item flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium ${
-                  isActive ? 'bg-white/80 text-slate-900 ring-1 ring-white/70 dark:bg-white/18 dark:text-slate-100 dark:ring-white/25' : 'text-slate-700 hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10'
-                }`}
+                className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
               >
-                <span>{cat.name}</span>
+                <span className="truncate">{cat.name}</span>
                 {categoryCounts[cat.id] > 0 && (
-                  <span className="ml-1.5 shrink-0 rounded-full border border-slate-200/80 bg-white/75 px-1.5 py-0.5 text-xs text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-slate-300">
-                    {categoryCounts[cat.id]}
-                  </span>
+                  <span className="sidebar-count">{categoryCounts[cat.id]}</span>
                 )}
               </Link>
             );
           })}
       </nav>
 
-      {/* ── Cloud sync panel ─────────────────────────────────────────── */}
-      <div className="mt-auto pt-4">
-        <div className="border-t border-white/45 pt-3 dark:border-white/10">
-          <button
-            type="button"
-            onClick={() => setSyncOpen((v) => !v)}
-            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-white/55 dark:text-slate-200 dark:hover:bg-white/10"
+      {/* Theme toggle */}
+      <div className="mt-4 pt-4 divider-subtle">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <span
+            className="type-eyebrow"
+            style={{ color: 'var(--text-quaternary)' }}
           >
-            <span className="flex items-center gap-2">
-              <span aria-hidden>☁</span>
-              云同步
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className={`inline-block h-2 w-2 rounded-full ${syncStatusMeta.dot}`} />
-              <span className="text-xs text-slate-500 dark:text-slate-400">{syncStatusMeta.label}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">{syncOpen ? '▲' : '▼'}</span>
-            </span>
-          </button>
-
-          {syncOpen && (
-            <div className="mt-2 rounded-lg border border-white/60 bg-white/65 p-3 text-xs dark:border-white/10 dark:bg-white/6">
-              {token ? (
-                // Configured state
-                <div className="flex flex-col gap-2">
-                  <p className="text-slate-500 dark:text-slate-400">
-                    进度已与 GitHub Gist 同步。切换设备时填入相同 Token 即可拉取。
-                  </p>
-                  {syncStatus === 'error' && (
-                    <p className="rounded bg-red-50 px-2 py-1 text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                      {syncError}
-                    </p>
-                  )}
-                  <p className="break-all text-slate-500 dark:text-slate-400">
-                    Gist ID: {gistId}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleDisconnect}
-                    className="rounded-md border border-red-300 px-2 py-1 text-red-600 transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-                  >
-                    断开同步
-                  </button>
-                </div>
-              ) : (
-                // Setup state
-                <div className="flex flex-col gap-2">
-                  <p className="text-slate-500 dark:text-slate-400">
-                    填入 GitHub Personal Access Token（仅需勾选 <code className="rounded bg-white/70 px-1 text-slate-700 dark:bg-white/10 dark:text-slate-200">gist</code> 权限），进度将自动跨设备同步。
-                  </p>
-                  <input
-                    type="password"
-                    value={tokenDraft}
-                    onChange={(e) => setTokenDraft(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveToken()}
-                    placeholder="ghp_xxxxxxxxxxxx"
-                    className="w-full rounded-md border border-white/65 bg-white/75 px-2 py-1.5 font-mono text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:placeholder:text-slate-500"
-                  />
-                  {syncStatus === 'error' && (
-                    <p className="rounded bg-red-50 px-2 py-1 text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                      {syncError}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleSaveToken}
-                    disabled={!tokenDraft.trim() || syncStatus === 'syncing'}
-                    className="rounded-md border border-white/70 bg-white/75 px-3 py-1.5 font-medium text-slate-700 transition-colors hover:bg-white disabled:opacity-50 dark:border-white/15 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15"
-                  >
-                    {syncStatus === 'syncing' ? '连接中…' : '连接并同步'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+            外观
+          </span>
+        </div>
+        <div className="theme-segmented" role="radiogroup" aria-label="主题模式">
+          {THEME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={themeMode === opt.value}
+              onClick={() => setThemeMode(opt.value)}
+              className={themeMode === opt.value ? 'is-active' : ''}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Sync panel */}
+      <div className="mt-3 pt-3 divider-subtle">
+        <button
+          type="button"
+          onClick={() => setSyncOpen((v) => !v)}
+          className="sidebar-nav-item w-full"
+        >
+          <span className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{
+                background: syncStatusMeta.dot,
+                animation: syncStatus === 'syncing' ? 'pulse 1.4s ease-in-out infinite' : 'none',
+              }}
+            />
+            云同步
+          </span>
+          <span className="sidebar-count">{syncStatusMeta.label}</span>
+        </button>
+
+        {syncOpen && (
+          <div
+            className="mt-2 rounded-xl border p-3"
+            style={{
+              borderColor: 'var(--border-subtle)',
+              background: 'var(--surface-card)',
+            }}
+          >
+            {token ? (
+              <div className="flex flex-col gap-2.5">
+                <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
+                  已与 GitHub Gist 同步。换设备时填入相同 Token 即可拉取。
+                </p>
+                {syncStatus === 'error' && (
+                  <p
+                    className="type-micro rounded-md px-2 py-1.5"
+                    style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
+                  >
+                    {syncError}
+                  </p>
+                )}
+                <p className="type-micro break-all" style={{ color: 'var(--text-quaternary)' }}>
+                  Gist {gistId.slice(0, 8)}…
+                </p>
+                <button type="button" onClick={handleDisconnect} className="btn-ghost type-micro">
+                  断开同步
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
+                  填入 GitHub Personal Access Token（仅需 <code className="font-mono" style={{ color: 'var(--text-secondary)' }}>gist</code> 权限）实现跨设备同步。
+                </p>
+                <input
+                  type="password"
+                  value={tokenDraft}
+                  onChange={(e) => setTokenDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveToken()}
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  className="input-apple font-mono"
+                />
+                {syncStatus === 'error' && (
+                  <p
+                    className="type-micro rounded-md px-2 py-1.5"
+                    style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
+                  >
+                    {syncError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSaveToken}
+                  disabled={!tokenDraft.trim() || syncStatus === 'syncing'}
+                  className="btn-blue"
+                >
+                  {syncStatus === 'syncing' ? '连接中…' : '连接并同步'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <div
+      className="type-eyebrow mt-5 mb-1 px-3"
+      style={{ color: 'var(--text-quaternary)' }}
+    >
+      {children}
+    </div>
   );
 }

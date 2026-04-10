@@ -9,20 +9,45 @@ export default function Markdown({ content, className = '' }) {
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
         components={{
-          p: ({ children }) => <p className="mb-3 leading-relaxed">{children}</p>,
+          h1: ({ children }) => (
+            <h1
+              className="type-display-sm mt-5 mb-3"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2
+              className="type-card-title mt-5 mb-3"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3
+              className="type-body-emphasis mt-4 mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => <p className="mb-3">{children}</p>,
           ul: ({ children }) => <ul className="mb-3 list-disc pl-6">{children}</ul>,
           ol: ({ children }) => <ol className="mb-3 list-decimal pl-6">{children}</ol>,
           li: ({ children }) => <li className="mb-1">{children}</li>,
-          strong: ({ children }) => <strong className="font-semibold text-neutral-900 dark:text-neutral-100">{children}</strong>,
-          code: ({ children }) => (
-            <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-sm dark:bg-neutral-800 dark:text-neutral-200">
+          strong: ({ children }) => <strong>{children}</strong>,
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--apple-link)' }}
+              className="hover:underline"
+            >
               {children}
-            </code>
-          ),
-          pre: ({ children }) => (
-            <pre className="mb-3 overflow-x-auto rounded-lg bg-neutral-100 p-4 font-mono text-sm dark:bg-neutral-800 dark:text-neutral-200">
-              {children}
-            </pre>
+            </a>
           ),
         }}
       >
