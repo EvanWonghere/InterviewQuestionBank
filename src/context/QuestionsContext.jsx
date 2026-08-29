@@ -1,18 +1,26 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { loadQuestions } from '@/data/loadQuestions';
+import { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import { listQuestions } from '@/data/questionRepository';
 
 const QuestionsContext = createContext(null);
 
 export function QuestionsProvider({ children }) {
-  const [data, setData] = useState({ categories: [], questions: [], loading: true, error: null });
+  const [data, setData] = useState({ categories: [], questions: [], loading: true, error: null, source: 'static' });
 
-  useEffect(() => {
-    loadQuestions()
-      .then((payload) => setData({ categories: payload.categories, questions: payload.questions, loading: false, error: null }))
-      .catch((err) => setData({ categories: [], questions: [], loading: false, error: err.message }));
+  const refresh = useCallback(async () => {
+    setData((previous) => ({ ...previous, loading: true, error: null }));
+    try {
+      const payload = await listQuestions();
+      setData({ categories: payload.categories, questions: payload.questions, loading: false, error: null, source: payload.source });
+    } catch (err) {
+      setData({ categories: [], questions: [], loading: false, error: err.message, source: 'error' });
+    }
   }, []);
 
-  return <QuestionsContext.Provider value={data}>{children}</QuestionsContext.Provider>;
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return <QuestionsContext.Provider value={{ ...data, refresh }}>{children}</QuestionsContext.Provider>;
 }
 
 export function useQuestions() {

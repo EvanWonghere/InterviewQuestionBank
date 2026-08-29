@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import QuestionContent from './QuestionContent';
-import ActionButtons from './ActionButtons';
-import NoteEditor from './NoteEditor';
+import AnswerPanel from './AnswerPanel';
+import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 
 /**
  * @param {{
@@ -11,12 +10,7 @@ import NoteEditor from './NoteEditor';
  *   cardRef?: import('react').RefObject<HTMLDivElement | null>,
  * }} props
  */
-export default function QuestionCard({ question, showAnswer: controlledShow, onToggleAnswer, cardRef }) {
-  const isControlled = typeof controlledShow === 'boolean' && typeof onToggleAnswer === 'function';
-  const [internalShow, setInternalShow] = useState(false);
-  const showAnswer = isControlled ? controlledShow : internalShow;
-  const toggleAnswer = isControlled ? onToggleAnswer : () => setInternalShow((v) => !v);
-
+export default function QuestionCard({ question, cardRef, onRated }) {
   if (!question) return null;
 
   const difficultyChipClass = {
@@ -40,9 +34,10 @@ export default function QuestionCard({ question, showAnswer: controlledShow, onT
           <h2 className="type-card-title" style={{ color: 'var(--text-primary)' }}>
             {question.title}
           </h2>
-          {difficultyLabel && (
-            <span className={`${difficultyChipClass} shrink-0`}>{difficultyLabel}</span>
-          )}
+          <div className="flex shrink-0 gap-2">
+            {question.type && <span className="chip">{QUESTION_TYPE_LABELS[question.type] ?? question.type}</span>}
+            {difficultyLabel && <span className={difficultyChipClass}>{difficultyLabel}</span>}
+          </div>
         </div>
 
         {tags.length > 0 && (
@@ -59,38 +54,7 @@ export default function QuestionCard({ question, showAnswer: controlledShow, onT
           <QuestionContent content={question.question} />
         </div>
 
-        <div className="mt-5">
-          <button
-            type="button"
-            onClick={toggleAnswer}
-            className={showAnswer ? 'btn-neutral' : 'btn-blue'}
-          >
-            {showAnswer ? '收起答案' : '展开答案'}
-          </button>
-
-          {showAnswer && (
-            <>
-              <div
-                className="answer-block mt-5 rounded-2xl p-6"
-                style={{
-                  background: 'var(--filter-bg)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <p
-                  className="type-eyebrow mb-3"
-                  style={{ color: 'var(--apple-blue)' }}
-                >
-                  参考答案
-                </p>
-                <QuestionContent content={question.answer} />
-              </div>
-              <NoteEditor questionId={question.id} />
-            </>
-          )}
-        </div>
-
-        <ActionButtons questionId={question.id} />
+        <AnswerPanel question={question} onRated={onRated} />
       </div>
     </article>
   );

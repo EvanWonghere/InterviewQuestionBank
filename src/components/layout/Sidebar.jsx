@@ -1,9 +1,8 @@
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useProgressStore } from '@/store/progressStore';
-import { useSyncStore } from '@/store/syncStore';
+import { useReviewStore } from '@/store/reviewStore';
 import { useThemeStore } from '@/store/themeStore';
-import { findOrCreateGist, pullGist } from '@/lib/gistApi';
+import { useAuth } from '@/context/AuthContext';
 
 const THEME_OPTIONS = [
   { value: 'auto', label: '系统' },
@@ -12,9 +11,11 @@ const THEME_OPTIONS = [
 ];
 
 const LIST_ENTRIES = [
-  { path: 'wrong', label: '错题本' },
-  { path: 'review', label: '需复习' },
-  { path: 'mastered', label: '已掌握' },
+  { key: 'due', path: '/review/due', label: '今日复习' },
+  { key: 'wrong', path: '/review/wrong', label: '历史错题' },
+  { key: 'mastered', path: '/review/mastered', label: '已掌握' },
+  { key: 'weak', path: '/review/weak', label: '薄弱知识点' },
+  { key: 'history', path: '/review/history', label: '作答历史' },
 ];
 
 const TOP_LINKS = [
@@ -37,7 +38,9 @@ export default function Sidebar({ categories, questions = [], className = '', on
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const path = location.pathname;
-  const progress = useProgressStore((s) => s.progress);
+  const reviewStates = useReviewStore((s) => s.reviewStates);
+  const attempts = useReviewStore((s) => s.attempts);
+  const { configured, user, isAdmin, signIn, signOut } = useAuth();
   const searchQuery = path === '/quiz' ? (searchParams.get('q') ?? '') : '';
   const [searchInput, setSearchInput] = useState(searchQuery);
 
@@ -56,15 +59,21 @@ export default function Sidebar({ categories, questions = [], className = '', on
   );
 
   const listCounts = useMemo(() => {
-    const counts = { wrong: 0, review: 0, mastered: 0 };
+    const counts = { due: 0, wrong: 0, mastered: 0, weak: 0, history: attempts.length };
+    const weak = new Set();
     questions.forEach((q) => {
-      const s = progress[q.id];
-      if (s === 'wrong') counts.wrong++;
-      else if (s === 'review') counts.review++;
-      else if (s === 'mastered') counts.mastered++;
+      const state = reviewStates[q.id];
+      if (!state) return;
+      if (state.dueAt && new Date(state.dueAt) <= new Date()) counts.due++;
+      if (state.lapseCount > 0) {
+        counts.wrong++;
+        q.tags?.forEach((tag) => weak.add(tag));
+      }
+      if (state.intervalDays >= 30 && state.lastQuality >= 4) counts.mastered++;
     });
+    counts.weak = weak.size;
     return counts;
-  }, [questions, progress]);
+  }, [questions, reviewStates, attempts.length]);
 
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -78,55 +87,9 @@ export default function Sidebar({ categories, questions = [], className = '', on
     window.location.href = '/';
   };
 
-  // ── Cloud sync ──────────────────────────────────────────────
-  const token = useSyncStore((s) => s.token);
-  const gistId = useSyncStore((s) => s.gistId);
-  const syncStatus = useSyncStore((s) => s.syncStatus);
-  const syncError = useSyncStore((s) => s.syncError);
-  const setToken = useSyncStore((s) => s.setToken);
-  const setGistId = useSyncStore((s) => s.setGistId);
-  const setSyncStatus = useSyncStore((s) => s.setSyncStatus);
-  const setProgressBulk = useProgressStore((s) => s.setProgressBulk);
-
-  const [syncOpen, setSyncOpen] = useState(false);
-  const [tokenDraft, setTokenDraft] = useState('');
-
   // ── Theme ───────────────────────────────────────────────────
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
-
-  const handleSaveToken = useCallback(async () => {
-    const t = tokenDraft.trim();
-    if (!t) return;
-    setSyncStatus('syncing');
-    try {
-      const id = await findOrCreateGist(t);
-      const data = await pullGist(t, id);
-      if (data.progress && typeof data.progress === 'object') {
-        setProgressBulk(data.progress);
-      }
-      setToken(t);
-      setGistId(id);
-      setSyncStatus('synced');
-      setTokenDraft('');
-    } catch (e) {
-      setSyncStatus('error', e.message);
-    }
-  }, [tokenDraft, setToken, setGistId, setSyncStatus, setProgressBulk]);
-
-  const handleDisconnect = useCallback(() => {
-    setToken('');
-    setGistId('');
-    setSyncStatus('idle');
-    setTokenDraft('');
-  }, [setToken, setGistId, setSyncStatus]);
-
-  const syncStatusMeta = {
-    idle: { dot: '#86868b', label: '未配置' },
-    syncing: { dot: '#0071e3', label: '同步中' },
-    synced: { dot: '#30d158', label: '已同步' },
-    error: { dot: '#ff453a', label: '同步失败' },
-  }[syncStatus] ?? { dot: '#86868b', label: '' };
 
   return (
     <aside className={className}>
@@ -198,13 +161,12 @@ export default function Sidebar({ categories, questions = [], className = '', on
         })}
 
         <SectionLabel>智能列表</SectionLabel>
-        {LIST_ENTRIES.map(({ path: statusPath, label }) => {
-          const listPath = `/list/${statusPath}`;
+        {LIST_ENTRIES.map(({ key, path: listPath, label }) => {
           const isActive = path === listPath;
-          const count = listCounts[statusPath] ?? 0;
+          const count = listCounts[key] ?? 0;
           return (
             <Link
-              key={statusPath}
+              key={key}
               to={listPath}
               className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
             >
@@ -260,87 +222,15 @@ export default function Sidebar({ categories, questions = [], className = '', on
         </div>
       </div>
 
-      {/* Sync panel */}
+      {/* Account and cloud state */}
       <div className="mt-3 pt-3 divider-subtle">
-        <button
-          type="button"
-          onClick={() => setSyncOpen((v) => !v)}
-          className="sidebar-nav-item w-full"
-        >
-          <span className="flex items-center gap-2">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{
-                background: syncStatusMeta.dot,
-                animation: syncStatus === 'syncing' ? 'pulse 1.4s ease-in-out infinite' : 'none',
-              }}
-            />
-            云同步
-          </span>
-          <span className="sidebar-count">{syncStatusMeta.label}</span>
-        </button>
-
-        {syncOpen && (
-          <div
-            className="mt-2 rounded-xl border p-3"
-            style={{
-              borderColor: 'var(--border-subtle)',
-              background: 'var(--surface-card)',
-            }}
-          >
-            {token ? (
-              <div className="flex flex-col gap-2.5">
-                <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
-                  已与 GitHub Gist 同步。换设备时填入相同 Token 即可拉取。
-                </p>
-                {syncStatus === 'error' && (
-                  <p
-                    className="type-micro rounded-md px-2 py-1.5"
-                    style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
-                  >
-                    {syncError}
-                  </p>
-                )}
-                <p className="type-micro break-all" style={{ color: 'var(--text-quaternary)' }}>
-                  Gist {gistId.slice(0, 8)}…
-                </p>
-                <button type="button" onClick={handleDisconnect} className="btn-ghost type-micro">
-                  断开同步
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
-                  填入 GitHub Personal Access Token（仅需 <code className="font-mono" style={{ color: 'var(--text-secondary)' }}>gist</code> 权限）实现跨设备同步。
-                </p>
-                <input
-                  type="password"
-                  value={tokenDraft}
-                  onChange={(e) => setTokenDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveToken()}
-                  placeholder="ghp_xxxxxxxxxxxx"
-                  className="input-apple font-mono"
-                />
-                {syncStatus === 'error' && (
-                  <p
-                    className="type-micro rounded-md px-2 py-1.5"
-                    style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
-                  >
-                    {syncError}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSaveToken}
-                  disabled={!tokenDraft.trim() || syncStatus === 'syncing'}
-                  className="btn-blue"
-                >
-                  {syncStatus === 'syncing' ? '连接中…' : '连接并同步'}
-                </button>
-              </div>
-            )}
+        {!configured ? <p className="px-3 type-micro" style={{ color: 'var(--text-quaternary)' }}>本地模式 · 云端尚未配置</p> : user ? (
+          <div className="space-y-1">
+            <p className="truncate px-3 type-micro" style={{ color: 'var(--text-tertiary)' }}>{user.email}</p>
+            {isAdmin && <><Link to="/manage/questions" className="sidebar-nav-item">管理题目</Link><Link to="/manage/migrate" className="sidebar-nav-item">迁移旧数据</Link></>}
+            <button type="button" onClick={signOut} className="sidebar-nav-item w-full">退出登录</button>
           </div>
-        )}
+        ) : <button type="button" onClick={signIn} className="sidebar-nav-item w-full">管理员登录</button>}
       </div>
     </aside>
   );

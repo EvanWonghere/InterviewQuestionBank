@@ -1,54 +1,38 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This repository contains the Interview Question Bank deployed at the Hugo blog's `/quiz/` subpath. It is a React 19 + Vite + Tailwind SPA with a Supabase-backed administrator workflow and a read-only static fallback.
 
 ## Commands
 
 ```bash
-npm run dev          # Start Vite dev server
-npm run build        # Production build (outputs to dist/)
-npm run lint         # ESLint
-npm run preview      # Preview production build
-npm run preview:quiz # Build and serve at /quiz/ path (port 5000) — use this to test sub-directory deployment
+npm run dev                # Vite development server
+npm run build              # Production build in dist/
+npm run lint               # ESLint
+npm test                   # Vitest + React Testing Library
+npm run test:e2e           # Playwright against a /quiz/ production preview
+npm run preview:quiz       # Build and serve the real subpath on port 4173
+npm run migrate:questions  # Idempotently seed categories and legacy questions
 ```
-
-There are no automated tests.
 
 ## Architecture
 
-This is a static React SPA — a Unity/C# interview question bank and quiz platform. It has no backend; all data comes from `public/questions.json` (fetched at runtime).
+- `HashRouter` is intentional because the build is copied into Hugo `static/quiz`.
+- `AuthContext` owns GitHub OAuth state and the `app_admins` lookup.
+- `QuestionsContext` reads published questions from Supabase when configured and otherwise loads `public/questions.json`.
+- `questionRepository.js` is the question boundary. Public list results never contain solution data; objective grading goes through the `grade_question` RPC.
+- `progressRepository.js` and `reviewStore.js` persist attempts, notes and SM-2 state. Anonymous practice remains local; administrator records sync to Supabase.
+- `questionSchema.js` contains the runtime-validated discriminated question model. Keep all six types valid: `single_choice`, `multiple_choice`, `fill_blank`, `short_answer`, `algorithm`, and `engineering`.
+- Markdown images use `asset://<question_assets UUID>` references. `QuestionAsset` resolves them to short-lived signed Storage URLs.
+- SQL migrations and RLS policies live under `supabase/migrations/`; never expose a service-role key to Vite or the browser.
 
-**Routing**: `HashRouter` is used intentionally so the app works on static hosting. Routes:
-- `/` — Dashboard (progress overview)
-- `/quiz`, `/quiz/:categoryId` — Quiz interface filtered by category
-- `/list/:status` — Smart lists (`wrong`, `review`, `mastered`)
-- `/mock-interview` — Timed mock interview mode
+## Data and security
 
-**Data flow**:
-1. `QuestionsContext` fetches `questions.json` via `fetch(import.meta.env.BASE_URL + 'questions.json')` on mount and provides `{ categories, questions, loading, error }` to all pages.
-2. `progressStore.js` (Zustand + `persist` middleware) tracks per-question status (`mastered` | `review` | `wrong`) in localStorage under the key defined in `src/constants/storageKeys.js`.
-3. Custom hooks in `src/hooks/useProgress.js` expose progress utilities (`useCategoryStats`, `useProgress`).
+Supabase is the source of truth after migration. The bundled 148-question JSON file is both the import source and offline/public fallback. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are browser variables. `SUPABASE_SERVICE_ROLE_KEY` is accepted only by the local migration script.
 
-**Questions data schema** (`public/questions.json`):
-```json
-{
-  "version": "1.0",
-  "categories": [{ "id": "", "name": "", "order": 0 }],
-  "questions": [{
-    "id": "", "categoryId": "", "title": "", "question": "", "answer": "",
-    "tags": [], "difficulty": "easy|medium|hard", "order": 0
-  }]
-}
-```
+New questions default to `draft` and `private`. Publishing must pass `questionSchema` validation. Correct answers are stored in `question_solutions`, protected by RLS, and must not be joined into public list queries.
 
-**Key source files**:
-- `src/App.jsx` — Route tree and `QuestionsProvider` wrapper
-- `src/pages/QuizPage.jsx` — Main quiz with filtering, search, keyboard shortcuts
-- `src/components/layout/Sidebar.jsx` — Category nav, search input, smart lists
-- `src/components/quiz/QuestionCard.jsx` — Question/answer toggle with markdown rendering
+The old GitHub Gist reader remains only for the one-time migration wizard. Do not reintroduce Gist writes or token-based synchronization.
 
 ## Deployment
 
-The app is deployed as a sub-application under a Hugo blog at the `/quiz/` path. `vite.config.js` sets `base: '/quiz/'`. On push to `main`, GitHub Actions builds and pushes `dist/` to `static/quiz/` in the Hugo blog repository (`EvanWonghere/EvanWonghere.github.io`) using the `API_TOKEN_GITHUB` secret.
-
-When adding new questions, edit `public/questions.json` directly — no build step is needed for data changes, but `npm run build` must be run before deploy picks them up via CI.
+Pushes to `main` run lint, unit tests and the Vite build, then copy `dist/` to the blog repository's `static/quiz/`. Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `BLOG_REPO`, and `API_TOKEN_GITHUB` as GitHub Actions secrets/variables. GitHub OAuth must redirect to the public `/quiz/` URL; the callback code restores the HashRouter destination.

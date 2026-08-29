@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Checkout
@@ -21,7 +23,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Lint and unit tests
+        run: npm run lint && npm test
 
       - name: Build
         run: npm run build

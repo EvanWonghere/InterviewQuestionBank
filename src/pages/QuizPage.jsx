@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import QuestionCard from '@/components/quiz/QuestionCard';
 import { useProgressStore } from '@/store/progressStore';
+import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 
 const LIST_STATUS_LABELS = {
   wrong: { title: '错题本', empty: '错题本暂无题目，去做题并加入错题本吧', cta: '去刷题' },
@@ -33,10 +34,11 @@ export default function QuizPage() {
   const searchQuery = searchParams.get('q') ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
-  const setProgress = useProgressStore((s) => s.setProgress);
   const cardContainerRef = useRef(null);
 
   const [difficultyFilter, setDifficultyFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
 
   const questionsByCategoryOrList = useMemo(() => {
     if (!allQuestions.length) return [];
@@ -54,14 +56,18 @@ export default function QuizPage() {
   }, [questionsByCategoryOrList, searchQuery]);
 
   const questions = useMemo(() => {
-    if (!difficultyFilter) return questionsFilteredBySearch;
-    return questionsFilteredBySearch.filter((q) => q.difficulty === difficultyFilter);
-  }, [questionsFilteredBySearch, difficultyFilter]);
+    return questionsFilteredBySearch.filter((q) =>
+      (!difficultyFilter || q.difficulty === difficultyFilter)
+      && (!typeFilter || q.type === typeFilter)
+      && (!tagFilter || q.tags?.includes(tagFilter))
+    );
+  }, [questionsFilteredBySearch, difficultyFilter, typeFilter, tagFilter]);
+  const availableTypes = useMemo(() => [...new Set(questionsFilteredBySearch.map((question) => question.type).filter(Boolean))], [questionsFilteredBySearch]);
+  const availableTags = useMemo(() => [...new Set(questionsFilteredBySearch.flatMap((question) => question.tags ?? []))].sort(), [questionsFilteredBySearch]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const current = questions[currentIndex] ?? null;
-  const currentId = current?.id ?? null;
 
   const goPrev = useCallback(() => {
     setCurrentIndex((i) => Math.max(0, i - 1));
@@ -76,6 +82,8 @@ export default function QuizPage() {
     setCurrentIndex(0);
     setShowAnswer(false);
     setDifficultyFilter('');
+    setTypeFilter('');
+    setTagFilter('');
   }, [categoryId, listStatus, searchQuery]);
 
   useEffect(() => {
@@ -100,29 +108,13 @@ export default function QuizPage() {
           e.preventDefault();
           goNext();
           break;
-        case ' ':
-          e.preventDefault();
-          toggleAnswer();
-          break;
-        case '1':
-          e.preventDefault();
-          if (currentId) setProgress(currentId, 'mastered');
-          break;
-        case '2':
-          e.preventDefault();
-          if (currentId) setProgress(currentId, 'review');
-          break;
-        case '3':
-          e.preventDefault();
-          if (currentId) setProgress(currentId, 'wrong');
-          break;
         default:
           break;
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [current, currentId, goPrev, goNext, setProgress, toggleAnswer]);
+  }, [current, goPrev, goNext]);
 
   if (loading) {
     return (
@@ -176,7 +168,7 @@ export default function QuizPage() {
         </p>
         <button
           type="button"
-          onClick={() => setDifficultyFilter('')}
+          onClick={() => { setDifficultyFilter(''); setTypeFilter(''); setTagFilter(''); }}
           className="btn-blue-outline"
         >
           清除难度筛选
@@ -214,6 +206,16 @@ export default function QuizPage() {
               {label}
             </button>
           ))}
+        </div>
+        <div className="mb-4 grid gap-2">
+          <select className="input-apple" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} aria-label="按题型筛选">
+            <option value="">全部题型</option>
+            {availableTypes.map((type) => <option key={type} value={type}>{QUESTION_TYPE_LABELS[type] ?? type}</option>)}
+          </select>
+          <select className="input-apple" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="按知识点筛选">
+            <option value="">全部知识点</option>
+            {availableTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+          </select>
         </div>
 
         <ul className="max-h-[44vh] space-y-0.5 overflow-y-auto lg:max-h-[68vh]">
@@ -273,7 +275,7 @@ export default function QuizPage() {
             className="type-micro hidden sm:inline"
             style={{ color: 'var(--text-quaternary)' }}
           >
-            ← → 翻页 · 空格 展开/收起 · 1 已掌握 · 2 需复习 · 3 加入错题本
+            ← → 翻页 · 完成作答与自评后进入复习计划
           </span>
         </div>
       </div>

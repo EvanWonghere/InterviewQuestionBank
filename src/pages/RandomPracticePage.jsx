@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
-import NoteEditor from '@/components/quiz/NoteEditor';
+import AnswerPanel from '@/components/quiz/AnswerPanel';
 
 /**
  * @param {string[]} ids
@@ -52,7 +52,7 @@ export default function RandomPracticePage() {
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const [pendingIds, setPendingIds] = useState([]);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [, setShowAnswer] = useState(false);
   const [answeredCurrent, setAnsweredCurrent] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [cycle, setCycle] = useState(1);
@@ -158,31 +158,6 @@ export default function RandomPracticePage() {
     const wrong = values.filter((v) => v === 'wrong').length;
     return { mastered, review, wrong };
   }, [sessionRecord]);
-
-  useEffect(() => {
-    if (phase !== 'practicing' || !currentQuestion) return;
-    const onKeyDown = (e) => {
-      if (e.target?.closest('input, textarea, [contenteditable="true"]')) return;
-      switch (e.key) {
-        case '1':
-          e.preventDefault();
-          markCurrent('mastered');
-          break;
-        case '2':
-          e.preventDefault();
-          markCurrent('review');
-          break;
-        case '3':
-          e.preventDefault();
-          markCurrent('wrong');
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [currentQuestion, markCurrent, phase]);
 
   if (loading) {
     return (
@@ -423,13 +398,6 @@ export default function RandomPracticePage() {
     );
   }
 
-  const currentStatus = sessionRecord[currentQuestionId] ?? null;
-  const MARK_BUTTONS = [
-    { status: 'mastered', label: '已掌握', shortcut: '1', className: 'btn-status btn-status-mastered' },
-    { status: 'review', label: '需要复习', shortcut: '2', className: 'btn-status btn-status-review' },
-    { status: 'wrong', label: '加入错题本', shortcut: '3', className: 'btn-status btn-status-wrong' },
-  ];
-
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       {/* Status bar */}
@@ -467,50 +435,7 @@ export default function RandomPracticePage() {
               <QuestionContent content={currentQuestion.question} />
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowAnswer((v) => !v)}
-                className={showAnswer ? 'btn-neutral' : 'btn-blue'}
-              >
-                {showAnswer ? '收起答案' : '展开答案'}
-              </button>
-              <span className="type-micro" style={{ color: 'var(--text-quaternary)' }}>
-                先标记结果再进入下一题（1 已掌握 / 2 需复习 / 3 加入错题本）
-              </span>
-            </div>
-
-            {showAnswer && (
-              <>
-                <div
-                  className="answer-block mt-5 rounded-2xl p-6"
-                  style={{
-                    background: 'var(--filter-bg)',
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                >
-                  <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>
-                    参考答案
-                  </p>
-                  <QuestionContent content={currentQuestion.answer} />
-                </div>
-                <NoteEditor questionId={currentQuestion.id} />
-              </>
-            )}
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {MARK_BUTTONS.map(({ status, label, shortcut, className }) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => markCurrent(status)}
-                  className={`${className} ${currentStatus === status ? 'is-active' : ''}`}
-                >
-                  <span className="dot" />
-                  {label}（{shortcut}）
-                </button>
-              ))}
-            </div>
+            <AnswerPanel question={currentQuestion} onRated={markCurrent} />
           </>
         ) : (
           <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>没有可用题目</p>

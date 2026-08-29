@@ -1,4 +1,8 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import QuestionAsset from './QuestionAsset';
 
 /**
  * @param {{ content: string, className?: string }} props
@@ -8,6 +12,8 @@ export default function Markdown({ content, className = '' }) {
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           h1: ({ children }) => (
             <h1
@@ -49,6 +55,9 @@ export default function Markdown({ content, className = '' }) {
               {children}
             </a>
           ),
+          img: ({ src, alt }) => src?.startsWith('asset://')
+            ? <QuestionAsset assetId={src.slice('asset://'.length)} alt={alt} />
+            : <img src={src} alt={alt ?? ''} loading="lazy" className="my-4 max-h-[32rem] rounded-xl object-contain" />,
         }}
       >
         {content}

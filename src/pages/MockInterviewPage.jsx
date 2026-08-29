@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
-import NoteEditor from '@/components/quiz/NoteEditor';
+import AnswerPanel from '@/components/quiz/AnswerPanel';
 
 const COUNT_OPTIONS = [5, 10, 20];
 const DEFAULT_COUNT = 10;
@@ -57,7 +57,7 @@ export default function MockInterviewPage() {
   const [count, setCount] = useState(DEFAULT_COUNT);
   const [deck, setDeck] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [, setShowAnswer] = useState(false);
   const [roundResults, setRoundResults] = useState(/** @type {Record<string, 'mastered'|'wrong'>} */ ({}));
 
   const startInterview = useCallback(() => {
@@ -77,7 +77,7 @@ export default function MockInterviewPage() {
     (status) => {
       if (!currentQuestion) return;
       setProgress(currentQuestion.id, status);
-      setRoundResults((prev) => ({ ...prev, [currentQuestion.id]: status }));
+      setRoundResults((prev) => ({ ...prev, [currentQuestion.id]: status === 'mastered' ? 'mastered' : 'wrong' }));
       setShowAnswer(false);
       if (isLast) {
         setPhase('summary');
@@ -87,8 +87,6 @@ export default function MockInterviewPage() {
     },
     [currentQuestion, isLast, setProgress]
   );
-
-  const toggleAnswer = useCallback(() => setShowAnswer((v) => !v), []);
 
   const summaryStats = useMemo(() => {
     const mastered = Object.values(roundResults).filter((s) => s === 'mastered').length;
@@ -245,35 +243,7 @@ export default function MockInterviewPage() {
                   <QuestionContent content={currentQuestion.question} />
                 </div>
 
-                <div className="mt-5">
-                  <button
-                    type="button"
-                    onClick={toggleAnswer}
-                    className={showAnswer ? 'btn-neutral' : 'btn-blue'}
-                  >
-                    {showAnswer ? '收起答案' : '查看答案解析'}
-                  </button>
-                  {showAnswer && (
-                    <>
-                      <div
-                        className="answer-block mt-5 rounded-2xl p-6"
-                        style={{
-                          background: 'var(--filter-bg)',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        <p
-                          className="type-eyebrow mb-3"
-                          style={{ color: 'var(--apple-blue)' }}
-                        >
-                          参考答案
-                        </p>
-                        <QuestionContent content={currentQuestion.answer} />
-                      </div>
-                      <NoteEditor questionId={currentQuestion.id} />
-                    </>
-                  )}
-                </div>
+                <AnswerPanel question={currentQuestion} onRated={markAndNext} />
               </article>
             )}
           </div>
@@ -289,24 +259,7 @@ export default function MockInterviewPage() {
             borderTop: '1px solid var(--border-subtle)',
           }}
         >
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => markAndNext('wrong')}
-              className="btn-status btn-status-wrong is-active"
-            >
-              <span className="dot" />
-              忘了 / 答错
-            </button>
-            <button
-              type="button"
-              onClick={() => markAndNext('mastered')}
-              className="btn-status btn-status-mastered is-active"
-            >
-              <span className="dot" />
-              掌握了
-            </button>
-          </div>
+          <p className="mx-auto max-w-3xl text-center type-caption" style={{ color: 'var(--text-tertiary)' }}>提交答案并完成自评后自动进入下一题</p>
         </footer>
       </div>
     );

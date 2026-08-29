@@ -60,6 +60,59 @@
   --track-bg: rgba(0, 0, 0, 0.08);
 }
 
+/* Cloud question bank controls */
+.answer-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.9rem;
+  background: var(--surface-card);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.answer-option:hover,
+.answer-option.is-selected {
+  border-color: var(--apple-blue);
+  background: var(--filter-bg);
+}
+
+.answer-option input {
+  margin-top: 0.3rem;
+  accent-color: var(--apple-blue);
+}
+
+.answer-option .markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.result-banner {
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  font-weight: 600;
+}
+
+.result-banner.is-correct {
+  color: var(--success-fg);
+  background: color-mix(in srgb, var(--success-fg) 12%, transparent);
+}
+
+.result-banner.is-wrong {
+  color: var(--error-fg);
+  background: var(--error-bg);
+}
+
+.rating-again { border-color: var(--error-fg); }
+.rating-hard { border-color: var(--warning-fg); }
+.rating-good,
+.rating-easy { border-color: var(--success-fg); }
+
+select.input-apple {
+  appearance: auto;
+}
+
 /* ── Dark theme: applied when system is dark and user has not forced
        a specific theme (data-theme attribute absent / set to auto) ──── */
 @media (prefers-color-scheme: dark) {
