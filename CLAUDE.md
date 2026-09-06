@@ -27,7 +27,7 @@ npm run migrate:questions  # Idempotently seed categories and legacy questions
 
 ## Data and security
 
-Supabase is the source of truth after migration. The bundled 148-question JSON file is both the import source and offline/public fallback. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are browser variables. `SUPABASE_SERVICE_ROLE_KEY` is accepted only by the local migration script.
+Supabase is the source of truth after migration. The bundled 178-question JSON file is both the import source and offline/public fallback. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are browser variables. `SUPABASE_SERVICE_ROLE_KEY` is accepted only by the local migration script.
 
 New questions default to `draft` and `private`. Publishing must pass `questionSchema` validation. Correct answers are stored in `question_solutions`, protected by RLS, and must not be joined into public list queries.
 

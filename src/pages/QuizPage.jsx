@@ -21,6 +21,7 @@ const DIFFICULTY_OPTIONS = [
 function matchKeyword(question, keyword) {
   if (!keyword || !keyword.trim()) return true;
   const k = keyword.trim().toLowerCase();
+  if (/^q-\d+$/.test(k)) return [question.id, question.legacyId].some((id) => id?.toLowerCase() === k);
   const title = (question.title ?? '').toLowerCase();
   const q = (question.question ?? '').toLowerCase();
   const answer = (question.answer ?? '').toLowerCase();

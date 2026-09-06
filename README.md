@@ -9,7 +9,7 @@
 - 分类、题型、知识点、难度筛选，以及随机练习和模拟面试。
 - 今日复习、历史错题、已掌握、薄弱知识点和作答历史。
 - 管理员题目 CRUD、复制、软归档、私有草稿和公开发布。
-- Supabase Postgres、Auth、Storage 与 RLS；未配置云端时自动回退到现有静态 148 题。
+- Supabase Postgres、Auth、Storage 与 RLS；未配置云端时自动回退到现有静态题库。
 
 ## 本地开发
 
@@ -41,7 +41,7 @@ select id from auth.users where email = '<你的 GitHub 邮箱>'
 on conflict do nothing;
 ```
 
-5. 使用仅限本地终端的 service-role key 幂等迁移现有 9 个分类和 148 道题：
+5. 使用仅限本地终端的 service-role key 幂等迁移静态JSON中的分类和题目：
 
 ```bash
 SUPABASE_URL=https://<project-ref>.supabase.co \
@@ -79,3 +79,9 @@ npm run test:e2e
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 跨仓库部署继续使用现有 `API_TOKEN_GITHUB` Secret。
+
+## 2026-09 题目补充
+
+静态题库现有178题。本轮新增q-149–q-178：UI空间7题、构建产物/排错6题、操作系统基础/场景5题、引擎原理12题，每题含评分点、追问、最小验证与资料链接。支持按稳定题号（含云端legacyId）搜索。
+
+练习与内容规范见 [题目质量约定](docs/QUESTION_QUALITY.md)。云端增量文件为 `supabase/migrations/20260906000000_quality_question_pack.sql`，仅插入缺失ID，不覆盖已编辑内容；本轮经过审核的新题随部署公开。更新静态JSON不等于更新Supabase，发布时必须同时应用迁移。
