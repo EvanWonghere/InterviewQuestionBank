@@ -9,8 +9,9 @@ export function modelFailure(error) {
     '429': '模型服务限流，请稍后重试。',
   };
   if (code) return { status: 502, code: `upstream_${code}`, error: known[code] ?? `模型服务暂时不可用（上游HTTP ${code}）。` };
-  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return { status: 504, code: 'model_timeout', error: '模型响应超时，输入已保留；请稍后重试或选择响应更快的模型。' };
-  if (text === 'upstream_length') return { status: 502, code: 'model_length', error: '模型输出达到长度上限，未得到完整结果；请缩短作答或选择非推理模型。' };
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return { status: 504, code: 'model_timeout', error: '模型响应超时，输入已保留；请稍后重试，或在 API 设置中降低思考强度。' };
+  if (text === 'upstream_length') return { status: 502, code: 'model_length', error: '模型输出（含思考过程）达到长度上限，未得到完整结果；可在 API 设置中降低思考强度后重试。' };
+  if (text === 'upstream_busy') return { status: 502, code: 'model_busy', error: '模型服务资源不足，本次未完成，请稍后重试。' };
   if (text === 'evaluation_parse') return { status: 502, code: 'model_json', error: '模型未返回有效的评估格式，可稍后重试。' };
   if (text === 'upstream_format') return { status: 502, code: 'model_format', error: '模型未返回有效文本，请确认服务商支持 Chat Completions。' };
   return { status: 502, code: 'model_network', error: '服务端连接模型失败，请稍后重试；若持续发生，请检查服务商状态和 API 地址。' };

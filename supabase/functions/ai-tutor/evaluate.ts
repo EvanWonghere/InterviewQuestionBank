@@ -9,7 +9,7 @@ export type EvaluationContext = {
   client: any; // user JWT client: grade_question enforces the caller's own visibility
   db: any; // service-role client
   model: string;
-  callModel: (messages: unknown[], maxTokens: number) => Promise<string>;
+  callModel: (messages: unknown[]) => Promise<string>; // JSON Output, configured thinking mode and budget
   json: (data: unknown, status?: number) => Response;
   must: Must;
 };
@@ -45,7 +45,7 @@ export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
       question: q, solution: solution?.solution, correct: row.is_correct, mode: row.mode, chain,
       current: { followUpQuestion: row.follow_up_question, answer: submission },
     });
-    const result = parseEvaluation(await ctx.callModel(messages, 1500), { correct: row.is_correct, allowFollowUp: row.round < MAX_ROUNDS[row.mode as 'practice' | 'interview'] });
+    const result = parseEvaluation(await ctx.callModel(messages), { correct: row.is_correct, allowFollowUp: row.round < MAX_ROUNDS[row.mode as 'practice' | 'interview'] });
     const saved = must(await db.from('ai_evaluations').update({
       status: 'complete', result, score: result.score, suggested_rating: result.suggestedRating, weakness_tags: weaknessTags(result),
     }).eq('id', row.id).eq('status', 'running').select('*')) as Row[];
@@ -98,7 +98,7 @@ export async function handleInterviewReport(input: Row, ctx: EvaluationContext) 
     };
   });
   return runReport(ctx, input, 'interview', async () => {
-    const report = parseInterviewReport(await ctx.callModel(buildInterviewReportMessages(items), 2000), ids);
+    const report = parseInterviewReport(await ctx.callModel(buildInterviewReportMessages(items)), ids);
     return { ...report, questionScores: items.map((i) => ({ questionId: i.questionId, title: i.title, score: i.finalScore, rounds: i.rounds.length })) };
   });
 }
@@ -116,7 +116,7 @@ export async function handleWeaknessReport(input: Row, ctx: EvaluationContext) {
   for (const r of rows) if (typeof r.score === 'number' && (lowest.get(r.question_id) ?? 101) > r.score) lowest.set(r.question_id, r.score);
   const candidates = questions.map((x) => ({ id: x.id, title: x.title, lowestScore: lowest.get(x.id) ?? null }));
   return runReport(ctx, input, 'weakness', async () => {
-    const report = parseWeaknessReport(await ctx.callModel(buildWeaknessReportMessages({ weaknesses, candidates }), 2000), candidates.map((c) => c.id));
+    const report = parseWeaknessReport(await ctx.callModel(buildWeaknessReportMessages({ weaknesses, candidates })), candidates.map((c) => c.id));
     return { ...report, basedOn: rows.length };
   });
 }

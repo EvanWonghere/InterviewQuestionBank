@@ -122,4 +122,21 @@ await db.query('delete from ai_evaluations where id=$1',[e1.evaluation.id]);
 assert.equal((await db.query(`select count(*)::int as n from ai_evaluations where root_id=$1`,[e1.evaluation.id])).rows[0].n,0); // chain cascades
 assert.equal((await db.query(`select count(*)::int as n from attempts where ai_evaluation_id is not null`)).rows[0].n,0);
 assert.equal((await db.query(`select count(*)::int as n from attempts`)).rows[0].n,4);
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports');
+// Reasoning settings and the 150s stale cutoff.
+await db.exec(await readFile(new URL('../supabase/migrations/20260917002000_ai_reasoning_settings.sql',import.meta.url),'utf8'));
+assert.equal((await db.query(`select reasoning_effort from ai_settings where user_id=$1`,[a])).rows[0].reasoning_effort,'high');
+await assert.rejects(()=>db.query(`update ai_settings set reasoning_effort='extreme' where user_id=$1`,[a]),/check constraint/);
+await db.exec(`update ai_settings set request_count=0;delete from ai_evaluations;`);
+const slow=await db.query(`select ai_begin_evaluation($1,$2,'v',$3,'practice',null,null,'{}',null,'m') as r`,[a,q,req(300)]).then(r=>r.rows[0].r);
+await db.query(`update ai_evaluations set created_at=now()-interval '100 seconds' where id=$1`,[slow.evaluation.id]);
+await assert.rejects(()=>db.query(`select ai_begin_evaluation($1,$2,'v',$3,'practice',null,null,'{}',null,'m')`,[a,q,req(301)]),/generation_busy/); // 100s: still healthy
+await db.query(`update ai_evaluations set created_at=now()-interval '160 seconds' where id=$1`,[slow.evaluation.id]);
+assert.equal((await db.query(`select ai_begin_evaluation($1,$2,'v',$3,'practice',null,null,'{}',null,'m') as r`,[a,q,req(302)])).rows[0].r.duplicate,false);
+assert.equal((await db.query(`select status from ai_evaluations where id=$1`,[slow.evaluation.id])).rows[0].status,'failed');
+await db.exec(`update ai_settings set request_count=0;`);
+const chat=await db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m') as r`,[a,q,req(310)]).then(r=>r.rows[0].r);
+await db.query(`update ai_messages set created_at=now()-interval '100 seconds' where id=$1`,[chat.message.id]);
+await assert.rejects(()=>db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m')`,[a,q,req(311)]),/generation_busy/);
+await db.query(`update ai_messages set created_at=now()-interval '160 seconds' where id=$1`,[chat.message.id]);
+assert.equal((await db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m') as r`,[a,q,req(312)])).rows[0].r.duplicate,false);
+await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff');

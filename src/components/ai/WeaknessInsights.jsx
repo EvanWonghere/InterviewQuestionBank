@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { latestReport, listEvaluations, requestWeaknessReport } from '@/data/aiRepository';
 import { ChatMarkdown } from './TutorPanel';
+import Elapsed from './Elapsed';
 import { aggregateWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 
 // Loaded lazily by ReviewPage after the admin check.
@@ -76,6 +77,7 @@ export default function WeaknessInsights({ questionMap }) {
             <p className="type-eyebrow" style={{ color: 'var(--apple-blue)' }}>AI 学习建议</p>
             <button type="button" className="btn-blue-outline" disabled={generating} onClick={generate}>{generating ? '生成中…' : report ? '重新生成' : '生成 AI 学习建议'}</button>
           </div>
+          {generating && <p role="status" className="type-caption mt-2">AI 正在分析薄弱点…<Elapsed /></p>}
           {report?.result && (
             <>
               <p className="type-micro mt-2" style={{ color: 'var(--text-tertiary)' }}>

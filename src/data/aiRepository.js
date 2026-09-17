@@ -4,7 +4,8 @@ export async function aiRequest(input, { signal } = {}) {
   const client = requireSupabase();
   const { data, error } = await client.auth.getSession();
   if (error || !data.session) throw new Error('请重新登录管理员账户');
-  const timeout = AbortSignal.timeout(85000);
+  // Above the server's 90s model wait plus database work, so the server reports its own timeout first.
+  const timeout = AbortSignal.timeout(120000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   const send = token => fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`, {
     method: 'POST', signal: requestSignal,

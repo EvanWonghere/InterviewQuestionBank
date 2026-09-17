@@ -2,21 +2,15 @@ import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import { endpoint, validateChat, buildContext, sseData } from './core.js';
 import { handleEvaluate, handleInterviewReport, handleWeaknessReport } from './evaluate.ts';
 import { modelFailure } from './modelErrors.js';
-import { modelOptions } from './modelOptions.js';
+import { MODEL_TIMEOUT_MS, modelOptions, normalizeEffort, outputBudget, REASONING_EFFORTS } from './modelOptions.js';
+import { callModel as callModelWith } from './modelClient.js';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 const must = <T>(r: { data: T; error: { message: string } | null }): T => { if (r.error) throw new Error(r.error.message); return r.data; };
-// Non-streaming Chat Completions call; errors carry only the upstream status, never its body.
-const callModel = async (url: string, model: string, messages: unknown[], maxTokens: number, timeoutMs: number) => {
- const response=await fetch(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,max_tokens:maxTokens,stream:false,...modelOptions(url)})});
- if(!response.ok) throw new Error(`upstream_http_${response.status}`);
- const result=await response.json().catch(()=>null);
- if(result?.choices?.[0]?.finish_reason==='length') throw new Error('upstream_length');
- const content=result?.choices?.[0]?.message?.content;
- if(typeof content!=='string' || !content.trim()) throw new Error('upstream_format');
- return content;
-};
+type ModelCall = { effort: string; json?: boolean };
+const callModel = (url: string, model: string, messages: unknown[], { effort, json = false }: ModelCall) =>
+ callModelWith({ url, apiKey: env('AI_API_KEY'), model, messages, effort, json });
 export async function handleRequest(req: Request, factory = createClient) {
  if (req.method === 'OPTIONS') return new Response(null, { headers });
  if (req.method !== 'POST') return json({ error: 'POST required' },405);
@@ -33,18 +27,21 @@ export async function handleRequest(req: Request, factory = createClient) {
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
   if (action === 'settings') {
-   const settings = must(await db.from('ai_settings').select('base_url,model').eq('user_id',uid).maybeSingle());
-   return json({ settings: settings ?? {base_url:'',model:''}, configured: Boolean(env('AI_API_KEY')), allowedOrigins:env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean) });
+   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
+   return json({ settings: settings ?? {base_url:'',model:'',reasoning_effort:'high'}, reasoningEfforts: REASONING_EFFORTS, configured: Boolean(env('AI_API_KEY')), allowedOrigins:env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean) });
   }
   if (action === 'save-settings' || action === 'test') {
    const url = endpoint(input.baseUrl,env('AI_ALLOWED_ORIGINS'));
    if (typeof input.model !== 'string' || !input.model.trim() || input.model.length > 200) return json({error:'请填写model（最长200字）'},400);
+   if (input.reasoningEffort != null && !REASONING_EFFORTS.includes(input.reasoningEffort)) return json({error:'无效思考强度'},400);
+   const effort=normalizeEffort(input.reasoningEffort);
    if(action === 'save-settings') {
-    must(await db.from('ai_settings').upsert({user_id:uid,base_url:input.baseUrl.trim().replace(/\/$/,''),model:input.model.trim()})); return json({ok:true});
+    must(await db.from('ai_settings').upsert({user_id:uid,base_url:input.baseUrl.trim().replace(/\/$/,''),model:input.model.trim(),reasoning_effort:effort})); return json({ok:true});
    }
    if (!env('AI_API_KEY')) return json({error:'尚未设置服务端AI_API_KEY'},503);
    must(await db.rpc('ai_take_rate',{p_user:uid}));
-   try { await callModel(url,input.model,[{role:'user',content:'Reply with OK.'}],256,45000); return json({ok:true}); }
+   // Same thinking mode, budget and timeout as real generation, so a passing test predicts real behaviour.
+   try { await callModel(url,input.model,[{role:'user',content:'Reply with OK.'}],{effort}); return json({ok:true}); }
    catch(error) {
     const failure=modelFailure(error); return json(failure,failure.status);
    }
@@ -59,24 +56,24 @@ export async function handleRequest(req: Request, factory = createClient) {
   if (action === 'history') {
    const c=must(await db.from('ai_conversations').select('*').eq('user_id',uid).eq('question_id',input.questionId).maybeSingle());
    if(!c) return json({conversation:null,messages:[]});
-   must(await db.from('ai_messages').update({status:'failed'}).eq('conversation_id',c.id).eq('status','running').lt('created_at',new Date(Date.now()-90000).toISOString()));
+   must(await db.from('ai_messages').update({status:'failed'}).eq('conversation_id',c.id).eq('status','running').lt('created_at',new Date(Date.now()-150000).toISOString()));
    const messages=must(await db.from('ai_messages').select('*').eq('conversation_id',c.id).order('created_at',{ascending:false}).order('request_id',{ascending:false}).order('role',{ascending:true}).limit(200));
    const q=must(await db.from('questions').select('updated_at').eq('id',input.questionId).single());
    if(!q)return json({error:'题目不存在'},404);
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
   }
   if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report') {
-   const settings=must(await db.from('ai_settings').select('base_url,model').eq('user_id',uid).maybeSingle());
+   const settings=must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
    if(!settings?.model || !env('AI_API_KEY')) return json({error:'请先配置API地址、model和服务端密钥'},503);
    const url=endpoint(settings.base_url,env('AI_ALLOWED_ORIGINS'));
-   const ctx={uid,client,db,model:settings.model,json,must,callModel:(messages:unknown[],maxTokens:number)=>callModel(url,settings.model,messages,maxTokens,60000)};
+   const ctx={uid,client,db,model:settings.model,json,must,callModel:(messages:unknown[])=>callModel(url,settings.model,messages,{effort:settings.reasoning_effort,json:true})};
    if(action==='evaluate') return await handleEvaluate(input,ctx);
    if(action==='interview-report') return await handleInterviewReport(input,ctx);
    return await handleWeaknessReport(input,ctx);
   }
   if(action !== 'chat') return json({error:'未知操作'},400);
   validateChat(input);
-  const settings=must(await db.from('ai_settings').select('base_url,model').eq('user_id',uid).maybeSingle());
+  const settings=must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
   if(!settings?.model || !env('AI_API_KEY')) return json({error:'请先配置API地址、model和服务端密钥'},503);
   const url=endpoint(settings.base_url,env('AI_ALLOWED_ORIGINS'));
   const q=must(await db.from('questions').select('id,title,prompt_md,type,payload,updated_at').eq('id',input.questionId).single());
@@ -90,16 +87,16 @@ export async function handleRequest(req: Request, factory = createClient) {
   if(begin.duplicate) return json({error:'此请求已接收，请重新加载历史确认结果；不会重复调用',duplicate:true},409);
   const abort=new AbortController(); let disconnected=false;
   req.signal.addEventListener('abort',()=>{disconnected=true;abort.abort();},{once:true});
-  const timer=setTimeout(()=>abort.abort(),60000);
+  const timer=setTimeout(()=>abort.abort(),MODEL_TIMEOUT_MS);
   const encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller) {
-   let body=''; let status='failed'; let failure=''; let lastSave=0; let polling=false;
+   let body=''; let status='failed'; let failure=''; let lastSave=0; let polling=false; let lastThinking=0;
    const emit=(event:string,data:unknown)=>{try{controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));}catch{disconnected=true;abort.abort();}};
    const persist=async()=>must(await db.from('ai_messages').update({body}).eq('id',begin.message.id));
    const poll=setInterval(async()=>{if(polling)return;polling=true;try{const m=must(await db.from('ai_messages').select('status').eq('id',begin.message.id).single());if(!m || m.status!=='running'){disconnected=true;abort.abort();}}catch{abort.abort();}finally{polling=false;}},1000);
    try {
     emit('meta',{truncated:context.truncated,model:settings.model,version:q.updated_at});
-    const upstream=await fetch(url,{method:'POST',redirect:'error',signal:abort.signal,headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:settings.model,messages:[...context.messages,{role:'user',content:input.message}],max_tokens:2048,stream:true,...modelOptions(url)})});
+    const upstream=await fetch(url,{method:'POST',redirect:'error',signal:abort.signal,headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:settings.model,messages:[...context.messages,{role:'user',content:input.message}],max_tokens:outputBudget(url,settings.reasoning_effort),stream:true,...modelOptions(url,{effort:settings.reasoning_effort})})});
     if(!upstream.ok) throw new Error(`upstream_http_${upstream.status}`);
     if(!upstream.body) throw new Error('upstream_format');
     let finished=false;
@@ -107,8 +104,11 @@ export async function handleRequest(req: Request, factory = createClient) {
      if(data==='[DONE]'){finished=true;break;}
      const parsed=JSON.parse(data); if(parsed.error) throw new Error('模型服务返回错误');
      const delta=parsed.choices?.[0]?.delta?.content;
+     // Reasoning text is not forwarded; a throttled marker shows progress and keeps the connection active.
+     if(parsed.choices?.[0]?.delta?.reasoning_content && Date.now()-lastThinking>5000){lastThinking=Date.now();emit('thinking',{thinking:true});}
      if(typeof delta==='string'){body+=delta;if(body.length>60000)throw new Error('回复超过长度限制');emit('delta',{text:delta});}
      if(parsed.choices?.[0]?.finish_reason==='length') throw new Error('upstream_length');
+     if(parsed.choices?.[0]?.finish_reason==='insufficient_system_resource') throw new Error('upstream_busy');
      if(parsed.choices?.[0]?.finish_reason) finished=true;
      if(Date.now()-lastSave>700){await persist();lastSave=Date.now();}
     }

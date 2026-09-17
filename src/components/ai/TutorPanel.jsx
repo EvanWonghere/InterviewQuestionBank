@@ -7,6 +7,7 @@ import { aiRequest, streamChat } from '@/data/aiRepository';
 import { useNotesStore } from '@/store/notesStore';
 import { useAIDraft } from '@/lib/aiDrafts';
 
+const EFFORT_LABELS = { none: '关闭', low: '低', high: '高（默认）', max: '最大' };
 const quickPrompts = ['给我一个提示', '检查我的思路', '解释背后的机制', '联系Unity项目', '用C#和C++对照', '像面试官一样追问', '出一道变式，先不告诉我答案'];
 export function ChatMarkdown({ content }) {
   return <div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} skipHtml components={{
@@ -24,7 +25,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [text, setText] = useAIDraft(`${user.id}:${question.id}:chat`); const [includeNote, setIncludeNote] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState({ baseUrl: '', model: '', configured: false, allowedOrigins: [] });
+  const [settings, setSettings] = useState({ baseUrl: '', model: '', reasoningEffort: 'high', configured: false, allowedOrigins: [] });
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [noteDraft, setNoteDraft] = useState(null); const [noteBusy, setNoteBusy] = useState(false);
   const [lastRequest, setLastRequest] = useState(null);
@@ -46,7 +47,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     Promise.all([aiRequest({ action: 'settings' }), aiRequest({ action: 'history', questionId: question.id })])
       .then(([config, history]) => {
         if (!alive.current) return;
-        setSettings({ baseUrl: config.settings.base_url, model: config.settings.model, configured: config.configured, allowedOrigins: config.allowedOrigins });
+        setSettings({ baseUrl: config.settings.base_url, model: config.settings.model, reasoningEffort: config.settings.reasoning_effort ?? 'high', configured: config.configured, allowedOrigins: config.allowedOrigins });
         setSettingsOpen(!config.configured || !config.settings.model);
         setMessages(history.messages);
         if (phaseRef.current === 'hint' && history.messages.some(m => m.role === 'assistant' && m.body)) assistRef.current?.();
@@ -80,6 +81,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       await streamChat(request, { signal: controller.signal, onEvent: event => {
         if (!alive.current) return;
         if (event.truncated) setNotice('上下文仅包含最近20条及长度预算内内容；历史不会被删除。');
+        if (event.thinking) setMessages(prev => prev.map(m => m.id === localId ? { ...m, thinking: true } : m));
         if (event.text) {
           markAssisted();
           setMessages(prev => prev.map(m => m.id === localId ? { ...m, body: m.body + event.text } : m));
@@ -109,7 +111,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const configure = async action => {
     setSettingsBusy(true); setError('');
     try {
-      await aiRequest({ action, baseUrl: settings.baseUrl, model: settings.model });
+      await aiRequest({ action, baseUrl: settings.baseUrl, model: settings.model, reasoningEffort: settings.reasoningEffort });
       if (alive.current) setNotice(action === 'test' ? '连接成功（仅发送固定测试文本）' : '设置已保存');
     } catch (e) { if (alive.current) setError(e.message); }
     finally { if (alive.current) setSettingsBusy(false); }
@@ -140,6 +142,8 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         <p className="type-caption">Key由Supabase服务端保管：{settings.configured ? '已配置' : '未配置AI_API_KEY'}。网页不接收Key。</p>
         <label>Base URL<input className="input-apple" value={settings.baseUrl} placeholder="https://api.example.com/v1" onChange={e => setSettings(s => ({ ...s, baseUrl: e.target.value }))} /></label>
         <label>Model<input className="input-apple" value={settings.model} placeholder="填写服务商的model名称" onChange={e => setSettings(s => ({ ...s, model: e.target.value }))} /></label>
+        <label>思考强度<select className="input-apple" value={settings.reasoningEffort} onChange={e => setSettings(s => ({ ...s, reasoningEffort: e.target.value }))}>{Object.entries(EFFORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <p className="type-caption">仅对官方 DeepSeek API 生效，聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}
@@ -152,7 +156,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
           <p className="type-eyebrow">{m.role === 'user' ? '我' : '学习教练'}{m.model ? ` · ${m.model}` : ''}</p>
           <ChatMarkdown content={m.body} />
           {m.role === 'assistant' && <>
-            <p className="type-micro">{m.status === 'running' ? '生成中…' : m.status !== 'complete' ? '未完成回复' : 'AI生成 · 请结合资料核对'}</p>
+            <p className="type-micro">{m.status === 'running' ? (m.thinking && !m.body ? '思考中…' : '生成中…') : m.status !== 'complete' ? '未完成回复' : 'AI生成 · 请结合资料核对'}</p>
             {m.body && <div className="flex gap-2 mt-2"><button className="btn-neutral" onClick={() => navigator.clipboard.writeText(m.body).catch(() => setError('复制失败，请手动选择内容'))}>复制</button><button className="btn-neutral" onClick={() => setNoteDraft(m.body)}>加入本题笔记</button></div>}
           </>}
         </article>)}

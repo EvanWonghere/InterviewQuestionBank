@@ -42,7 +42,7 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
   if(path.endsWith('/functions/v1/ai-tutor')) {
    state.calls.push(input.action);
    if(!admin)return reply({error:'仅管理员可用'},403);
-   if(input.action==='settings')return reply({configured,settings:{base_url:'https://model.example.test/v1',model:'synthetic-tutor'},allowedOrigins:['https://model.example.test']});
+   if(input.action==='settings')return reply({configured,settings:{base_url:'https://model.example.test/v1',model:'synthetic-tutor',reasoning_effort:'high'},allowedOrigins:['https://model.example.test']});
    if(input.action==='history')return reply({messages:state.messages[input.questionId]??[],versionChanged:false});
    if(input.action==='clear'){state.messages[input.questionId]=[];return reply({ok:true});}
    if(input.action==='append-note'){state.notes=[{question_id:input.questionId,body_md:`原有笔记\n\n${input.body}`}];return reply({body:state.notes[0].body_md});}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { aiRequest, evaluateAnswer } from '@/data/aiRepository';
 import { REVIEW_RATINGS } from '@/lib/sm2';
 import { ChatMarkdown } from './TutorPanel';
+import Elapsed from './Elapsed';
 import { MAX_ROUNDS } from '../../../supabase/functions/ai-tutor/evaluation.js';
 import { useAuth } from '@/context/AuthContext';
 import { useAIDraft } from '@/lib/aiDrafts';
@@ -99,7 +100,7 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
 
       {rounds.map((evaluation) => <RoundCard key={evaluation.id} evaluation={evaluation} />)}
 
-      {(status === 'checking' || busy) && <p role="status" className="type-caption mt-3">{rounds.length ? 'AI 正在评估你的追问回答…' : 'AI 正在对照评分标准评估…'}</p>}
+      {(status === 'checking' || busy) && <p role="status" className="type-caption mt-3">{rounds.length ? 'AI 正在思考并评估你的追问回答…' : 'AI 正在对照评分标准思考评估…'}{busy && <Elapsed />}</p>}
 
       {error && !busy && (
         <div className="mt-3">

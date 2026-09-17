@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { latestReport, listEvaluations, requestInterviewReport } from '@/data/aiRepository';
 import { ChatMarkdown } from './TutorPanel';
+import Elapsed from './Elapsed';
 
 // Admin-only session recap. Generates once per session; revisits reuse the stored report.
 export default function InterviewReport({ sessionId, questions }) {
@@ -58,7 +59,7 @@ function ReportState({ sessionId, questions }) {
   return (
     <section className="ai-evaluation mb-7 text-left" aria-label="AI面试报告">
       <p className="type-eyebrow" style={{ color: 'var(--apple-blue)' }}>AI 面试报告</p>
-      {(status === 'loading' || status === 'generating') && <p role="status" className="type-caption mt-3">{status === 'loading' ? '正在读取本场评估…' : 'AI 正在汇总本场表现…'}</p>}
+      {(status === 'loading' || status === 'generating') && <p role="status" className="type-caption mt-3">{status === 'loading' ? '正在读取本场评估…' : <>AI 正在汇总本场表现…<Elapsed /></>}</p>}
       {status === 'error' && (
         <div className="mt-3">
           <p role="alert" className="ai-error">{error}</p>
