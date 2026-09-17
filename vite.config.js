@@ -31,6 +31,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     globals: true,
-    exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**'],
+    exclude: ['tests/e2e/**', 'tests/ai-e2e/**', 'supabase/functions/**/handler_test.js', 'dist-ai/**', 'node_modules/**', 'dist/**'],
   },
 })

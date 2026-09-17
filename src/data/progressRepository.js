@@ -29,7 +29,7 @@ export async function loadCloudLearningData(userId) {
   };
 }
 
-export async function saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons = [], customErrorReason = '' }, previous) {
+export async function saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons = [], customErrorReason = '', assistanceUsed = null }, previous) {
   const client = requireSupabase();
   const next = nextSm2State(previous, quality);
   const { error: attemptError } = await client.from('attempts').insert({
@@ -37,6 +37,7 @@ export async function saveCloudAttempt({ userId, questionId, submission, correct
     question_id: questionId,
     submission,
     is_correct: correct,
+          assistance_used: assistanceUsed,
     quality,
     error_reasons: errorReasons,
     custom_error_reason: customErrorReason || null,

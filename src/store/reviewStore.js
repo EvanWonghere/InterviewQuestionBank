@@ -15,16 +15,17 @@ export const useReviewStore = create(
         set({ reviewStates: data.reviewStates, attempts: data.attempts, hydratedUserId: userId });
         return data;
       },
-      recordAttempt: async ({ userId, questionId, submission, correct, quality, errorReasons, customErrorReason }) => {
+      recordAttempt: async ({ userId, questionId, submission, correct, quality, errorReasons, customErrorReason, assistanceUsed = null }) => {
         const previous = get().reviewStates[questionId] ?? {};
         const next = userId
-          ? await saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons, customErrorReason }, previous)
+          ? await saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons, customErrorReason, assistanceUsed }, previous)
           : nextSm2State(previous, quality);
         const attempt = {
           id: crypto.randomUUID(),
           question_id: questionId,
           submission,
           is_correct: correct,
+          assistance_used: assistanceUsed,
           quality,
           error_reasons: errorReasons ?? [],
           custom_error_reason: customErrorReason ?? '',

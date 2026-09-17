@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'dist-preview', 'htmls', 'test-results', 'playwright-report']),
+  globalIgnores(['dist', 'dist-preview', 'dist-ai', 'htmls', 'test-results', 'playwright-report', 'supabase/functions/**/handler_test.js']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

@@ -1,48 +1,40 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const epoch = useRef(0);
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   const refreshAdmin = useCallback(async (nextSession) => {
-    if (!supabase || !nextSession?.user) {
-      setIsAdmin(false);
-      return false;
-    }
-    const { data, error } = await supabase.rpc('is_app_admin');
-    if (error) {
-      setIsAdmin(false);
-      return false;
-    }
-    setIsAdmin(Boolean(data));
-    return Boolean(data);
+    const ticket = ++epoch.current;
+    setSession(nextSession); setIsAdmin(false); setLoading(Boolean(nextSession?.user));
+    if (!supabase || !nextSession?.user) { setLoading(false); return; }
+    // Defer Supabase calls out of onAuthStateChange's synchronous callback.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (ticket !== epoch.current) return;
+    let data = false, error = null;
+    try { ({ data, error } = await supabase.rpc('is_app_admin')); }
+    catch (cause) { error = cause; }
+    if (ticket !== epoch.current) return;
+    setIsAdmin(!error && data === true); setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!supabase) {
-      return undefined;
-    }
-
+    if (!supabase) return undefined;
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      await refreshAdmin(data.session);
-      if (active) setLoading(false);
+    const generation = epoch;
+    const initialEpoch = epoch.current;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && epoch.current === initialEpoch) void refreshAdmin(data.session);
     });
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      refreshAdmin(nextSession).finally(() => setLoading(false));
+      if (active) void refreshAdmin(nextSession);
     });
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
+    return () => { active = false; ++generation.current; listener.subscription.unsubscribe(); };
   }, [refreshAdmin]);
 
   const signIn = useCallback(async () => {

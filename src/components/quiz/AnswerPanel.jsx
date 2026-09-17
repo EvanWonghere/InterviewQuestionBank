@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from '@/components/common/Markdown';
 import { gradeCloudQuestion } from '@/data/questionRepository';
 import { gradeObjective, isObjectiveType } from '@/lib/grading';
@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useReviewStore } from '@/store/reviewStore';
 import { useProgressStore } from '@/store/progressStore';
 import NoteEditor from './NoteEditor';
+import TutorEntry from '@/components/ai/TutorEntry';
 
 const ERROR_REASONS = [
   ['concept_gap', '知识盲区'],
@@ -25,10 +26,17 @@ function initialSubmission(question) {
   return { answerMd: '' };
 }
 
-export default function AnswerPanel({ question, onRated }) {
+export default function AnswerPanel(props) {
+  return <AnswerPanelState key={props.question.id} {...props} />;
+}
+
+function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
   const { user, isAdmin } = useAuth();
   const recordAttempt = useReviewStore((state) => state.recordAttempt);
   const setProgress = useProgressStore((state) => state.setProgress);
+  const assistance = useRef(false);
+  const submitted = useRef(false);
+  const [assisted, setAssisted] = useState(false);
   const [submission, setSubmission] = useState(() => initialSubmission(question));
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,6 +63,7 @@ export default function AnswerPanel({ question, onRated }) {
 
   const submit = async () => {
     if (!canSubmit || loading) return;
+    submitted.current = true;
     setLoading(true);
     setError('');
     try {
@@ -69,6 +78,7 @@ export default function AnswerPanel({ question, onRated }) {
         setResult(await gradeCloudQuestion(question.id, submission));
       }
     } catch (err) {
+      submitted.current = false;
       setError(err.message);
     } finally {
       setLoading(false);
@@ -89,6 +99,7 @@ export default function AnswerPanel({ question, onRated }) {
         quality: rating.quality,
         errorReasons,
         customErrorReason,
+        assistanceUsed: assistance.current,
       });
       const legacyStatus = rating.quality < 3 ? 'wrong' : rating.quality === 3 ? 'review' : 'mastered';
       setProgress(question.id, legacyStatus);
@@ -167,6 +178,8 @@ export default function AnswerPanel({ question, onRated }) {
           <NoteEditor questionId={question.id} />
         </div>
       )}
+      {assisted && <p className="type-caption mt-3">本次作答使用过AI辅助；对错与自评仍由原流程记录。</p>}
+      <TutorEntry enabled={assistantEnabled} question={question} phase={result ? 'review' : 'hint'} submission={submission} onAssistance={() => { if (!submitted.current) { assistance.current = true; setAssisted(true); } }} />
       {error && <p className="type-caption mt-3" style={{ color: 'var(--error-fg)' }}>{error}</p>}
     </section>
   );

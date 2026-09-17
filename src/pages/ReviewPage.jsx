@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
+import TutorEntry from '@/components/ai/TutorEntry';
 import { useReviewStore } from '@/store/reviewStore';
 
 const MODES = {
@@ -62,7 +63,7 @@ function WeakList({ items }) {
 
 function History({ attempts, questionMap }) {
   if (!attempts.length) return <Empty />;
-  return <div className="space-y-3">{attempts.map((attempt) => <article key={attempt.id} className="surface-card p-5"><div className="flex justify-between gap-4"><div><h2 className="type-body-emphasis">{questionMap.get(attempt.question_id)?.title ?? '已归档题目'}</h2><p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>{attempt.error_reasons?.join(' · ') || '无错误标签'}</p></div><div className="shrink-0 text-right"><span className={`chip ${attempt.quality < 3 ? 'chip-difficulty-hard' : 'chip-difficulty-easy'}`}>评分 {attempt.quality}</span><p className="type-micro mt-1" style={{ color: 'var(--text-quaternary)' }}>{new Date(attempt.answered_at).toLocaleString()}</p></div></div></article>)}</div>;
+  return <div className="space-y-3">{attempts.map((attempt) => <article key={attempt.id} className="surface-card p-5"><div className="flex justify-between gap-4"><div><h2 className="type-body-emphasis">{questionMap.get(attempt.question_id)?.title ?? '已归档题目'}</h2><p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>{attempt.error_reasons?.join(' · ') || '无错误标签'}</p></div><div className="shrink-0 text-right"><span className={`chip ${attempt.quality < 3 ? 'chip-difficulty-hard' : 'chip-difficulty-easy'}`}>评分 {attempt.quality}</span><p className="type-micro mt-1" style={{ color: 'var(--text-quaternary)' }}>{new Date(attempt.answered_at).toLocaleString()}</p></div></div><p className="type-micro mt-2">{attempt.assistance_used === true ? 'AI辅助作答' : attempt.assistance_used === false ? '本次未使用AI助手' : '历史记录：辅助情况未知'}</p>{questionMap.has(attempt.question_id) && <TutorEntry enabled question={questionMap.get(attempt.question_id)} phase="review" submission={attempt.submission} />}</article>)}</div>;
 }
 
 function Empty() { return <div className="surface-card p-8 text-center type-body" style={{ color: 'var(--text-tertiary)' }}>这里暂时没有记录，完成一次作答后会自动更新。</div>; }

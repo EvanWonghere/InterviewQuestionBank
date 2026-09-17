@@ -12,7 +12,10 @@
     "test:e2e": "playwright test",
     "migrate:questions": "node scripts/migrate-legacy-questions.mjs",
     "preview": "vite preview",
-    "preview:quiz": "npm run build && rm -rf dist-preview && mkdir -p dist-preview/quiz && cp -r dist/. dist-preview/quiz && serve dist-preview -l 4173"
+    "preview:quiz": "npm run build && rm -rf dist-preview && mkdir -p dist-preview/quiz && cp -r dist/. dist-preview/quiz && serve dist-preview -l 4173",
+    "test:ai-db": "node scripts/test-ai-db.mjs",
+    "test:ai-edge": "deno test --allow-env --allow-net --allow-read --allow-sys supabase/functions/ai-tutor/handler_test.js",
+    "test:ai-e2e": "playwright test --config playwright.ai.config.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -28,6 +31,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.2.1",

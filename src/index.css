@@ -1027,3 +1027,24 @@ body {
 .progress-fill.is-complete {
   background: var(--success-fg);
 }
+
+/* Admin-only lazy tutor: shared page remains visible on desktop. */
+.ai-tutor-panel { position:fixed; inset:0 0 0 auto; margin:0; width:min(480px,100vw); height:100dvh; max-height:100dvh; max-width:100vw; padding:0; border:0; border-left:1px solid var(--border-subtle); background:var(--surface-card); color:var(--text-primary); z-index:100; box-shadow:-12px 0 40px #0002; }
+.ai-tutor-panel[open] { display:flex; flex-direction:column; }
+.ai-tutor-panel::backdrop { background:#0006; }
+.ai-tutor-header { display:flex; align-items:start; gap:12px; justify-content:space-between; padding:20px; border-bottom:1px solid var(--border-subtle); }
+.ai-tutor-header h2 { font-size:17px; margin-top:6px; overflow-wrap:anywhere; }
+.ai-tutor-scroll { overflow:auto; flex:1; min-height:0; padding:20px; }
+.ai-tutor-compose { padding:16px 20px; border-top:1px solid var(--border-subtle); background:var(--surface-card); }
+.ai-prompts { display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; }
+.ai-prompts button { white-space:nowrap; font-size:12px; }
+.ai-message { margin:14px 0; padding:14px; border:1px solid var(--border-subtle); border-radius:16px; overflow-wrap:anywhere; }
+.ai-message pre,.ai-context { overflow:auto; max-width:100%; white-space:pre-wrap; font-size:12px; }
+.ai-user,.ai-settings { background:var(--filter-bg); }
+.ai-settings { border-radius:14px; padding:14px; display:grid; gap:10px; }
+.ai-settings label { display:grid; gap:4px; }
+.ai-empty { padding:24px 8px; color:var(--text-tertiary); }
+.ai-notice { padding:10px; background:var(--filter-bg); border-radius:10px; font-size:13px; }
+.ai-error { color:var(--error-fg); padding-bottom:8px; font-size:13px; }
+@media(min-width:900px) { body.ai-panel-open { padding-right:480px; } }
+@media(max-width:899px) { .ai-tutor-panel { width:100vw; } }

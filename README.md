@@ -13,6 +13,8 @@
 
 ## 本地开发
 
+管理员 AI 学习助手的角色、API 配置与部署步骤见 [接入说明](docs/AI_TUTOR.md)。
+
 ```bash
 npm ci
 cp .env.example .env.local

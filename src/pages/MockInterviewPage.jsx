@@ -4,6 +4,8 @@ import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
 import AnswerPanel from '@/components/quiz/AnswerPanel';
+import TutorEntry from '@/components/ai/TutorEntry';
+import { useReviewStore } from '@/store/reviewStore';
 
 const COUNT_OPTIONS = [5, 10, 20];
 const DEFAULT_COUNT = 10;
@@ -49,6 +51,7 @@ function pickQuestions(allQuestions, categories, progress, count) {
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
+  const attempts = useReviewStore(s => s.attempts);
   const { questions: allQuestions, categories, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
   const setProgress = useProgressStore((s) => s.setProgress);
@@ -243,7 +246,7 @@ export default function MockInterviewPage() {
                   <QuestionContent content={currentQuestion.question} />
                 </div>
 
-                <AnswerPanel question={currentQuestion} onRated={markAndNext} />
+                <AnswerPanel question={currentQuestion} onRated={markAndNext} assistantEnabled={false} />
               </article>
             )}
           </div>
@@ -328,6 +331,8 @@ export default function MockInterviewPage() {
             </ul>
           </div>
         )}
+
+        <section className="mb-7"><h2 className="type-eyebrow">逐题巩固</h2>{deck.map(q => <div key={q.id} className="mt-4"><p>{q.title}</p><TutorEntry enabled question={q} phase="review" submission={attempts.find(a => a.question_id === q.id)?.submission ?? {}} /></div>)}</section>
 
         <div className="flex flex-col gap-2.5">
           <button type="button" onClick={resetToSetup} className="btn-blue w-full">
