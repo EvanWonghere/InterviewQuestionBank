@@ -1,5 +1,6 @@
 import { aggregateWeaknesses, MAX_ROUNDS, parseEvaluation, parseInterviewReport, parseWeaknessReport, validateEvaluateInput, validateReportInput, weaknessTags } from './evaluation.js';
 import { buildEvaluationMessages, buildInterviewReportMessages, buildWeaknessReportMessages } from './evaluationPrompts.js';
+import { modelFailure } from './modelErrors.js';
 
 type Row = Record<string, any>;
 type Must = <T>(r: { data: T; error: { message: string } | null }) => T;
@@ -11,16 +12,6 @@ export type EvaluationContext = {
   callModel: (messages: unknown[], maxTokens: number) => Promise<string>;
   json: (data: unknown, status?: number) => Response;
   must: Must;
-};
-
-// Upstream failures keep only a status code; parse failures ask for a manual retry.
-const failureMessage = (error: unknown) => {
-  const text = error instanceof Error ? error.message : '';
-  if (text === 'evaluation_parse') return { status: 502, error: '模型未返回有效的评估格式，可稍后重试' };
-  const http = text.match(/^upstream_http_(\d{3})$/);
-  if (http) return { status: 502, error: `AI服务请求失败（上游HTTP ${http[1]}）` };
-  if (text === 'upstream_format') return { status: 502, error: '响应不是兼容Chat Completions格式' };
-  return { status: 502, error: 'AI生成失败或超时，可稍后重试' };
 };
 
 export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
@@ -42,7 +33,7 @@ export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
   if (begin.duplicate) {
     // Safe retry after a lost response: return the stored result instead of calling the model again.
     if (row.status === 'complete') return json({ evaluation: row });
-    return json({ error: row.status === 'running' ? '评估仍在进行，请稍后重试' : '此次评估已失败，请重新发起', duplicate: true }, 409);
+    return json({ error: row.status === 'running' ? '评估仍在进行，请稍后重试' : '此次评估已失败，请重新发起', duplicate: true, settled: row.status !== 'running' }, 409);
   }
   try {
     const chain = row.root_id
@@ -58,13 +49,14 @@ export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
     const saved = must(await db.from('ai_evaluations').update({
       status: 'complete', result, score: result.score, suggested_rating: result.suggestedRating, weakness_tags: weaknessTags(result),
     }).eq('id', row.id).eq('status', 'running').select('*')) as Row[];
-    if (!saved?.length) return json({ error: '评估超时已被标记失败，请重新发起' }, 409);
+    if (!saved?.length) return json({ error: '评估状态已变化，请重试以核对保存结果' }, 409);
     return json({ evaluation: saved[0] });
   } catch (error) {
-    await db.from('ai_evaluations').update({ status: 'failed' }).eq('id', row.id).eq('status', 'running');
-    if (error instanceof Error && error.message.startsWith('题目与作答')) return json({ error: error.message }, 400);
-    const failure = failureMessage(error);
-    return json({ error: failure.error }, failure.status);
+    const failed = await db.from('ai_evaluations').update({ status: 'failed' }).eq('id', row.id).eq('status', 'running').select('id');
+    const settled = !failed.error && Boolean(failed.data?.length);
+    if (error instanceof Error && error.message.startsWith('题目与作答')) return json({ error: error.message, settled }, 400);
+    const failure = modelFailure(error);
+    return json({ ...failure, settled }, failure.status);
   }
 }
 
@@ -74,17 +66,17 @@ async function runReport(ctx: EvaluationContext, input: Row, kind: 'interview' |
   const row = begin.report as Row;
   if (begin.duplicate) {
     if (row.status === 'complete') return json({ report: row });
-    return json({ error: row.status === 'running' ? '报告仍在生成，请稍后重试' : '此次生成已失败，请重新发起', duplicate: true }, 409);
+    return json({ error: row.status === 'running' ? '报告仍在生成，请稍后重试' : '此次生成已失败，请重新发起', duplicate: true, settled: row.status !== 'running' }, 409);
   }
   try {
     const result = await produce();
     const saved = must(await db.from('ai_reports').update({ status: 'complete', result }).eq('id', row.id).eq('status', 'running').select('*')) as Row[];
-    if (!saved?.length) return json({ error: '生成超时已被标记失败，请重新发起' }, 409);
+    if (!saved?.length) return json({ error: '报告状态已变化，请重试以核对保存结果' }, 409);
     return json({ report: saved[0] });
   } catch (error) {
-    await db.from('ai_reports').update({ status: 'failed' }).eq('id', row.id).eq('status', 'running');
-    const failure = failureMessage(error);
-    return json({ error: failure.error }, failure.status);
+    const failed = await db.from('ai_reports').update({ status: 'failed' }).eq('id', row.id).eq('status', 'running').select('id');
+    const failure = modelFailure(error);
+    return json({ ...failure, settled: !failed.error && Boolean(failed.data?.length) }, failure.status);
   }
 }
 

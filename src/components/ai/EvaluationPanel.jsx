@@ -3,16 +3,19 @@ import { aiRequest, evaluateAnswer } from '@/data/aiRepository';
 import { REVIEW_RATINGS } from '@/lib/sm2';
 import { ChatMarkdown } from './TutorPanel';
 import { MAX_ROUNDS } from '../../../supabase/functions/ai-tutor/evaluation.js';
+import { useAuth } from '@/context/AuthContext';
+import { useAIDraft } from '@/lib/aiDrafts';
 
 const SEVERITY = { high: ['严重', 'chip-difficulty-hard'], mid: ['中等', 'chip-difficulty-medium'], low: ['轻微', 'chip-difficulty-easy'] };
 
 export default function EvaluationPanel({ question, submission, mode = 'practice', sessionId, onEvaluated, onDone, onUnavailable }) {
   const interview = mode === 'interview';
+  const { user } = useAuth();
   const [status, setStatus] = useState('checking');
   const [rounds, setRounds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useAIDraft(`${user.id}:${question.id}:${sessionId ?? mode}:followup`);
   const [ended, setEnded] = useState(false);
   const [retry, setRetry] = useState(null);
   const alive = useRef(true);
@@ -32,9 +35,9 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
       callbacks.current.onEvaluated?.(evaluation);
     } catch (e) {
       if (!alive.current) return;
-      // A lost response (no HTTP status) may still have been stored: retry the same request id.
-      // Any server answer means that id is settled, so a retry must be a new request.
-      setRetry(e.status ? { ...input, requestId: crypto.randomUUID() } : input);
+      // Network loss, gateway errors and a still-running request may have saved a
+      // result. Only a confirmed terminal failure permits a new generation id.
+      setRetry(e.settled === true ? { ...input, requestId: crypto.randomUUID() } : input);
       setError(e.message);
     } finally {
       if (alive.current) setBusy(false);

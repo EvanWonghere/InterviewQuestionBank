@@ -1,17 +1,25 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { clearAIDrafts } from '@/lib/aiDrafts';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const epoch = useRef(0);
+  const identity = useRef(null);
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   const refreshAdmin = useCallback(async (nextSession) => {
     const ticket = ++epoch.current;
-    setSession(nextSession); setIsAdmin(false); setLoading(Boolean(nextSession?.user));
+    const nextId = nextSession?.user?.id ?? null;
+    const changed = identity.current !== nextId;
+    if (identity.current && changed) clearAIDrafts();
+    identity.current = nextId;
+    setSession(nextSession);
+    // SIGNED_IN also fires on tab focus. Keep mounted work during same-user checks.
+    if (changed || !nextId) { setIsAdmin(false); setLoading(Boolean(nextId)); }
     if (!supabase || !nextSession?.user) { setLoading(false); return; }
     // Defer Supabase calls out of onAuthStateChange's synchronous callback.
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -20,7 +28,10 @@ export function AuthProvider({ children }) {
     try { ({ data, error } = await supabase.rpc('is_app_admin')); }
     catch (cause) { error = cause; }
     if (ticket !== epoch.current) return;
-    setIsAdmin(!error && data === true); setLoading(false);
+    // Transport failure is not a permission revocation. Every AI request still
+    // verifies current admin membership on the server. Explicit false revokes.
+    if (!error) setIsAdmin(data === true);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -30,7 +41,7 @@ export function AuthProvider({ children }) {
     const initialEpoch = epoch.current;
     supabase.auth.getSession().then(({ data }) => {
       if (active && epoch.current === initialEpoch) void refreshAdmin(data.session);
-    });
+    }).catch(() => { if (active && epoch.current === initialEpoch) setLoading(false); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (active) void refreshAdmin(nextSession);
     });

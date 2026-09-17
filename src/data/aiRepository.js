@@ -1,17 +1,35 @@
 import { requireSupabase } from '@/lib/supabase';
 import { sseData } from '../../supabase/functions/ai-tutor/core.js';
 export async function aiRequest(input, { signal } = {}) {
-  const { data, error } = await requireSupabase().auth.getSession();
+  const client = requireSupabase();
+  const { data, error } = await client.auth.getSession();
   if (error || !data.session) throw new Error('请重新登录管理员账户');
-  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`, {
-    method: 'POST', signal,
-    headers: { Authorization: `Bearer ${data.session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+  const timeout = AbortSignal.timeout(85000);
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const send = token => fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`, {
+    method: 'POST', signal: requestSignal,
+    headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
+  let response;
+  try {
+    response = await send(data.session.access_token);
+    // Only a rejected authentication request is repeated; generation is never
+    // automatically retried on ambiguous network/5xx failures.
+    if (response.status === 401) {
+      const refreshed = await client.auth.refreshSession();
+      if (!refreshed.error && refreshed.data.session) response = await send(refreshed.data.session.access_token);
+    }
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    throw new Error(timeout.aborted ? '请求等待超时；请先核对历史或用原请求重试，避免重复生成。' : '网络连接中断；草稿已保留，请恢复网络后核对结果。');
+  }
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}));
-    const error = new Error(detail.error || `请求失败（${response.status}）`);
+    const fallback = { 401: '登录已失效，请重新登录后继续，草稿已保留。', 403: '当前账号无管理员权限。', 429: '请求过于频繁，请稍后再试。', 504: '服务端等待超时，请先核对结果。' };
+    const error = new Error(detail.error || detail.message || fallback[response.status] || `服务请求失败（HTTP ${response.status}），请稍后核对结果。`);
     error.status = response.status;
+    error.settled = detail.settled === true;
     throw error;
   }
   if (input.action !== 'chat') return response.json();

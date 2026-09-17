@@ -5,6 +5,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { aiRequest, streamChat } from '@/data/aiRepository';
 import { useNotesStore } from '@/store/notesStore';
+import { useAIDraft } from '@/lib/aiDrafts';
 
 const quickPrompts = ['给我一个提示', '检查我的思路', '解释背后的机制', '联系Unity项目', '用C#和C++对照', '像面试官一样追问', '出一道变式，先不告诉我答案'];
 export function ChatMarkdown({ content }) {
@@ -21,7 +22,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
-  const [text, setText] = useState(''); const [includeNote, setIncludeNote] = useState(false);
+  const [text, setText] = useAIDraft(`${user.id}:${question.id}:chat`); const [includeNote, setIncludeNote] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({ baseUrl: '', model: '', configured: false, allowedOrigins: [] });
   const [settingsBusy, setSettingsBusy] = useState(false);
@@ -74,8 +75,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     const localId = `${request.requestId}-reply`;
     if (!reuse) setMessages(prev => [...prev, { id: `${request.requestId}-user`, role: 'user', body: request.message, status: 'complete' }]);
     setMessages(prev => [...prev.filter(m => m.id !== localId), { id: localId, role: 'assistant', body: '', status: 'running' }]);
-    setText('');
-    let persisted = false;
+    let persisted = false; let completed = false;
     try {
       await streamChat(request, { signal: controller.signal, onEvent: event => {
         if (!alive.current) return;
@@ -86,12 +86,13 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         }
         if (event.status) {
           persisted = true;
+          completed = event.status === 'complete';
           setMessages(prev => prev.map(m => m.id === localId ? { ...m, status: event.status } : m));
           if (event.error) setError(event.error);
         }
         if (event.message) throw new Error(event.message);
       }});
-      if (persisted && alive.current) await refresh();
+      if (persisted && alive.current) { if (completed) setText(''); await refresh(); }
     } catch (e) {
       if (alive.current) {
         setError(e.name === 'AbortError' ? '已停止；当前内容可能尚未全部保存，可复制或刷新历史核对。' : e.message);
@@ -160,9 +161,9 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     </div>
     <footer className="ai-tutor-compose">
       {error && <p role="alert" className="ai-error">{error}</p>}
-      <div className="ai-prompts">{quickPrompts.map(p => <button key={p} className="filter-pill" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
+      <div className="ai-prompts">{quickPrompts.map(p => <button key={p} disabled={busy} className="filter-pill" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
       <form onSubmit={e => { e.preventDefault(); void send(); }}>
-        <textarea ref={inputRef} aria-label="向学习教练提问" className="input-apple" value={text} maxLength={8000} onChange={e => setText(e.target.value)} placeholder="你的疑问，或需要一起分析的代码…" rows={3} />
+        <textarea ref={inputRef} aria-label="向学习教练提问" className="input-apple" value={text} disabled={busy} maxLength={8000} onChange={e => setText(e.target.value)} placeholder="你的疑问，或需要一起分析的代码…（草稿自动保留）" rows={3} />
         <div className="flex gap-2 mt-2 flex-wrap"><button className="btn-blue" disabled={busy || loading || !settings.configured || !settings.model || !text.trim()}>发送</button>{busy && <button type="button" className="btn-neutral" onClick={stop}>停止</button>}{lastRequest && !busy && <><button type="button" className="btn-neutral" onClick={() => send(true)}>核对此次请求</button><button type="button" className="btn-neutral" onClick={() => setText(lastRequest.message)}>重新提问</button></>}</div>
       </form>
     </footer>

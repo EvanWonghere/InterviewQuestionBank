@@ -1,17 +1,20 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import { endpoint, validateChat, buildContext, sseData } from './core.js';
 import { handleEvaluate, handleInterviewReport, handleWeaknessReport } from './evaluate.ts';
+import { modelFailure } from './modelErrors.js';
+import { modelOptions } from './modelOptions.js';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 const must = <T>(r: { data: T; error: { message: string } | null }): T => { if (r.error) throw new Error(r.error.message); return r.data; };
 // Non-streaming Chat Completions call; errors carry only the upstream status, never its body.
 const callModel = async (url: string, model: string, messages: unknown[], maxTokens: number, timeoutMs: number) => {
- const response=await fetch(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,max_tokens:maxTokens,stream:false})});
+ const response=await fetch(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,max_tokens:maxTokens,stream:false,...modelOptions(url)})});
  if(!response.ok) throw new Error(`upstream_http_${response.status}`);
  const result=await response.json().catch(()=>null);
+ if(result?.choices?.[0]?.finish_reason==='length') throw new Error('upstream_length');
  const content=result?.choices?.[0]?.message?.content;
- if(typeof content!=='string') throw new Error('upstream_format');
+ if(typeof content!=='string' || !content.trim()) throw new Error('upstream_format');
  return content;
 };
 export async function handleRequest(req: Request, factory = createClient) {
@@ -41,10 +44,9 @@ export async function handleRequest(req: Request, factory = createClient) {
    }
    if (!env('AI_API_KEY')) return json({error:'尚未设置服务端AI_API_KEY'},503);
    must(await db.rpc('ai_take_rate',{p_user:uid}));
-   try { await callModel(url,input.model,[{role:'user',content:'Reply with OK.'}],16,15000); return json({ok:true}); }
+   try { await callModel(url,input.model,[{role:'user',content:'Reply with OK.'}],256,45000); return json({ok:true}); }
    catch(error) {
-    const status=error instanceof Error ? error.message.match(/^upstream_http_(\d{3})$/)?.[1] : undefined;
-    return json({error:status?`连接测试失败（上游HTTP ${status}）`:'响应不是兼容Chat Completions格式'},502);
+    const failure=modelFailure(error); return json(failure,failure.status);
    }
   }
   if (action === 'append-note') {
@@ -58,7 +60,7 @@ export async function handleRequest(req: Request, factory = createClient) {
    const c=must(await db.from('ai_conversations').select('*').eq('user_id',uid).eq('question_id',input.questionId).maybeSingle());
    if(!c) return json({conversation:null,messages:[]});
    must(await db.from('ai_messages').update({status:'failed'}).eq('conversation_id',c.id).eq('status','running').lt('created_at',new Date(Date.now()-90000).toISOString()));
-   const messages=must(await db.from('ai_messages').select('*').eq('conversation_id',c.id).order('created_at',{ascending:false}).limit(200));
+   const messages=must(await db.from('ai_messages').select('*').eq('conversation_id',c.id).order('created_at',{ascending:false}).order('request_id',{ascending:false}).order('role',{ascending:true}).limit(200));
    const q=must(await db.from('questions').select('updated_at').eq('id',input.questionId).single());
    if(!q)return json({error:'题目不存在'},404);
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
@@ -82,7 +84,7 @@ export async function handleRequest(req: Request, factory = createClient) {
   const solution=input.phase==='review' ? must(await db.from('question_solutions').select('solution').eq('question_id',q.id).maybeSingle())?.solution : undefined;
   const note=input.includeNote ? must(await db.from('notes').select('body_md').eq('user_id',uid).eq('question_id',q.id).maybeSingle())?.body_md : undefined;
   const c=must(await db.from('ai_conversations').select('id').eq('user_id',uid).eq('question_id',q.id).maybeSingle());
-  const history=c ? (must(await db.from('ai_messages').select('role,body,phase,status').eq('conversation_id',c.id).order('created_at',{ascending:false}).limit(21)) ?? []).reverse() : [];
+  const history=c ? (must(await db.from('ai_messages').select('role,body,phase,status').eq('conversation_id',c.id).order('created_at',{ascending:false}).order('request_id',{ascending:false}).order('role',{ascending:true}).limit(20)) ?? []).reverse() : [];
   const context=buildContext({question:q,solution,submission:input.submission,phase:input.phase,note,history});
   const begin=must(await db.rpc('ai_begin',{p_user:uid,p_question:q.id,p_version:q.updated_at,p_request:input.requestId,p_body:input.message,p_phase:input.phase,p_model:settings.model}));
   if(begin.duplicate) return json({error:'此请求已接收，请重新加载历史确认结果；不会重复调用',duplicate:true},409);
@@ -97,20 +99,22 @@ export async function handleRequest(req: Request, factory = createClient) {
    const poll=setInterval(async()=>{if(polling)return;polling=true;try{const m=must(await db.from('ai_messages').select('status').eq('id',begin.message.id).single());if(!m || m.status!=='running'){disconnected=true;abort.abort();}}catch{abort.abort();}finally{polling=false;}},1000);
    try {
     emit('meta',{truncated:context.truncated,model:settings.model,version:q.updated_at});
-    const upstream=await fetch(url,{method:'POST',redirect:'error',signal:abort.signal,headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:settings.model,messages:[...context.messages,{role:'user',content:input.message}],max_tokens:2048,stream:true})});
-    if(!upstream.ok || !upstream.body) throw new Error(`上游请求失败（HTTP ${upstream.status}）`);
+    const upstream=await fetch(url,{method:'POST',redirect:'error',signal:abort.signal,headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:settings.model,messages:[...context.messages,{role:'user',content:input.message}],max_tokens:2048,stream:true,...modelOptions(url)})});
+    if(!upstream.ok) throw new Error(`upstream_http_${upstream.status}`);
+    if(!upstream.body) throw new Error('upstream_format');
     let finished=false;
     for await(const data of sseData(upstream.body)) {
      if(data==='[DONE]'){finished=true;break;}
      const parsed=JSON.parse(data); if(parsed.error) throw new Error('模型服务返回错误');
      const delta=parsed.choices?.[0]?.delta?.content;
      if(typeof delta==='string'){body+=delta;if(body.length>60000)throw new Error('回复超过长度限制');emit('delta',{text:delta});}
+     if(parsed.choices?.[0]?.finish_reason==='length') throw new Error('upstream_length');
      if(parsed.choices?.[0]?.finish_reason) finished=true;
      if(Date.now()-lastSave>700){await persist();lastSave=Date.now();}
     }
     if(!finished || !body)throw new Error('响应中断或为空，请手动重试');
     status='complete';
-   } catch(error) { status=disconnected?'stopped':'failed';failure=abort.signal.aborted?'已停止或超时；部分内容保留':(error instanceof Error?error.message:'生成失败'); }
+   } catch(error) { status=disconnected?'stopped':'failed';failure=disconnected?'已停止；部分内容保留':modelFailure(error).error; }
    finally {
     clearTimeout(timer);clearInterval(poll);
     try {

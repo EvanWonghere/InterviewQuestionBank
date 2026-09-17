@@ -30,7 +30,7 @@ export default function WeaknessInsights({ questionMap }) {
       setReport(await requestWeaknessReport({ requestId: requestId.current }));
       requestId.current = crypto.randomUUID();
     } catch (e) {
-      if (e.status) requestId.current = crypto.randomUUID();
+      if (e.settled === true) requestId.current = crypto.randomUUID();
       setError(e.message);
     } finally {
       setGenerating(false);

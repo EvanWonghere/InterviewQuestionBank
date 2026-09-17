@@ -8,6 +8,7 @@ vi.mock('@/data/aiRepository', () => ({
   evaluateAnswer: (...args) => state.evaluate(...args),
 }));
 vi.mock('./TutorPanel', () => ({ ChatMarkdown: ({ content }) => <div>{content}</div> }));
+vi.mock('@/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }));
 
 const question = { id: 'q1' };
 const evaluation = (round, followUp, extra = {}) => ({
@@ -18,6 +19,7 @@ const evaluation = (round, followUp, extra = {}) => ({
 });
 
 beforeEach(() => {
+  sessionStorage.clear();
   state.settings = { configured: true, settings: { model: 'm' } };
   state.evaluate.mockReset();
 });
@@ -54,20 +56,24 @@ describe('EvaluationPanel', () => {
     expect(onDone).toHaveBeenCalled();
   });
 
-  it('retries a lost response with the same request id but a server error with a new one', async () => {
+  it('keeps the request id until the server confirms a terminal failure', async () => {
     state.evaluate
       .mockRejectedValueOnce(Object.assign(new Error('网络中断'), { status: undefined }))
-      .mockRejectedValueOnce(Object.assign(new Error('模型未返回有效的评估格式'), { status: 502 }))
+      .mockRejectedValueOnce(Object.assign(new Error('仍在进行'), { status: 409, settled: false }))
+      .mockRejectedValueOnce(Object.assign(new Error('模型未返回有效的评估格式'), { status: 502, settled: true }))
       .mockResolvedValueOnce(evaluation(1, null));
     render(<EvaluationPanel question={question} submission={{}} />);
     expect(await screen.findByRole('alert')).toHaveTextContent('网络中断');
+    fireEvent.click(screen.getByRole('button', { name: '重试' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('仍在进行');
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('有效的评估格式');
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
     expect(await screen.findByText('第1轮结论')).toBeVisible();
     const ids = state.evaluate.mock.calls.map((c) => c[0].requestId);
     expect(ids[1]).toBe(ids[0]);
-    expect(ids[2]).not.toBe(ids[1]);
+    expect(ids[2]).toBe(ids[1]);
+    expect(ids[3]).not.toBe(ids[2]);
   });
 
   it('reports unavailability when the model is not configured', async () => {

@@ -26,8 +26,8 @@ function ReportState({ sessionId, questions }) {
       setReport(await requestInterviewReport({ sessionId, requestId: requestId.current }));
       setStatus('ready');
     } catch (e) {
-      // Keep the id after a lost response so a retry returns the stored report; otherwise start a new request.
-      if (e.status) requestId.current = crypto.randomUUID();
+      // Keep the id unless the server confirms a terminal failure.
+      if (e.settled === true) requestId.current = crypto.randomUUID();
       setError(e.message);
       setStatus('error');
     }

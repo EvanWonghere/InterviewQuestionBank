@@ -30,12 +30,12 @@ function fakeDb(handlers) {
 
 const question = { id: id(1), title: '协程', prompt_md: 'p', type: 'short_answer', payload: {}, updated_at: 'v1' };
 
-function setup({ modelReply, begin, chain = [] }) {
+function setup({ modelReply, begin, chain = [], updateMatched = true }) {
   const db = fakeDb({
     questions: () => ({ data: question, error: null }),
     question_solutions: () => ({ data: { solution: { referenceAnswerMd: 'ref' } }, error: null }),
     ai_evaluations: (q) => {
-      if (q.op === 'update') return { data: q.filters.some(([k, , v]) => k === 'eq' && v === 'running') && q.payload.status === 'complete' ? [{ ...begin.evaluation, ...q.payload }] : [], error: null };
+      if (q.op === 'update') return { data: updateMatched && q.filters.some(([k, , v]) => k === 'eq' && v === 'running') ? [{ ...begin.evaluation, ...q.payload }] : [], error: null };
       return { data: chain, error: null };
     },
   });
@@ -73,7 +73,21 @@ describe('handleEvaluate', () => {
     const res = await handleEvaluate({ questionId: id(1), requestId: id(2), mode: 'practice', submission: {} }, ctx);
     expect(res.status).toBe(502);
     expect(res.data.error).toContain('有效的评估格式');
+    expect(res.data.settled).toBe(true);
     expect(db.calls.find((c) => c.op === 'update').payload).toEqual({ status: 'failed' });
+  });
+
+  it.each([['running', false], ['failed', true]])('does not generate again for duplicate %s requests', async (status, settled) => {
+    const { ctx, callModel } = setup({ begin: { duplicate: true, evaluation: { id: 'e1', status } } });
+    const res = await handleEvaluate({ questionId: id(1), requestId: id(2), mode: 'practice', submission: {} }, ctx);
+    expect(res).toMatchObject({ status: 409, data: { settled } });
+    expect(callModel).not.toHaveBeenCalled();
+  });
+
+  it('does not declare a terminal failure when no running row was changed', async () => {
+    const { ctx } = setup({ begin: running(), modelReply: 'invalid JSON', updateMatched: false });
+    const res = await handleEvaluate({ questionId: id(1), requestId: id(2), mode: 'practice', submission: {} }, ctx);
+    expect(res.data.settled).toBe(false);
   });
 
   it('skips grading for follow-ups, loads the chain and blocks follow-ups at the limit', async () => {

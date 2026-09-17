@@ -1,6 +1,14 @@
 import { test, expect } from '@playwright/test';
 const uid='00000000-0000-0000-0000-000000000001';
 const questions=[1,2].map(n=>({id:`10000000-0000-0000-0000-${String(n).padStart(12,'0')}`,legacy_id:`q-90${n}`,category_id:'c',type:'short_answer',title:n===1?'事件订阅与生命周期':'服务器权威与状态同步',prompt_md:'请解释机制并给出一个项目中的边界例子。',difficulty:'medium',payload:{},question_tags:[],sort_order:n,status:'published',visibility:'public'}));
+// Deliver a real SDK auth notification using only this fixture's synthetic session.
+async function repeatSignIn(page) {
+ await page.evaluate(() => {
+  const channel = new BroadcastChannel('sb-ai-test-auth-token');
+  channel.postMessage({ event: 'SIGNED_IN', session: JSON.parse(localStorage.getItem('sb-ai-test-auth-token')) });
+  channel.close();
+ });
+}
 async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
  const state={messages:{},chats:[],attempts:[],notes:[],calls:[],fail:false,slow:false,evaluations:[],evalInputs:[],reports:[],rpc:{}};
  if(loggedIn)await page.addInitScript(({uid})=>{
@@ -14,7 +22,7 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
   const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data),headers:{'access-control-allow-origin':'*'}});
   if(path.includes('/auth/v1/user'))return reply({id:uid,email:'admin@example.test'});
   if(path.includes('/auth/v1/logout'))return reply({});
-  if(path.endsWith('/rpc/is_app_admin'))return reply(admin);
+ if(path.endsWith('/rpc/is_app_admin')){state.rpc.adminChecks=(state.rpc.adminChecks??0)+1;return reply(admin);}
   if(path.endsWith('/rpc/grade_question'))return reply({correct:null,referenceAnswerMd:'发布者持有订阅者引用；销毁时退订，避免重复回调。',rubricMd:'说明生命周期与退订。',explanationMd:''});
   if(path.endsWith('/questions'))return reply(questions);
   if(path.endsWith('/categories'))return reply([{id:'c',name:'Unity基础',slug:'unity',sort_order:1}]);
@@ -148,6 +156,12 @@ test('practice evaluation, follow-up and suggested rating stay advisory',async({
  await expect(page.getByRole('button',{name:/重来\s*AI 建议/})).toBeVisible();
  await expect(page.getByLabel('边界遗漏')).toBeChecked();
  await page.getByRole('textbox',{name:'回答追问'}).fill('在 OnDisable 退订，OnEnable 重新订阅');
+ const adminChecks=s.rpc.adminChecks;
+ await repeatSignIn(page);
+ await expect.poll(()=>s.rpc.adminChecks).toBeGreaterThan(adminChecks);
+ await expect(page.getByRole('textbox',{name:'回答追问'})).toHaveValue('在 OnDisable 退订，OnEnable 重新订阅');
+ await expect(page.getByText('遗漏了禁用时的退订')).toBeVisible();
+ expect(s.evalInputs).toHaveLength(1);
  await page.getByRole('button',{name:'回答追问',exact:true}).click();
  await expect(page.getByText('补充了禁用场景，仍可更严谨')).toBeVisible();
  expect(s.evalInputs[1]).toMatchObject({parentId:s.evaluations[0].id,answerMd:'在 OnDisable 退订，OnEnable 重新订阅'});
@@ -158,6 +172,20 @@ test('practice evaluation, follow-up and suggested rating stay advisory',async({
  await expect.poll(()=>s.attempts.length).toBe(1);
  expect(s.attempts[0]).toMatchObject({quality:4,ai_evaluation_id:s.evaluations[1].id,error_reasons:['boundary_case']});
  expect(errors).toEqual([]);
+});
+test('chat stays open across same-user auth events and restores unsent drafts on reopen',async({page})=>{
+ const s=await setup(page);await page.goto('./#/quiz?q=q-901');
+ await page.getByRole('button',{name:'问学习助手'}).click();
+ const draft=page.getByRole('textbox',{name:'向学习教练提问'});
+ await draft.fill('这个模式与 C++ 的 RAII 有什么关系？');
+ const checks=s.rpc.adminChecks;await repeatSignIn(page);
+ await expect.poll(()=>s.rpc.adminChecks).toBeGreaterThan(checks);
+ await expect(page.getByRole('dialog')).toBeVisible();
+ await expect(draft).toHaveValue('这个模式与 C++ 的 RAII 有什么关系？');
+ await page.getByRole('button',{name:'关闭学习助手'}).click();
+ await page.getByRole('button',{name:'问学习助手'}).click();
+ await expect(draft).toHaveValue('这个模式与 C++ 的 RAII 有什么关系？');
+ expect(s.chats).toHaveLength(0);
 });
 test('mock interview hides the reference during AI follow-ups and ends with a report',async({page})=>{
  const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -205,6 +233,6 @@ test('weakness insights aggregate evaluations and heatmap reads cloud aggregates
  await expect(insights.getByRole('link',{name:'事件订阅与生命周期'}).first()).toBeVisible();
  await page.goto('./#/');
  await expect(page.getByText('云端作答记录')).toBeVisible();
- expect(s.rpc.calendar.p_tz).toBeTruthy();
+ await expect.poll(()=>s.rpc.calendar?.p_tz).toBeTruthy();
  await expect(page.getByRole('button',{name:/· 3 次 · 2 题 · 平均评分 4\.0 · AI 均分 76 · 模拟面试 1 场$/})).toBeVisible();
 });
