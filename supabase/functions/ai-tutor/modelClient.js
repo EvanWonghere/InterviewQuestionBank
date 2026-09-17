@@ -1,12 +1,13 @@
 import { MODEL_TIMEOUT_MS, modelOptions, outputBudget } from './modelOptions.js';
 
 /** Non-streaming Chat Completions call; errors carry only the upstream status, never its body. */
-export async function callModel({ url, apiKey, model, messages, effort, json = false, fetchImpl = fetch }) {
+// budgetScale > 1 is for replies that carry several items (e.g. a set of drafted questions).
+export async function callModel({ url, apiKey, model, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch }) {
   const signal = AbortSignal.timeout(MODEL_TIMEOUT_MS);
   const post = (jsonOutput) => fetchImpl(url, {
     method: 'POST', redirect: 'error', signal,
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, max_tokens: outputBudget(url, effort), stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
+    body: JSON.stringify({ model, messages, max_tokens: outputBudget(url, effort) * budgetScale, stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
   });
   let response = await post(json);
   // A 400 is a rejected, unbilled request. If JSON Output was the unsupported part, the prompt still demands json.

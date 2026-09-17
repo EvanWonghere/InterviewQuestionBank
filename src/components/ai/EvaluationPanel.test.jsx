@@ -9,6 +9,7 @@ vi.mock('@/data/aiRepository', () => ({
 }));
 vi.mock('./TutorPanel', () => ({ ChatMarkdown: ({ content }) => <div>{content}</div> }));
 vi.mock('@/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }));
+vi.mock('./AddFollowUpToBank', () => ({ default: ({ evaluation }) => <div data-testid="add-to-bank">bank:{evaluation.id}</div> }));
 
 const question = { id: 'q1' };
 const evaluation = (round, followUp, extra = {}) => ({
@@ -44,6 +45,8 @@ describe('EvaluationPanel', () => {
     expect(state.evaluate.mock.calls[1][0].requestId).not.toBe(state.evaluate.mock.calls[0][0].requestId);
     expect(onEvaluated).toHaveBeenCalledTimes(2);
     expect(screen.queryByLabelText('回答追问')).toBeNull();
+    // Answered follow-ups offer the question-bank action in practice mode.
+    expect(screen.getByTestId('add-to-bank')).toHaveTextContent('bank:e2');
   });
 
   it('hides follow-ups at the interview round limit and hands control back', async () => {

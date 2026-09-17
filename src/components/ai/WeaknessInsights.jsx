@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { latestReport, listEvaluations, requestWeaknessReport } from '@/data/aiRepository';
 import { ChatMarkdown } from './TutorPanel';
 import Elapsed from './Elapsed';
+import AddFollowUpToBank from './AddFollowUpToBank';
+import WeaknessQuestionGenerator from './WeaknessQuestionGenerator';
+import { useQuestions } from '@/context/QuestionsContext';
+import { followUpScore, WEAK_FOLLOW_UP_SCORE } from '../../../supabase/functions/ai-tutor/questionDraft.js';
 import { aggregateWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 
 // Loaded lazily by ReviewPage after the admin check.
@@ -22,6 +26,14 @@ export default function WeaknessInsights({ questionMap }) {
   }, []);
 
   const groups = useMemo(() => aggregateWeaknesses(evaluations ?? []), [evaluations]);
+  const { questions } = useQuestions();
+  // Answered follow-ups that went poorly and have not produced a question yet.
+  const pendingFollowUps = useMemo(() => {
+    const added = new Set(questions.map((q) => q.originEvaluationId).filter(Boolean));
+    return (evaluations ?? [])
+      .filter((e) => e.round > 1 && e.follow_up_question && !added.has(e.id) && (followUpScore(e) ?? 100) < WEAK_FOLLOW_UP_SCORE)
+      .slice(0, 10);
+  }, [evaluations, questions]);
   const titleFor = (id) => questionMap.get(id)?.title;
 
   const generate = async () => {
@@ -56,7 +68,7 @@ export default function WeaknessInsights({ questionMap }) {
       {groups.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {groups.map((g) => (
-            <article key={g.tag} className="surface-card p-5">
+            <article key={g.tag} className="surface-card weakness-card p-5">
               <div className="flex items-start justify-between gap-3">
                 <span className="type-body-emphasis">{g.tag}</span>
                 <span className="flex shrink-0 gap-1">
@@ -66,6 +78,7 @@ export default function WeaknessInsights({ questionMap }) {
               </div>
               <ul className="mt-2 list-disc pl-5 type-caption" style={{ color: 'var(--text-secondary)' }}>{g.points.map((p) => <li key={p}>{p}</li>)}</ul>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{questionLinks(g.questionIds)}</div>
+              <WeaknessQuestionGenerator group={g} questionMap={questionMap} />
             </article>
           ))}
         </div>
@@ -96,6 +109,29 @@ export default function WeaknessInsights({ questionMap }) {
               </div>
             </>
           )}
+        </div>
+      )}
+      {pendingFollowUps.length > 0 && (
+        <div className="mt-6">
+          <h3 className="type-body-emphasis">待入库的追问</h3>
+          <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>回答得分低于 {WEAK_FOLLOW_UP_SCORE} 的追问（含模拟面试），可一键生成题目加入题库。</p>
+          <div className="mt-3 space-y-3">
+            {pendingFollowUps.map((e) => (
+              <article key={e.id} className="surface-card p-5">
+                <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
+                  来自：{titleFor(e.question_id) ?? '已归档题目'} · {e.mode === 'interview' ? '模拟面试' : '刷题'} · 回答得分 {followUpScore(e)}
+                </p>
+                <div className="mt-2"><ChatMarkdown content={e.follow_up_question} /></div>
+                {e.submission?.answerMd && (
+                  <details className="mt-2">
+                    <summary className="type-caption cursor-pointer">我的回答</summary>
+                    <pre className="submission-text mt-2">{e.submission.answerMd}</pre>
+                  </details>
+                )}
+                <AddFollowUpToBank evaluation={e} sourceCategoryId={questionMap.get(e.question_id)?.categoryId} />
+              </article>
+            ))}
+          </div>
         </div>
       )}
       {error && <p role="alert" className="ai-error mt-3">{error}</p>}

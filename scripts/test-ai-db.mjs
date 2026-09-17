@@ -139,4 +139,18 @@ await db.query(`update ai_messages set created_at=now()-interval '100 seconds' w
 await assert.rejects(()=>db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m')`,[a,q,req(311)]),/generation_busy/);
 await db.query(`update ai_messages set created_at=now()-interval '160 seconds' where id=$1`,[chat.message.id]);
 assert.equal((await db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m') as r`,[a,q,req(312)])).rows[0].r.duplicate,false);
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff');
+// Question provenance: nullable link, cleared when the evaluation disappears.
+await db.exec(await readFile(new URL('../supabase/migrations/20260918000000_question_origin.sql',import.meta.url),'utf8'));
+await db.exec(`update ai_settings set request_count=0;update ai_evaluations set status='complete' where status='running';`);
+const origin=await db.query(`select ai_begin_evaluation($1,$2,'v',$3,'practice',null,null,'{}',null,'m') as r`,[a,q,req(400)]).then(r=>r.rows[0].r.evaluation.id);
+const q2='10000000-0000-0000-0000-000000000002';
+await db.query(`insert into questions(id,origin_kind,origin_evaluation_id) values($1,'follow_up',$2)`,[q2,origin]);
+await db.query(`insert into questions(id,origin_kind,origin_weakness_tag) values('10000000-0000-0000-0000-000000000003','weakness','事件退订')`);
+await assert.rejects(()=>db.query(`insert into questions(id,origin_kind) values('10000000-0000-0000-0000-000000000004','manual')`),/check constraint/);
+await assert.rejects(()=>db.query(`insert into questions(id,origin_weakness_tag) values('10000000-0000-0000-0000-000000000005',$1)`,['x'.repeat(41)]),/check constraint/);
+assert.equal((await db.query(`select origin_evaluation_id from questions where id=$1`,[q2])).rows[0].origin_evaluation_id,origin);
+await db.query(`delete from ai_evaluations where id=$1`,[origin]);
+assert.equal((await db.query(`select origin_evaluation_id from questions where id=$1`,[q2])).rows[0].origin_evaluation_id,null);
+assert.equal((await db.query(`select count(*)::int as n from questions where origin_evaluation_id is null`)).rows[0].n,3);
+assert.equal((await db.query(`select origin_kind from questions where id=$1`,[q2])).rows[0].origin_kind,'follow_up'); // kind survives evaluation deletion
+await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance');

@@ -1,15 +1,18 @@
 import { aggregateWeaknesses, MAX_ROUNDS, parseEvaluation, parseInterviewReport, parseWeaknessReport, validateEvaluateInput, validateReportInput, weaknessTags } from './evaluation.js';
 import { buildEvaluationMessages, buildInterviewReportMessages, buildWeaknessReportMessages } from './evaluationPrompts.js';
 import { modelFailure } from './modelErrors.js';
+import { parseGeneratedQuestion, parseGeneratedQuestionSet, validateDraftInput, validateWeaknessDraftInput } from './questionDraft.js';
+import { buildQuestionDraftMessages, buildWeaknessQuestionsMessages } from './evaluationPrompts.js';
 
 type Row = Record<string, any>;
+const likeLiteral = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 type Must = <T>(r: { data: T; error: { message: string } | null }) => T;
 export type EvaluationContext = {
   uid: string;
   client: any; // user JWT client: grade_question enforces the caller's own visibility
   db: any; // service-role client
   model: string;
-  callModel: (messages: unknown[]) => Promise<string>; // JSON Output, configured thinking mode and budget
+  callModel: (messages: unknown[], options?: { budgetScale?: number }) => Promise<string>; // JSON Output, configured thinking mode and budget
   json: (data: unknown, status?: number) => Response;
   must: Must;
 };
@@ -45,7 +48,7 @@ export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
       question: q, solution: solution?.solution, correct: row.is_correct, mode: row.mode, chain,
       current: { followUpQuestion: row.follow_up_question, answer: submission },
     });
-    const result = parseEvaluation(await ctx.callModel(messages), { correct: row.is_correct, allowFollowUp: row.round < MAX_ROUNDS[row.mode as 'practice' | 'interview'] });
+    const result = parseEvaluation(await ctx.callModel(messages), { correct: row.is_correct, allowFollowUp: row.round < MAX_ROUNDS[row.mode as 'practice' | 'interview'], isFollowUp: row.round > 1 });
     const saved = must(await db.from('ai_evaluations').update({
       status: 'complete', result, score: result.score, suggested_rating: result.suggestedRating, weakness_tags: weaknessTags(result),
     }).eq('id', row.id).eq('status', 'running').select('*')) as Row[];
@@ -119,4 +122,90 @@ export async function handleWeaknessReport(input: Row, ctx: EvaluationContext) {
     const report = parseWeaknessReport(await ctx.callModel(buildWeaknessReportMessages({ weaknesses, candidates })), candidates.map((c) => c.id));
     return { ...report, basedOn: rows.length };
   });
+}
+
+/**
+ * Generates a standalone question from an answered follow-up. Nothing is written here:
+ * the admin reviews the draft and saves it through the normal question editor path (RLS + questionSchema).
+ */
+export async function handleDraftQuestion(input: Row, ctx: EvaluationContext) {
+  const { uid, db, must, json } = ctx;
+  validateDraftInput(input);
+  const evaluation = must(await db.from('ai_evaluations').select('id,question_id,round,follow_up_question,submission,score,result,status')
+    .eq('user_id', uid).eq('id', input.evaluationId).maybeSingle()) as Row | null;
+  if (!evaluation || evaluation.status !== 'complete' || evaluation.round < 2 || !evaluation.follow_up_question) {
+    return json({ error: '只能把已回答并完成评估的追问加入题库' }, 400);
+  }
+  const source = must(await db.from('questions').select('title,type,prompt_md,difficulty,question_tags(tags(name))').eq('id', evaluation.question_id).single()) as Row;
+  const solution = must(await db.from('question_solutions').select('solution').eq('question_id', evaluation.question_id).maybeSingle()) as Row | null;
+  const messages = buildQuestionDraftMessages({
+    requestedType: input.type,
+    source: {
+      title: source.title, type: source.type, prompt: source.prompt_md, difficulty: source.difficulty,
+      tags: (source.question_tags ?? []).map((t: Row) => t.tags?.name).filter(Boolean), reference: solution?.solution ?? null,
+    },
+    followUp: evaluation.follow_up_question,
+    answer: evaluation.submission?.answerMd ?? '',
+    evaluation: { score: evaluation.result?.followUpAnswerScore ?? evaluation.score, verdict: evaluation.result?.verdict, weaknesses: evaluation.result?.weaknesses },
+  });
+  // Generation is billable, so it shares the per-minute limit with chat and evaluation.
+  must(await db.rpc('ai_take_rate', { p_user: uid }));
+  try {
+    const question = parseGeneratedQuestion(await ctx.callModel(messages), { requestedType: input.type });
+    return json({ question: { ...question, sourceTitle: `AI 追问 · ${source.title}`.slice(0, 200), originKind: 'follow_up', originEvaluationId: evaluation.id } });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('题目与作答')) return json({ error: error.message }, 400);
+    const failure = modelFailure(error);
+    return json(failure, failure.status);
+  }
+}
+
+/**
+ * Drafts a small set of questions aimed at one aggregated weakness. The weakness is re-derived from the
+ * caller's own evaluations (client text is only a lookup key); nothing is written here.
+ */
+export async function handleWeaknessQuestions(input: Row, ctx: EvaluationContext) {
+  const { uid, db, must, json } = ctx;
+  validateWeaknessDraftInput(input);
+  const rows = must(await db.from('ai_evaluations').select('question_id,score,result,status,created_at')
+    .eq('user_id', uid).eq('status', 'complete').order('created_at', { ascending: false }).limit(200)) as Row[];
+  const key = input.tag.trim().toLowerCase();
+  const group = aggregateWeaknesses(rows ?? [], { limit: 1000 }).find((g) => g.tag.toLowerCase() === key);
+  if (!group) return json({ error: '没有找到这个薄弱点对应的AI评估记录，请刷新后重试' }, 400);
+
+  const relatedIds = group.questionIds.slice(0, 5);
+  const related = relatedIds.length
+    ? must(await db.from('questions').select('id,title,type,prompt_md,question_solutions(solution)').in('id', relatedIds)) as Row[]
+    : [];
+  // Titles to avoid: questions already drafted for this weakness, related ones, and ones tagged with it.
+  // Escape LIKE wildcards so ilike acts as a case-insensitive equality on the tag.
+  const drafted = must(await db.from('questions').select('title').ilike('origin_weakness_tag', likeLiteral(group.tag)).limit(40)) as Row[];
+  const tagged = must(await db.from('tags').select('question_tags(questions(title))').ilike('name', likeLiteral(group.tag)).limit(1)) as Row[];
+  const existingTitles = [...new Set([
+    ...drafted.map((q) => q.title),
+    ...related.map((q) => q.title),
+    ...(tagged?.[0]?.question_tags ?? []).map((t: Row) => t.questions?.title),
+  ].filter(Boolean))].slice(0, 60);
+
+  const messages = buildWeaknessQuestionsMessages({
+    count: input.count,
+    types: input.types,
+    weakness: { tag: group.tag, points: group.points, affectedQuestions: group.count, avgScore: group.avgScore },
+    relatedQuestions: related.map((q) => ({
+      title: q.title, type: q.type, prompt: String(q.prompt_md ?? '').slice(0, 2000),
+      reference: String(q.question_solutions?.solution?.referenceAnswerMd ?? q.question_solutions?.[0]?.solution?.referenceAnswerMd ?? '').slice(0, 2000),
+    })),
+    existingTitles,
+  });
+  must(await db.rpc('ai_take_rate', { p_user: uid }));
+  try {
+    const questions = parseGeneratedQuestionSet(await ctx.callModel(messages, { budgetScale: input.count > 1 ? 2 : 1 }), { count: input.count, types: input.types });
+    return json({
+      tag: group.tag,
+      questions: questions.map((q) => ({ ...q, sourceTitle: `AI 针对薄弱点 · ${group.tag}`, originKind: 'weakness', originWeaknessTag: group.tag })),
+    });
+  } catch (error) {
+    const failure = modelFailure(error);
+    return json(failure, failure.status);
+  }
 }

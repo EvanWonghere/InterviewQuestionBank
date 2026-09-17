@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import Markdown from '@/components/common/Markdown';
 import { gradeCloudQuestion } from '@/data/questionRepository';
 import { gradeObjective, isObjectiveType } from '@/lib/grading';
@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useReviewStore } from '@/store/reviewStore';
 import { useProgressStore } from '@/store/progressStore';
 import NoteEditor from './NoteEditor';
+import SubmissionView from './SubmissionView';
 import TutorEntry from '@/components/ai/TutorEntry';
 import EvaluationEntry from '@/components/ai/EvaluationEntry';
 import { constrainRating } from '../../../supabase/functions/ai-tutor/evaluation.js';
@@ -55,16 +56,6 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
     const reasons = (evaluation.result?.weaknesses ?? []).map((w) => w.errorReason).filter(Boolean);
     if (reasons.length) setErrorReasons((items) => [...new Set([...items, ...reasons])]);
   }, []);
-
-  useEffect(() => {
-    setSubmission(initialSubmission(question));
-    setResult(null);
-    setSaved(false);
-    setError('');
-    setErrorReasons([]);
-    setCustomErrorReason('');
-    setAiEvaluation(null);
-  }, [question]);
 
   const canSubmit = useMemo(() => {
     if (question.type === 'single_choice') return Boolean(submission.optionId);
@@ -150,6 +141,13 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
             {loading ? '提交中…' : isObjectiveType(question.type) ? '提交答案' : '提交并查看参考答案'}
           </button>
         </div>
+      )}
+
+      {result && (
+        <details className="submission-card mb-5" open>
+          <summary><span className="type-eyebrow" style={{ color: 'var(--apple-blue)' }}>我的回答</span></summary>
+          <SubmissionView question={question} submission={submission} />
+        </details>
       )}
 
       {/* One stable position so revealing the reference does not remount (and re-run) the evaluation. */}

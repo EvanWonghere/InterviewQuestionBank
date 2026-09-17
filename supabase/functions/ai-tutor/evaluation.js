@@ -35,6 +35,7 @@ export function constrainRating(rating, correct) {
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const list = (value, max) => (Array.isArray(value) ? value.slice(0, max) : []);
 const clampInt = (value, min, max) => {
+  if (value == null || value === '') return null; // Number(null) would silently become 0
   const n = Math.round(Number(value));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null;
 };
@@ -57,7 +58,7 @@ function ratingFromScore(score) {
   return score < 50 ? 'again' : score < 70 ? 'hard' : score < 88 ? 'good' : 'easy';
 }
 
-export function parseEvaluation(raw, { correct = null, allowFollowUp = true } = {}) {
+export function parseEvaluation(raw, { correct = null, allowFollowUp = true, isFollowUp = false } = {}) {
   const data = extractJson(raw);
   const score = clampInt(data.score, 0, 100);
   if (score === null) throw new Error('evaluation_parse');
@@ -80,6 +81,7 @@ export function parseEvaluation(raw, { correct = null, allowFollowUp = true } = 
     strengths: list(data.strengths, 5).map((s) => text(s, 200)).filter(Boolean),
     weaknesses,
     followUp: followQuestion ? { question: followQuestion, targets: text(data.followUp?.targets, 200) } : null,
+    followUpAnswerScore: isFollowUp ? clampInt(data.followUpAnswerScore, 0, 100) : null,
     summaryMd: text(data.summaryMd, 4000),
   };
 }

@@ -61,7 +61,7 @@ export async function requestWeaknessReport({ requestId }, { signal } = {}) {
 }
 // Reads go straight through RLS (owner + current admin); writes stay in the Edge Function.
 export async function listEvaluations({ sessionId, limit = 200 } = {}) {
-  let query = requireSupabase().from('ai_evaluations').select('id,question_id,round,root_id,parent_id,follow_up_question,score,suggested_rating,result,status,mode,session_id,created_at').eq('status', 'complete');
+  let query = requireSupabase().from('ai_evaluations').select('id,question_id,round,root_id,parent_id,follow_up_question,submission,score,suggested_rating,result,status,mode,session_id,created_at').eq('status', 'complete');
   if (sessionId) query = query.eq('session_id', sessionId);
   const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
   if (error) throw error;
@@ -73,4 +73,11 @@ export async function latestReport(kind, { sessionId } = {}) {
   const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
   return data;
+}
+export async function draftQuestionFromFollowUp({ evaluationId, type }, { signal } = {}) {
+  const data = await aiRequest({ action: 'draft-question', evaluationId, type }, { signal });
+  return data.question;
+}
+export async function draftQuestionsForWeakness({ tag, count, types }, { signal } = {}) {
+  return aiRequest({ action: 'draft-weakness-questions', tag, count, types }, { signal });
 }

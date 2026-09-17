@@ -3,6 +3,8 @@ import { aiRequest, evaluateAnswer } from '@/data/aiRepository';
 import { REVIEW_RATINGS } from '@/lib/sm2';
 import { ChatMarkdown } from './TutorPanel';
 import Elapsed from './Elapsed';
+import AddFollowUpToBank from './AddFollowUpToBank';
+import { followUpScore } from '../../../supabase/functions/ai-tutor/questionDraft.js';
 import { MAX_ROUNDS } from '../../../supabase/functions/ai-tutor/evaluation.js';
 import { useAuth } from '@/context/AuthContext';
 import { useAIDraft } from '@/lib/aiDrafts';
@@ -98,7 +100,7 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
         <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>AI生成 · 建议仅供参考，评分仍由你确认</p>
       </div>
 
-      {rounds.map((evaluation) => <RoundCard key={evaluation.id} evaluation={evaluation} />)}
+      {rounds.map((evaluation) => <RoundCard key={evaluation.id} evaluation={evaluation} mode={mode} categoryId={question.categoryId} />)}
 
       {(status === 'checking' || busy) && <p role="status" className="type-caption mt-3">{rounds.length ? 'AI 正在思考并评估你的追问回答…' : 'AI 正在对照评分标准思考评估…'}{busy && <Elapsed />}</p>}
 
@@ -139,8 +141,9 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
   );
 }
 
-function RoundCard({ evaluation }) {
+function RoundCard({ evaluation, mode, categoryId }) {
   const r = evaluation.result ?? {};
+  const ownScore = evaluation.round > 1 ? followUpScore(evaluation) : null;
   return (
     <article className="ai-eval-round mt-4">
       {evaluation.round > 1 && (
@@ -149,6 +152,10 @@ function RoundCard({ evaluation }) {
           <ChatMarkdown content={evaluation.follow_up_question ?? ''} />
           <p className="type-micro-bold mt-2">我的回答</p>
           <p className="type-caption whitespace-pre-wrap">{evaluation.submission?.answerMd}</p>
+          {ownScore != null && <p className="type-micro mt-2" style={{ color: 'var(--text-tertiary)' }}>这轮追问回答得分 {ownScore}</p>}
+          {mode === 'interview'
+            ? <p className="type-micro mt-1" style={{ color: 'var(--text-tertiary)' }}>面试结束后可在“薄弱知识点 → 待入库的追问”中加入题库。</p>
+            : <AddFollowUpToBank evaluation={evaluation} sourceCategoryId={categoryId} />}
         </div>
       )}
       <div className="flex items-start gap-4">

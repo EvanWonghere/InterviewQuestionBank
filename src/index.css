@@ -1201,3 +1201,23 @@ button.heat-cell {
 .ai-eval-comment { grid-column:1 / -1; color:var(--text-tertiary); }
 .btn-status.is-suggested { box-shadow:0 0 0 2px var(--apple-blue); }
 .ai-suggest-badge { margin-left:6px; font-size:11px; font-weight:600; color:var(--apple-blue); }
+
+/* ── Submitted answer ─────────────────────────────────────────────── */
+.submission-card { border:1px solid var(--border-subtle); border-radius:1rem; padding:1rem 1.25rem; background:var(--surface-card); }
+.submission-card > summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+.submission-card > summary::-webkit-details-marker { display:none; }
+.submission-card > summary::after { content:"收起"; font-size:12px; color:var(--text-tertiary); }
+.submission-card:not([open]) > summary::after { content:"展开"; }
+.submission-card[open] > summary { margin-bottom:.75rem; }
+.submission-text { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; line-height:1.6; color:var(--text-primary); }
+.submission-option { display:flex; align-items:flex-start; gap:.75rem; padding:.6rem .9rem; border:1px solid var(--border-subtle); border-radius:.8rem; color:var(--text-tertiary); }
+.submission-option.is-chosen { border-color:var(--apple-blue); background:var(--filter-bg); color:var(--text-primary); }
+.submission-mark { min-width:4em; color:var(--apple-blue); padding-top:.2rem; }
+.submission-option .markdown-content > :last-child { margin-bottom:0; }
+
+/* ── Follow-up → question bank ────────────────────────────────────── */
+.bank-draft { border:1px dashed var(--border-default); border-radius:14px; padding:14px; margin-top:12px; }
+.bank-draft .correct { color:var(--success-fg); font-weight:600; }
+.bank-recommend { color:var(--warning-fg); }
+/* An open generator needs the full row for its previews. */
+.weakness-card:has(.bank-draft) { grid-column:1 / -1; }

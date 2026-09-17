@@ -25,6 +25,9 @@ export const questionSchema = z
   .object({
     id: z.string().optional(),
     legacyId: z.string().nullable().optional(),
+    originKind: z.enum(['follow_up', 'weakness']).nullable().optional(),
+    originEvaluationId: z.string().uuid().nullable().optional(),
+    originWeaknessTag: z.string().trim().max(40).nullable().optional(),
     categoryId: z.string().min(1, '请选择分类'),
     type: z.enum(QUESTION_TYPES),
     title: z.string().trim().min(1, '标题不能为空'),

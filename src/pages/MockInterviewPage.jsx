@@ -5,6 +5,7 @@ import { useProgressStore } from '@/store/progressStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
 import AnswerPanel from '@/components/quiz/AnswerPanel';
 import TutorEntry from '@/components/ai/TutorEntry';
+import SubmissionView from '@/components/quiz/SubmissionView';
 import { useReviewStore } from '@/store/reviewStore';
 
 // Markdown rendering for the report is heavy; only load it on the summary screen.
@@ -342,7 +343,7 @@ export default function MockInterviewPage() {
           </div>
         )}
 
-        <section className="mb-7"><h2 className="type-eyebrow">逐题巩固</h2>{deck.map(q => <div key={q.id} className="mt-4"><p>{q.title}</p><TutorEntry enabled question={q} phase="review" submission={attempts.find(a => a.question_id === q.id)?.submission ?? {}} /></div>)}</section>
+        <section className="mb-7"><h2 className="type-eyebrow">逐题巩固</h2>{deck.map(q => <div key={q.id} className="mt-4"><p>{q.title}</p>{attempts.some(a => a.question_id === q.id) && <details className="submission-card mt-2"><summary><span className="type-caption-bold">我的回答</span></summary><SubmissionView question={q} submission={attempts.find(a => a.question_id === q.id).submission} /></details>}<TutorEntry enabled question={q} phase="review" submission={attempts.find(a => a.question_id === q.id)?.submission ?? {}} /></div>)}</section>
 
         <div className="flex flex-col gap-2.5">
           <button type="button" onClick={resetToSetup} className="btn-blue w-full">

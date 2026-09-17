@@ -138,3 +138,84 @@ describe('reports', () => {
     expect(db.rpc).not.toHaveBeenCalled();
   });
 });
+
+describe('handleDraftQuestion', () => {
+  const draftDb = (evaluation) => {
+    const db = fakeDb({
+      ai_evaluations: () => ({ data: evaluation, error: null }),
+      questions: () => ({ data: { title: '事件订阅', type: 'short_answer', prompt_md: 'p', difficulty: 'medium', question_tags: [{ tags: { name: 'Unity' } }] }, error: null }),
+      question_solutions: () => ({ data: { solution: { referenceAnswerMd: 'ref' } }, error: null }),
+    });
+    db.rpc.mockResolvedValue({ data: null, error: null });
+    return db;
+  };
+  it('drafts from an answered follow-up without writing questions', async () => {
+    const { handleDraftQuestion } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const db = draftDb({ id: id(7), question_id: id(1), round: 2, follow_up_question: '禁用时何时退订？', submission: { answerMd: '不知道' }, score: 60, result: { followUpAnswerScore: 30 }, status: 'complete' });
+    const callModel = vi.fn(async () => JSON.stringify({ type: 'single_choice', title: 't', promptMd: 'p', payload: { options: [{ id: '1', text: 'OnDisable' }, { id: '2', text: 'Update' }] }, solution: { correctOptionIds: ['1'] } }));
+    const res = await handleDraftQuestion({ evaluationId: id(7), type: 'auto' }, { uid: 'u', db, model: 'm', json, must, callModel });
+    expect(res.status).toBe(200);
+    expect(res.data.question).toMatchObject({ type: 'single_choice', originEvaluationId: id(7), sourceTitle: 'AI 追问 · 事件订阅' });
+    expect(db.rpc).toHaveBeenCalledWith('ai_take_rate', { p_user: 'u' });
+    const material = callModel.mock.calls[0][0][1].content;
+    expect(material).toContain('禁用时何时退订？');
+    expect(material).toContain('"score":30');
+    expect(db.calls.some((c) => c.op !== 'select')).toBe(false);
+  });
+  it('rejects initial-answer rounds before charging', async () => {
+    const { handleDraftQuestion } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const db = draftDb({ id: id(7), round: 1, status: 'complete', follow_up_question: null });
+    const callModel = vi.fn();
+    const res = await handleDraftQuestion({ evaluationId: id(7), type: 'auto' }, { uid: 'u', db, model: 'm', json, must, callModel });
+    expect(res.status).toBe(400);
+    expect(db.rpc).not.toHaveBeenCalled();
+    expect(callModel).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleWeaknessQuestions', () => {
+  const evaluations = [
+    { question_id: id(1), score: 40, status: 'complete', created_at: '2026-09-02', result: { weaknesses: [{ tag: '事件退订', point: '没有区分 OnDisable 与 OnDestroy' }] } },
+    { question_id: id(2), score: 70, status: 'complete', created_at: '2026-09-01', result: { weaknesses: [{ tag: '事件退订', point: '忘记重新订阅' }] } },
+  ];
+  const setupDb = () => {
+    const db = fakeDb({
+      ai_evaluations: () => ({ data: evaluations, error: null }),
+      questions: (q) => (q.filters.some(([k]) => k === 'in')
+        ? { data: [{ id: id(1), title: '事件订阅与生命周期', type: 'short_answer', prompt_md: 'p', question_solutions: { solution: { referenceAnswerMd: 'ref' } } }], error: null }
+        : { data: [{ title: '已出过的题' }], error: null }),
+      tags: () => ({ data: [{ question_tags: [{ questions: { title: '带标签的题' } }] }], error: null }),
+    });
+    db.rpc.mockResolvedValue({ data: null, error: null });
+    return db;
+  };
+  it('re-derives the weakness server-side, avoids existing titles and returns provenance', async () => {
+    const { handleWeaknessQuestions } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const db = setupDb();
+    const reply = JSON.stringify({ questions: [
+      { type: 'single_choice', title: '禁用时退订', promptMd: 'p', payload: { options: [{ id: 'a', text: 'OnDisable' }, { id: 'b', text: 'Update' }] }, solution: { correctOptionIds: ['a'] } },
+      { type: 'algorithm', title: '实现安全订阅', promptMd: 'p', payload: { language: 'C#' }, solution: { referenceAnswerMd: 'code' } },
+    ] });
+    const callModel = vi.fn(async () => reply);
+    const res = await handleWeaknessQuestions({ tag: ' 事件退订 ', count: 2, types: 'auto' }, { uid: 'u', db, model: 'm', json, must, callModel });
+    expect(res.status).toBe(200);
+    expect(res.data.questions).toHaveLength(2);
+    expect(res.data.questions[1]).toMatchObject({ type: 'algorithm', originKind: 'weakness', originWeaknessTag: '事件退订', sourceTitle: 'AI 针对薄弱点 · 事件退订' });
+    const material = JSON.parse(callModel.mock.calls[0][0][1].content.split('\n').slice(1).join('\n'));
+    expect(material.weakness.points).toEqual(['没有区分 OnDisable 与 OnDestroy', '忘记重新订阅']);
+    expect(material.existingTitles).toEqual(expect.arrayContaining(['已出过的题', '事件订阅与生命周期', '带标签的题']));
+    expect(material.relatedQuestions[0].reference).toBe('ref');
+    expect(callModel.mock.calls[0][1]).toEqual({ budgetScale: 2 });
+    expect(db.rpc).toHaveBeenCalledWith('ai_take_rate', { p_user: 'u' });
+    expect(db.calls.some((c) => c.op !== 'select')).toBe(false);
+  });
+  it('rejects unknown weaknesses before charging', async () => {
+    const { handleWeaknessQuestions } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const db = setupDb();
+    const callModel = vi.fn();
+    const res = await handleWeaknessQuestions({ tag: '不存在', count: 1, types: 'auto' }, { uid: 'u', db, model: 'm', json, must, callModel });
+    expect(res.status).toBe(400);
+    expect(db.rpc).not.toHaveBeenCalled();
+    expect(callModel).not.toHaveBeenCalled();
+  });
+});

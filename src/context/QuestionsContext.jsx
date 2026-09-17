@@ -6,12 +6,14 @@ const QuestionsContext = createContext(null);
 export function QuestionsProvider({ children }) {
   const [data, setData] = useState({ categories: [], questions: [], loading: true, error: null, source: 'static' });
 
-  const refresh = useCallback(async () => {
-    setData((previous) => ({ ...previous, loading: true, error: null }));
+  // silent: update the list without the loading state, so open practice screens are not unmounted.
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setData((previous) => ({ ...previous, loading: true, error: null }));
     try {
       const payload = await listQuestions();
       setData({ categories: payload.categories, questions: payload.questions, loading: false, error: null, source: payload.source });
     } catch (err) {
+      if (silent) throw err; // keep the current list; the caller reports the failure
       setData({ categories: [], questions: [], loading: false, error: err.message, source: 'error' });
     }
   }, []);

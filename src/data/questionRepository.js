@@ -19,6 +19,9 @@ function mapCloudQuestion(row) {
     sourceUrl: row.source_url ?? '',
     status: row.status,
     visibility: row.visibility,
+    originKind: row.origin_kind ?? null,
+    originEvaluationId: row.origin_evaluation_id ?? null,
+    originWeaknessTag: row.origin_weakness_tag ?? null,
   };
 }
 
@@ -44,7 +47,7 @@ export async function listQuestions() {
     client.from('categories').select('id,slug,name,sort_order').order('sort_order'),
     client
       .from('questions')
-      .select('id,legacy_id,category_id,type,title,prompt_md,difficulty,sort_order,payload,source_title,source_url,status,visibility,question_tags(tags(name))')
+      .select('id,legacy_id,category_id,type,title,prompt_md,difficulty,sort_order,payload,source_title,source_url,status,visibility,origin_kind,origin_evaluation_id,origin_weakness_tag,question_tags(tags(name))')
       .order('sort_order'),
   ]);
   if (categoriesError) throw categoriesError;
@@ -88,6 +91,12 @@ export async function saveQuestion(input) {
     source_url: input.sourceUrl || null,
     status: input.status,
     visibility: input.visibility,
+    // Only set on creation from AI drafts; editing never rewrites provenance.
+    ...(!input.id && input.originKind ? {
+      origin_kind: input.originKind,
+      origin_evaluation_id: input.originEvaluationId ?? null,
+      origin_weakness_tag: input.originWeaknessTag ?? null,
+    } : {}),
   };
   const { data: question, error } = input.id
     ? await client.from('questions').update(row).eq('id', input.id).select().single()
@@ -115,7 +124,7 @@ export async function archiveQuestion(id) {
 
 export async function duplicateQuestion(id) {
   const source = await getQuestionForEdit(id);
-  return saveQuestion({ ...source, id: undefined, legacyId: undefined, title: `${source.title}（副本）`, status: 'draft', visibility: 'private' });
+  return saveQuestion({ ...source, id: undefined, legacyId: undefined, title: `${source.title}（副本）`, status: 'draft', visibility: 'private', originKind: null, originEvaluationId: null, originWeaknessTag: null });
 }
 
 export async function gradeCloudQuestion(questionId, submission) {

@@ -10,7 +10,7 @@ async function repeatSignIn(page) {
  });
 }
 async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
- const state={messages:{},chats:[],attempts:[],notes:[],calls:[],fail:false,slow:false,evaluations:[],evalInputs:[],reports:[],rpc:{}};
+ const state={messages:{},chats:[],attempts:[],notes:[],calls:[],fail:false,slow:false,evaluations:[],evalInputs:[],reports:[],rpc:{},created:[],drafts:[]};
  if(loggedIn)await page.addInitScript(({uid})=>{
   const enc=x=>btoa(JSON.stringify(x)).replaceAll('=','').replaceAll('+','-').replaceAll('/','_');
   const token=`${enc({alg:'HS256',typ:'JWT'})}.${enc({sub:uid,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})}.fake`;
@@ -24,7 +24,11 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
   if(path.includes('/auth/v1/logout'))return reply({});
  if(path.endsWith('/rpc/is_app_admin')){state.rpc.adminChecks=(state.rpc.adminChecks??0)+1;return reply(admin);}
   if(path.endsWith('/rpc/grade_question'))return reply({correct:null,referenceAnswerMd:'发布者持有订阅者引用；销毁时退订，避免重复回调。',rubricMd:'说明生命周期与退订。',explanationMd:''});
-  if(path.endsWith('/questions'))return reply(questions);
+  if(path.endsWith('/questions')){
+   if(route.request().method()==='POST'){const row={...input,id:crypto.randomUUID(),question_tags:[]};state.created.push(row);return reply(row,201);}
+   return reply([...questions,...state.created]);
+  }
+  if(path.endsWith('/question_solutions')){if(route.request().method()==='POST')state.solutions=[...(state.solutions??[]),input];return reply([]);}
   if(path.endsWith('/categories'))return reply([{id:'c',name:'Unity基础',slug:'unity',sort_order:1}]);
   if(path.endsWith('/attempts')){if(route.request().method()==='POST')state.attempts.push(input);return reply(state.attempts);}
   if(path.endsWith('/notes')){if(route.request().method()==='POST')state.notes=[input];return reply(state.notes);}
@@ -54,11 +58,26 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
     const result={score:round===1?58:76,verdict:round===1?'遗漏了禁用时的退订':'补充了禁用场景，仍可更严谨',suggestedRating:round===1?'again':'hard',
      dimensions:[{name:'正确性',score:3,comment:'主体正确'}],strengths:['说明了订阅关系'],
      weaknesses:[{tag:'事件退订',point:'没有区分 OnDisable 与 OnDestroy',errorReason:'boundary_case',severity:'high'}],
-     followUp:round===1?{question:'对象被禁用而非销毁时，应该何时退订？',targets:'事件退订'}:null,summaryMd:'**建议**：把订阅与退订放在对称的生命周期回调里。'};
+     followUp:round===1?{question:'对象被禁用而非销毁时，应该何时退订？',targets:'事件退订'}:null,followUpAnswerScore:round>1?45:null,summaryMd:'**建议**：把订阅与退订放在对称的生命周期回调里。'};
     const ev={id:crypto.randomUUID(),question_id:input.questionId,round,root_id:parent?(parent.root_id??parent.id):null,parent_id:input.parentId??null,
      follow_up_question:parent?parent.result.followUp.question:null,submission:parent?{answerMd:input.answerMd}:input.submission,mode:input.mode,
      session_id:parent?parent.session_id:(input.sessionId??null),score:result.score,suggested_rating:result.suggestedRating,result,status:'complete',created_at:new Date().toISOString()};
     state.evaluations.push(ev);return reply({evaluation:ev});
+   }
+   if(input.action==='draft-question'){
+    state.drafts.push(input);
+    return reply({question:{type:input.type==='auto'?'single_choice':input.type,title:'禁用时的事件退订时机',promptMd:'组件被 **禁用** 而非销毁时，应在哪个回调中退订事件？',difficulty:'medium',tags:['事件退订'],
+     payload:{options:[{id:'a',text:'OnDisable'},{id:'b',text:'Update'},{id:'c',text:'OnApplicationQuit'}]},
+     solution:{correctOptionIds:['a'],referenceAnswerMd:'OnDisable，并在 OnEnable 重新订阅。',rubricMd:'',explanationMd:'禁用不会触发 OnDestroy。',caseSensitive:false},
+     sourceTitle:'AI 追问 · 事件订阅与生命周期',originKind:'follow_up',originEvaluationId:input.evaluationId}});
+   }
+   if(input.action==='draft-weakness-questions'){
+    state.drafts.push(input);
+    const all=[
+     {type:'multiple_choice',title:'哪些回调适合成对订阅与退订',promptMd:'选出**成对**使用的回调组合。',difficulty:'medium',tags:['事件退订'],payload:{options:[{id:'a',text:'OnEnable / OnDisable'},{id:'b',text:'Awake / OnDestroy'},{id:'c',text:'Update / LateUpdate'}]},solution:{correctOptionIds:['a','b'],referenceAnswerMd:'',rubricMd:'',explanationMd:'成对回调保证对称。',caseSensitive:false}},
+     {type:'algorithm',title:'用 C# 实现自动退订的事件订阅',promptMd:'实现 `Subscription : IDisposable`。',difficulty:'hard',tags:['事件退订','C#'],payload:{language:'C#',starterCode:'public sealed class Subscription : IDisposable {}'},solution:{referenceAnswerMd:'```csharp\n// 参考实现\n```',rubricMd:'- Dispose 幂等',explanationMd:'',caseSensitive:false}},
+    ].slice(0,input.count);
+    return reply({tag:input.tag,questions:all.map(q=>({...q,sourceTitle:`AI 针对薄弱点 · ${input.tag}`,originKind:'weakness',originWeaknessTag:input.tag}))});
    }
    if(input.action==='interview-report'||input.action==='weakness-report'){
     const interview=input.action==='interview-report';
@@ -235,4 +254,66 @@ test('weakness insights aggregate evaluations and heatmap reads cloud aggregates
  await expect(page.getByText('云端作答记录')).toBeVisible();
  await expect.poll(()=>s.rpc.calendar?.p_tz).toBeTruthy();
  await expect(page.getByRole('button',{name:/· 3 次 · 2 题 · 平均评分 4\.0 · AI 均分 76 · 模拟面试 1 场$/})).toBeVisible();
+});
+
+test('submitted answers stay visible and a weak follow-up becomes a private draft question',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('./#/quiz?q=q-901');
+ await page.getByPlaceholder('用自己的话作答…').fill('对象销毁时在 OnDestroy 退订');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ const mine=page.locator('details.submission-card').first();
+ await expect(mine).toContainText('对象销毁时在 OnDestroy 退订');
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await page.getByRole('textbox',{name:'回答追问'}).fill('好像也是 OnDestroy');
+ await page.getByRole('button',{name:'回答追问',exact:true}).click();
+ await expect(page.getByText('这轮追问回答得分 45')).toBeVisible();
+ await expect(page.getByText(/掌握不牢（45 分）/)).toBeVisible();
+ await page.getByRole('button',{name:'加入题库'}).click();
+ await page.getByRole('combobox',{name:'生成题型'}).selectOption('single_choice');
+ await page.getByRole('button',{name:'生成题目'}).click();
+ await expect(page.getByRole('textbox',{name:'标题'})).toHaveValue('禁用时的事件退订时机');
+ expect(s.drafts[0]).toEqual({action:'draft-question',evaluationId:s.evaluations[1].id,type:'single_choice'});
+ await page.screenshot({path:'test-results/ai-follow-up-draft.png',fullPage:true});
+ await page.getByRole('button',{name:'保存到题库（私有草稿）'}).click();
+ await expect(page.getByText('已加入题库：')).toBeVisible();
+ expect(s.created).toHaveLength(1);
+ expect(s.created[0]).toMatchObject({type:'single_choice',status:'draft',visibility:'private',origin_kind:'follow_up',origin_evaluation_id:s.evaluations[1].id,category_id:'c',source_title:'AI 追问 · 事件订阅与生命周期'});
+ expect(s.solutions.at(-1).solution.correctOptionIds).toEqual(['a']);
+ // The practice screen stayed mounted through the silent list refresh.
+ await expect(mine).toContainText('对象销毁时在 OnDestroy 退订');
+ await page.getByRole('button',{name:'良好',exact:true}).click();
+ await page.goto('./#/review/history');
+ await page.getByText('我的回答').first().click();
+ await expect(page.getByText('对象销毁时在 OnDestroy 退订')).toBeVisible();
+ expect(errors).toEqual([]);
+});
+
+test('weakness card drafts targeted questions and saves only the ticked ones',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1280,height:900});
+ await page.goto('./#/quiz?q=q-901');
+ await page.getByPlaceholder('用自己的话作答…').fill('销毁时退订');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await expect(page.getByText('遗漏了禁用时的退订')).toBeVisible();
+ await page.goto('./#/review/weak');
+ const card=page.locator('article.weakness-card',{hasText:'事件退订'});
+ await card.getByRole('button',{name:'针对性出题'}).click();
+ await card.getByRole('button',{name:'生成题目'}).click();
+ await expect(card.getByRole('textbox',{name:'标题'}).first()).toHaveValue('哪些回调适合成对订阅与退订');
+ expect(s.drafts.at(-1)).toEqual({action:'draft-weakness-questions',tag:'事件退订',count:2,types:'auto'});
+ await expect(card.getByText('语言：C#')).toBeVisible();
+ // The open generator spans the full grid row.
+ const width=await card.evaluate(el=>el.getBoundingClientRect().width/el.parentElement.getBoundingClientRect().width);
+ expect(width).toBeGreaterThan(0.95);
+ await page.screenshot({path:'test-results/ai-weakness-drafts.png',fullPage:true});
+ await card.getByRole('checkbox',{name:/保存第 1 道/}).uncheck();
+ await card.getByRole('button',{name:'保存选中的 1 道（私有草稿）'}).click();
+ await expect(card.getByText('已保存为私有草稿：')).toBeVisible();
+ expect(s.created).toHaveLength(1);
+ expect(s.created[0]).toMatchObject({type:'algorithm',status:'draft',visibility:'private',origin_kind:'weakness',origin_weakness_tag:'事件退订',origin_evaluation_id:null,category_id:'c'});
+ expect(s.solutions.at(-1).solution.referenceAnswerMd).toContain('参考实现');
+ await expect(card.getByText('已为此薄弱点出过 1 道')).toBeVisible();
+ await expect(card.getByRole('textbox',{name:'标题'})).toHaveValue('哪些回调适合成对订阅与退订');
+ expect(errors).toEqual([]);
 });

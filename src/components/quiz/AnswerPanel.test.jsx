@@ -80,3 +80,17 @@ describe('AnswerPanel AI evaluation', () => {
     expect(screen.queryByTestId('evaluation')).toBeNull();
   });
 });
+
+describe('AnswerPanel question identity', () => {
+  it('keeps the submitted answer when the question list refreshes with new objects', async () => {
+    const { rerender } = render(<AnswerPanel question={question} evaluationMode="off" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '保留我' } });
+    fireEvent.click(screen.getByRole('button', { name: /提交/ }));
+    expect(await screen.findByText('参考答案内容')).toBeVisible();
+    rerender(<AnswerPanel question={{ ...question }} evaluationMode="off" />);
+    expect(screen.getByText('参考答案内容')).toBeVisible();
+    expect(screen.getByText('保留我')).toBeVisible();
+    rerender(<AnswerPanel question={{ ...question, id: 'q2' }} evaluationMode="off" />);
+    expect(screen.queryByText('参考答案内容')).toBeNull();
+  });
+});

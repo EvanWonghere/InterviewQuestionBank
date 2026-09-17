@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import { endpoint, validateChat, buildContext, sseData } from './core.js';
-import { handleEvaluate, handleInterviewReport, handleWeaknessReport } from './evaluate.ts';
+import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeaknessQuestions, handleWeaknessReport } from './evaluate.ts';
 import { modelFailure } from './modelErrors.js';
 import { MODEL_TIMEOUT_MS, modelOptions, normalizeEffort, outputBudget, REASONING_EFFORTS } from './modelOptions.js';
 import { callModel as callModelWith } from './modelClient.js';
@@ -8,9 +8,9 @@ const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 const must = <T>(r: { data: T; error: { message: string } | null }): T => { if (r.error) throw new Error(r.error.message); return r.data; };
-type ModelCall = { effort: string; json?: boolean };
-const callModel = (url: string, model: string, messages: unknown[], { effort, json = false }: ModelCall) =>
- callModelWith({ url, apiKey: env('AI_API_KEY'), model, messages, effort, json });
+type ModelCall = { effort: string; json?: boolean; budgetScale?: number };
+const callModel = (url: string, model: string, messages: unknown[], { effort, json = false, budgetScale = 1 }: ModelCall) =>
+ callModelWith({ url, apiKey: env('AI_API_KEY'), model, messages, effort, json, budgetScale });
 export async function handleRequest(req: Request, factory = createClient) {
  if (req.method === 'OPTIONS') return new Response(null, { headers });
  if (req.method !== 'POST') return json({ error: 'POST required' },405);
@@ -62,13 +62,15 @@ export async function handleRequest(req: Request, factory = createClient) {
    if(!q)return json({error:'题目不存在'},404);
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
   }
-  if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report') {
+  if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report' || action === 'draft-question' || action === 'draft-weakness-questions') {
    const settings=must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
    if(!settings?.model || !env('AI_API_KEY')) return json({error:'请先配置API地址、model和服务端密钥'},503);
    const url=endpoint(settings.base_url,env('AI_ALLOWED_ORIGINS'));
-   const ctx={uid,client,db,model:settings.model,json,must,callModel:(messages:unknown[])=>callModel(url,settings.model,messages,{effort:settings.reasoning_effort,json:true})};
+   const ctx={uid,client,db,model:settings.model,json,must,callModel:(messages:unknown[],options:{budgetScale?:number}={})=>callModel(url,settings.model,messages,{effort:settings.reasoning_effort,json:true,budgetScale:options.budgetScale})};
    if(action==='evaluate') return await handleEvaluate(input,ctx);
    if(action==='interview-report') return await handleInterviewReport(input,ctx);
+   if(action==='draft-question') return await handleDraftQuestion(input,ctx);
+   if(action==='draft-weakness-questions') return await handleWeaknessQuestions(input,ctx);
    return await handleWeaknessReport(input,ctx);
   }
   if(action !== 'chat') return json({error:'未知操作'},400);
@@ -134,7 +136,7 @@ export async function handleRequest(req: Request, factory = createClient) {
   if(text.includes('generation_busy'))return json({error:'本题还有生成中的请求，请停止或稍后刷新'},409);
   if(text.includes('followup_invalid'))return json({error:'追问已回答、已达轮次上限或不属于本题，请刷新后重试'},400);
   // Input validation messages are authored in evaluation.js and safe to show.
-  if(/^(无效|模拟面试评估需要|追问回答需为|作答过长)/.test(text))return json({error:text},400);
+  if(/^(无效|模拟面试评估需要|追问回答需为|作答过长|只能把|薄弱点数据过长)/.test(text))return json({error:text},400);
   // Do not reflect database internals, upstream response bodies or secrets.
   return json({error:'请求未完成，请检查输入与配置；已有内容未被清空'},400);
  }
