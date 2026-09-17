@@ -58,6 +58,13 @@
   --badge-active-fg: var(--apple-blue);
   --dot-default: rgba(0, 0, 0, 0.22);
   --track-bg: rgba(0, 0, 0, 0.08);
+
+  /* Practice heatmap (GitHub-like greens) */
+  --heat-0: #ebedf0;
+  --heat-1: #9be9a8;
+  --heat-2: #40c463;
+  --heat-3: #30a14e;
+  --heat-4: #216e39;
 }
 
 /* Cloud question bank controls */
@@ -155,6 +162,12 @@ select.input-apple {
     --badge-active-fg: var(--apple-blue-bright);
     --dot-default: rgba(255, 255, 255, 0.28);
     --track-bg: rgba(255, 255, 255, 0.12);
+
+    --heat-0: #2a2a2c;
+    --heat-1: #0e4429;
+    --heat-2: #006d32;
+    --heat-3: #26a641;
+    --heat-4: #39d353;
   }
 }
 
@@ -198,6 +211,12 @@ select.input-apple {
   --badge-active-fg: var(--apple-blue-bright);
   --dot-default: rgba(255, 255, 255, 0.28);
   --track-bg: rgba(255, 255, 255, 0.12);
+
+  --heat-0: #2a2a2c;
+  --heat-1: #0e4429;
+  --heat-2: #006d32;
+  --heat-3: #26a641;
+  --heat-4: #39d353;
 }
 
 * {
@@ -1048,3 +1067,137 @@ body {
 .ai-error { color:var(--error-fg); padding-bottom:8px; font-size:13px; }
 @media(min-width:900px) { body.ai-panel-open { padding-right:480px; } }
 @media(max-width:899px) { .ai-tutor-panel { width:100vw; } }
+
+/* ── Practice heatmap ─────────────────────────────────────────────── */
+.heatmap-range {
+  width: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 13px;
+}
+
+.heatmap-info {
+  min-height: 1.5em;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.heatmap {
+  --cell: 12px;
+  --gap: 3px;
+  display: grid;
+  grid-template-columns: 18px auto;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  row-gap: 4px;
+  width: max-content;
+}
+
+.heatmap-months {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), var(--cell));
+  column-gap: var(--gap);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.heatmap-weekdays {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  row-gap: var(--gap);
+  font-size: 10px;
+  line-height: var(--cell);
+  color: var(--text-tertiary);
+}
+
+.heatmap-grid {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, var(--cell));
+  grid-auto-columns: var(--cell);
+  grid-auto-flow: column;
+  gap: var(--gap);
+}
+
+.heat-cell {
+  position: relative;
+  display: inline-block;
+  width: var(--cell, 12px);
+  height: var(--cell, 12px);
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--heat-0);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+button.heat-cell {
+  cursor: pointer;
+}
+
+.heat-cell.is-empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+.heat-cell[data-level="1"] { background: var(--heat-1); }
+.heat-cell[data-level="2"] { background: var(--heat-2); }
+.heat-cell[data-level="3"] { background: var(--heat-3); }
+.heat-cell[data-level="4"] { background: var(--heat-4); }
+
+.heat-cell.is-today {
+  box-shadow: inset 0 0 0 1px var(--text-tertiary);
+}
+
+.heat-cell.is-selected,
+.heat-cell:focus-visible {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 1px;
+}
+
+.heat-cell.has-interview::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--apple-blue);
+}
+
+.heatmap-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.heatmap-legend .heat-cell {
+  --cell: 10px;
+}
+
+.heatmap-detail {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── AI evaluation ────────────────────────────────────────────────── */
+.ai-evaluation { border:1px solid var(--border-subtle); border-radius:18px; padding:18px; background:var(--surface-card); overflow-wrap:anywhere; }
+.ai-eval-round + .ai-eval-round { border-top:1px solid var(--border-subtle); padding-top:16px; }
+.ai-eval-score { display:flex; align-items:baseline; gap:2px; min-width:72px; color:var(--text-primary); }
+.ai-eval-followup,.ai-followup { background:var(--filter-bg); border-radius:14px; padding:12px 14px; }
+.ai-eval-dimension { display:grid; grid-template-columns:minmax(4.5em,auto) minmax(60px,1fr) auto; align-items:center; gap:4px 10px; }
+.ai-eval-dimension .progress-track { height:6px; }
+.ai-eval-dimension .progress-fill { display:block; }
+.ai-eval-comment { grid-column:1 / -1; color:var(--text-tertiary); }
+.btn-status.is-suggested { box-shadow:0 0 0 2px var(--apple-blue); }
+.ai-suggest-badge { margin-left:6px; font-size:11px; font-weight:600; color:var(--apple-blue); }

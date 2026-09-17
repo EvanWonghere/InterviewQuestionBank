@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useProgressStore } from '@/store/progressStore';
@@ -6,6 +6,9 @@ import QuestionContent from '@/components/quiz/QuestionContent';
 import AnswerPanel from '@/components/quiz/AnswerPanel';
 import TutorEntry from '@/components/ai/TutorEntry';
 import { useReviewStore } from '@/store/reviewStore';
+
+// Markdown rendering for the report is heavy; only load it on the summary screen.
+const InterviewReport = lazy(() => import('@/components/ai/InterviewReport'));
 
 const COUNT_OPTIONS = [5, 10, 20];
 const DEFAULT_COUNT = 10;
@@ -62,6 +65,8 @@ export default function MockInterviewPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [, setShowAnswer] = useState(false);
   const [roundResults, setRoundResults] = useState(/** @type {Record<string, 'mastered'|'wrong'>} */ ({}));
+  // Groups this round's AI evaluations so the summary can build one report.
+  const [sessionId, setSessionId] = useState(null);
 
   const startInterview = useCallback(() => {
     const picked = pickQuestions(allQuestions, categories, progress, count);
@@ -69,6 +74,7 @@ export default function MockInterviewPage() {
     setCurrentIndex(0);
     setShowAnswer(false);
     setRoundResults({});
+    setSessionId(crypto.randomUUID());
     setPhase('interviewing');
   }, [allQuestions, categories, progress, count]);
 
@@ -246,7 +252,7 @@ export default function MockInterviewPage() {
                   <QuestionContent content={currentQuestion.question} />
                 </div>
 
-                <AnswerPanel question={currentQuestion} onRated={markAndNext} assistantEnabled={false} />
+                <AnswerPanel question={currentQuestion} onRated={markAndNext} assistantEnabled={false} evaluationMode="interview" sessionId={sessionId} />
               </article>
             )}
           </div>
@@ -262,7 +268,7 @@ export default function MockInterviewPage() {
             borderTop: '1px solid var(--border-subtle)',
           }}
         >
-          <p className="mx-auto max-w-3xl text-center type-caption" style={{ color: 'var(--text-tertiary)' }}>提交答案并完成自评后自动进入下一题</p>
+          <p className="mx-auto max-w-3xl text-center type-caption" style={{ color: 'var(--text-tertiary)' }}>提交答案 → AI 面试官评估与追问（管理员）→ 查看参考答案并自评 → 下一题</p>
         </footer>
       </div>
     );
@@ -303,6 +309,10 @@ export default function MockInterviewPage() {
             </p>
           </div>
         </div>
+
+        <Suspense fallback={null}>
+          <InterviewReport sessionId={sessionId} questions={deck} />
+        </Suspense>
 
         {wrongQuestions.length > 0 && (
           <div className="mb-7">

@@ -1,9 +1,19 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import { endpoint, validateChat, buildContext, sseData } from './core.js';
+import { handleEvaluate, handleInterviewReport, handleWeaknessReport } from './evaluate.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 const must = <T>(r: { data: T; error: { message: string } | null }): T => { if (r.error) throw new Error(r.error.message); return r.data; };
+// Non-streaming Chat Completions call; errors carry only the upstream status, never its body.
+const callModel = async (url: string, model: string, messages: unknown[], maxTokens: number, timeoutMs: number) => {
+ const response=await fetch(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages,max_tokens:maxTokens,stream:false})});
+ if(!response.ok) throw new Error(`upstream_http_${response.status}`);
+ const result=await response.json().catch(()=>null);
+ const content=result?.choices?.[0]?.message?.content;
+ if(typeof content!=='string') throw new Error('upstream_format');
+ return content;
+};
 export async function handleRequest(req: Request, factory = createClient) {
  if (req.method === 'OPTIONS') return new Response(null, { headers });
  if (req.method !== 'POST') return json({ error: 'POST required' },405);
@@ -31,10 +41,11 @@ export async function handleRequest(req: Request, factory = createClient) {
    }
    if (!env('AI_API_KEY')) return json({error:'尚未设置服务端AI_API_KEY'},503);
    must(await db.rpc('ai_take_rate',{p_user:uid}));
-   const response=await fetch(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:input.model,messages:[{role:'user',content:'Reply with OK.'}],max_tokens:16,stream:false})});
-   if(!response.ok) return json({error:`连接测试失败（上游HTTP ${response.status}）`},502);
-   const result=await response.json();
-   return result.choices?.[0]?.message ? json({ok:true}) : json({error:'响应不是兼容Chat Completions格式'},502);
+   try { await callModel(url,input.model,[{role:'user',content:'Reply with OK.'}],16,15000); return json({ok:true}); }
+   catch(error) {
+    const status=error instanceof Error ? error.message.match(/^upstream_http_(\d{3})$/)?.[1] : undefined;
+    return json({error:status?`连接测试失败（上游HTTP ${status}）`:'响应不是兼容Chat Completions格式'},502);
+   }
   }
   if (action === 'append-note') {
    const body=must(await db.rpc('ai_append_note',{p_user:uid,p_question:input.questionId,p_body:input.body,p_expected:input.expectedNote ?? ''})); return json({body});
@@ -51,6 +62,15 @@ export async function handleRequest(req: Request, factory = createClient) {
    const q=must(await db.from('questions').select('updated_at').eq('id',input.questionId).single());
    if(!q)return json({error:'题目不存在'},404);
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
+  }
+  if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report') {
+   const settings=must(await db.from('ai_settings').select('base_url,model').eq('user_id',uid).maybeSingle());
+   if(!settings?.model || !env('AI_API_KEY')) return json({error:'请先配置API地址、model和服务端密钥'},503);
+   const url=endpoint(settings.base_url,env('AI_ALLOWED_ORIGINS'));
+   const ctx={uid,client,db,model:settings.model,json,must,callModel:(messages:unknown[],maxTokens:number)=>callModel(url,settings.model,messages,maxTokens,60000)};
+   if(action==='evaluate') return await handleEvaluate(input,ctx);
+   if(action==='interview-report') return await handleInterviewReport(input,ctx);
+   return await handleWeaknessReport(input,ctx);
   }
   if(action !== 'chat') return json({error:'未知操作'},400);
   validateChat(input);
@@ -108,6 +128,9 @@ export async function handleRequest(req: Request, factory = createClient) {
   if(text.includes('note_conflict'))return json({error:'笔记已更改或尚未同步；请保留编辑内容，刷新笔记后再追加'},409);
   if(text.includes('rate_limit'))return json({error:'请求过于频繁，一分钟最多10次'},429);
   if(text.includes('generation_busy'))return json({error:'本题还有生成中的请求，请停止或稍后刷新'},409);
+  if(text.includes('followup_invalid'))return json({error:'追问已回答、已达轮次上限或不属于本题，请刷新后重试'},400);
+  // Input validation messages are authored in evaluation.js and safe to show.
+  if(/^(无效|模拟面试评估需要|追问回答需为|作答过长)/.test(text))return json({error:text},400);
   // Do not reflect database internals, upstream response bodies or secrets.
   return json({error:'请求未完成，请检查输入与配置；已有内容未被清空'},400);
  }

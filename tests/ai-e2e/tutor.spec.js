@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 const uid='00000000-0000-0000-0000-000000000001';
 const questions=[1,2].map(n=>({id:`10000000-0000-0000-0000-${String(n).padStart(12,'0')}`,legacy_id:`q-90${n}`,category_id:'c',type:'short_answer',title:n===1?'事件订阅与生命周期':'服务器权威与状态同步',prompt_md:'请解释机制并给出一个项目中的边界例子。',difficulty:'medium',payload:{},question_tags:[],sort_order:n,status:'published',visibility:'public'}));
 async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
- const state={messages:{},chats:[],attempts:[],notes:[],calls:[],fail:false,slow:false};
+ const state={messages:{},chats:[],attempts:[],notes:[],calls:[],fail:false,slow:false,evaluations:[],evalInputs:[],reports:[],rpc:{}};
  if(loggedIn)await page.addInitScript(({uid})=>{
   const enc=x=>btoa(JSON.stringify(x)).replaceAll('=','').replaceAll('+','-').replaceAll('/','_');
   const token=`${enc({alg:'HS256',typ:'JWT'})}.${enc({sub:uid,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})}.fake`;
@@ -21,6 +21,16 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
   if(path.endsWith('/attempts')){if(route.request().method()==='POST')state.attempts.push(input);return reply(state.attempts);}
   if(path.endsWith('/notes')){if(route.request().method()==='POST')state.notes=[input];return reply(state.notes);}
   if(path.endsWith('/review_states'))return reply([]);
+  if(path.endsWith('/rpc/practice_calendar')){state.rpc.calendar=input;return reply([{day:input.p_to,attempts:3,questions:2,objective:0,correct:0,avg_quality:4,ai_avg_score:76,interviews:1}]);}
+  if(path.endsWith('/rpc/practice_day'))return reply([]);
+  if(path.endsWith('/ai_evaluations')){
+   const session=new URL(route.request().url()).searchParams.get('session_id')?.replace(/^eq\./,'');
+   return reply(state.evaluations.filter(e=>!session||e.session_id===session).slice().reverse());
+  }
+  if(path.endsWith('/ai_reports')){
+   const url=new URL(route.request().url());const session=url.searchParams.get('session_id')?.replace(/^eq\./,'');const kind=url.searchParams.get('kind')?.replace(/^eq\./,'');
+   return reply(state.reports.filter(r=>r.kind===kind&&(!session||r.session_id===session)).slice(-1));
+  }
   if(path.endsWith('/functions/v1/ai-tutor')) {
    state.calls.push(input.action);
    if(!admin)return reply({error:'仅管理员可用'},403);
@@ -28,6 +38,28 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
    if(input.action==='history')return reply({messages:state.messages[input.questionId]??[],versionChanged:false});
    if(input.action==='clear'){state.messages[input.questionId]=[];return reply({ok:true});}
    if(input.action==='append-note'){state.notes=[{question_id:input.questionId,body_md:`原有笔记\n\n${input.body}`}];return reply({body:state.notes[0].body_md});}
+   if(input.action==='evaluate'){
+    state.evalInputs.push(input);
+    if(!configured)return reply({error:'请先配置API地址、model和服务端密钥'},503);
+    const parent=input.parentId&&state.evaluations.find(e=>e.id===input.parentId);
+    const round=parent?parent.round+1:1;
+    const result={score:round===1?58:76,verdict:round===1?'遗漏了禁用时的退订':'补充了禁用场景，仍可更严谨',suggestedRating:round===1?'again':'hard',
+     dimensions:[{name:'正确性',score:3,comment:'主体正确'}],strengths:['说明了订阅关系'],
+     weaknesses:[{tag:'事件退订',point:'没有区分 OnDisable 与 OnDestroy',errorReason:'boundary_case',severity:'high'}],
+     followUp:round===1?{question:'对象被禁用而非销毁时，应该何时退订？',targets:'事件退订'}:null,summaryMd:'**建议**：把订阅与退订放在对称的生命周期回调里。'};
+    const ev={id:crypto.randomUUID(),question_id:input.questionId,round,root_id:parent?(parent.root_id??parent.id):null,parent_id:input.parentId??null,
+     follow_up_question:parent?parent.result.followUp.question:null,submission:parent?{answerMd:input.answerMd}:input.submission,mode:input.mode,
+     session_id:parent?parent.session_id:(input.sessionId??null),score:result.score,suggested_rating:result.suggestedRating,result,status:'complete',created_at:new Date().toISOString()};
+    state.evaluations.push(ev);return reply({evaluation:ev});
+   }
+   if(input.action==='interview-report'||input.action==='weakness-report'){
+    const interview=input.action==='interview-report';
+    const result=interview
+     ?{overallScore:71,summaryMd:'整体思路清楚，**生命周期边界**需要加强。',strengths:['表达结构清晰'],weaknesses:[{tag:'事件退订',detail:'禁用场景考虑不足',questionIds:[questions[0].id]}],studyPlan:['重做事件订阅题并口述 OnEnable/OnDisable 对称写法'],questionScores:[...new Set(state.evaluations.filter(e=>e.session_id===input.sessionId).map(e=>e.question_id))].map(id=>({questionId:id,title:'',score:76,rounds:2}))}
+     :{summaryMd:'近期薄弱点集中在**生命周期边界**。',basedOn:state.evaluations.length,focusAreas:[{tag:'事件退订',diagnosis:'把销毁和禁用混为一谈',drills:['画出 Awake→OnEnable→OnDisable→OnDestroy 时序'],questionIds:[questions[0].id]}]};
+    const report={id:crypto.randomUUID(),kind:interview?'interview':'weakness',session_id:input.sessionId??null,status:'complete',result,created_at:new Date().toISOString()};
+    state.reports.push(report);return reply({report});
+   }
    if(input.action==='chat'){
     state.chats.push(input);
     if(state.fail)return reply({error:'请求过于频繁，一分钟最多10次'},429);
@@ -101,4 +133,78 @@ test('unconfigured key and mock interview disable generation',async({page})=>{
  await expect(page.getByText('未配置AI_API_KEY',{exact:false})).toBeVisible();await expect(page.getByRole('button',{name:'发送',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'关闭学习助手'}).click();await page.goto('./#/mock-interview');
  await page.getByRole('button',{name:/开始/}).click();await expect(page.getByRole('button',{name:'问学习助手'})).toHaveCount(0);
+});
+
+test('practice evaluation, follow-up and suggested rating stay advisory',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('./#/quiz?q=q-901');
+ await page.getByPlaceholder('用自己的话作答…').fill('对象销毁时退订');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ await expect(page.getByText('发布者持有订阅者引用',{exact:false})).toBeVisible();
+ expect(s.evalInputs).toEqual([]);
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await expect(page.getByText('遗漏了禁用时的退订')).toBeVisible();
+ expect(s.evalInputs[0]).toMatchObject({mode:'practice',submission:{answerMd:'对象销毁时退订'}});
+ await expect(page.getByRole('button',{name:/重来\s*AI 建议/})).toBeVisible();
+ await expect(page.getByLabel('边界遗漏')).toBeChecked();
+ await page.getByRole('textbox',{name:'回答追问'}).fill('在 OnDisable 退订，OnEnable 重新订阅');
+ await page.getByRole('button',{name:'回答追问',exact:true}).click();
+ await expect(page.getByText('补充了禁用场景，仍可更严谨')).toBeVisible();
+ expect(s.evalInputs[1]).toMatchObject({parentId:s.evaluations[0].id,answerMd:'在 OnDisable 退订，OnEnable 重新订阅'});
+ await expect(page.getByRole('button',{name:/困难\s*AI 建议/})).toBeVisible();
+ await page.screenshot({path:'test-results/ai-evaluation.png',fullPage:true});
+ // The suggestion is advisory: choosing a different rating is recorded as chosen.
+ await page.getByRole('button',{name:'良好',exact:true}).click();
+ await expect.poll(()=>s.attempts.length).toBe(1);
+ expect(s.attempts[0]).toMatchObject({quality:4,ai_evaluation_id:s.evaluations[1].id,error_reasons:['boundary_case']});
+ expect(errors).toEqual([]);
+});
+test('mock interview hides the reference during AI follow-ups and ends with a report',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1280,height:900});await page.goto('./#/mock-interview');
+ await page.getByRole('button',{name:'5 题'}).click();await page.getByRole('button',{name:/开始/}).click();
+ for(let i=0;i<2;i++){
+  await page.getByPlaceholder('用自己的话作答…').fill(`第${i+1}题作答`);
+  await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+  await expect(page.getByText('遗漏了禁用时的退订')).toBeVisible();
+  await expect(page.getByText('发布者持有订阅者引用',{exact:false})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'良好',exact:true})).toHaveCount(0);
+  if(i===0){
+   await page.getByRole('textbox',{name:'回答追问'}).fill('OnDisable 退订');
+   await page.getByRole('button',{name:'回答追问',exact:true}).click();
+   await page.getByRole('button',{name:'查看参考答案并自评'}).click();
+  } else {
+   await page.getByRole('button',{name:'跳过追问，查看参考答案'}).click();
+  }
+  await expect(page.getByText('发布者持有订阅者引用',{exact:false})).toBeVisible();
+  await page.getByRole('button',{name:'良好',exact:true}).click();
+ }
+ await expect(page.getByText('71')).toBeVisible();
+ await expect(page.getByLabel('AI面试报告')).toContainText('生命周期边界');
+ const sessions=new Set(s.evaluations.map(e=>e.session_id));
+ expect(sessions.size).toBe(1);expect([...sessions][0]).toMatch(/^[0-9a-f-]{36}$/);
+ expect(s.evaluations.filter(e=>e.round===2)).toHaveLength(1);
+ expect(s.attempts.map(a=>Boolean(a.ai_evaluation_id))).toEqual([true,true]);
+ expect(s.calls.filter(c=>c==='interview-report')).toHaveLength(1);
+ await page.screenshot({path:'test-results/ai-interview-report.png',fullPage:true});
+ expect(errors).toEqual([]);
+});
+test('weakness insights aggregate evaluations and heatmap reads cloud aggregates',async({page})=>{
+ const s=await setup(page);
+ await page.goto('./#/quiz?q=q-901');
+ await page.getByPlaceholder('用自己的话作答…').fill('销毁时退订');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await expect(page.getByText('遗漏了禁用时的退订')).toBeVisible();
+ await page.goto('./#/review/weak');
+ const insights=page.getByRole('region',{name:'AI 评估中的薄弱点'});
+ await expect(insights.getByText('事件退订',{exact:true})).toBeVisible();
+ await expect(insights.getByText('均分 58')).toBeVisible();
+ await insights.getByRole('button',{name:'生成 AI 学习建议'}).click();
+ await expect(insights.getByText('把销毁和禁用混为一谈')).toBeVisible();
+ await expect(insights.getByRole('link',{name:'事件订阅与生命周期'}).first()).toBeVisible();
+ await page.goto('./#/');
+ await expect(page.getByText('云端作答记录')).toBeVisible();
+ expect(s.rpc.calendar.p_tz).toBeTruthy();
+ await expect(page.getByRole('button',{name:/· 3 次 · 2 题 · 平均评分 4\.0 · AI 均分 76 · 模拟面试 1 场$/})).toBeVisible();
 });

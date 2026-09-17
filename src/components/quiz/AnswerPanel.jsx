@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from '@/components/common/Markdown';
 import { gradeCloudQuestion } from '@/data/questionRepository';
 import { gradeObjective, isObjectiveType } from '@/lib/grading';
@@ -8,6 +8,8 @@ import { useReviewStore } from '@/store/reviewStore';
 import { useProgressStore } from '@/store/progressStore';
 import NoteEditor from './NoteEditor';
 import TutorEntry from '@/components/ai/TutorEntry';
+import EvaluationEntry from '@/components/ai/EvaluationEntry';
+import { constrainRating } from '../../../supabase/functions/ai-tutor/evaluation.js';
 
 const ERROR_REASONS = [
   ['concept_gap', '知识盲区'],
@@ -30,7 +32,7 @@ export default function AnswerPanel(props) {
   return <AnswerPanelState key={props.question.id} {...props} />;
 }
 
-function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
+function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluationMode = 'practice', sessionId }) {
   const { user, isAdmin } = useAuth();
   const recordAttempt = useReviewStore((state) => state.recordAttempt);
   const setProgress = useProgressStore((state) => state.setProgress);
@@ -44,6 +46,15 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
   const [error, setError] = useState('');
   const [errorReasons, setErrorReasons] = useState([]);
   const [customErrorReason, setCustomErrorReason] = useState('');
+  const [aiEvaluation, setAiEvaluation] = useState(null);
+  // Interview mode keeps the reference hidden until the AI follow-ups finish, are skipped, or AI is unavailable.
+  const [revealed, setRevealed] = useState(evaluationMode !== 'interview');
+  const reveal = useCallback(() => setRevealed(true), []);
+  const applyEvaluation = useCallback((evaluation) => {
+    setAiEvaluation(evaluation);
+    const reasons = (evaluation.result?.weaknesses ?? []).map((w) => w.errorReason).filter(Boolean);
+    if (reasons.length) setErrorReasons((items) => [...new Set([...items, ...reasons])]);
+  }, []);
 
   useEffect(() => {
     setSubmission(initialSubmission(question));
@@ -52,6 +63,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
     setError('');
     setErrorReasons([]);
     setCustomErrorReason('');
+    setAiEvaluation(null);
   }, [question]);
 
   const canSubmit = useMemo(() => {
@@ -100,6 +112,8 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
         errorReasons,
         customErrorReason,
         assistanceUsed: assistance.current,
+        aiEvaluationId: aiEvaluation?.id ?? null,
+        aiScore: aiEvaluation?.score ?? null,
       });
       const legacyStatus = rating.quality < 3 ? 'wrong' : rating.quality === 3 ? 'review' : 'mastered';
       setProgress(question.id, legacyStatus);
@@ -113,6 +127,19 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
   };
 
   const allowedRatings = result?.correct === false ? ['again'] : result?.correct === true ? ['hard', 'good', 'easy'] : ['again', 'hard', 'good', 'easy'];
+  const suggestedRating = aiEvaluation?.suggested_rating ? constrainRating(aiEvaluation.suggested_rating, result?.correct) : null;
+  const evaluation = result && evaluationMode !== 'off' && (
+    <EvaluationEntry
+      key={question.id}
+      question={question}
+      submission={submission}
+      mode={evaluationMode}
+      sessionId={sessionId}
+      onEvaluated={applyEvaluation}
+      onDone={reveal}
+      onUnavailable={reveal}
+    />
+  );
 
   return (
     <section className="mt-6 divider-subtle pt-6">
@@ -125,7 +152,10 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
         </div>
       )}
 
-      {result && (
+      {/* One stable position so revealing the reference does not remount (and re-run) the evaluation. */}
+      {evaluation && <div className="mb-5">{evaluation}</div>}
+
+      {result && revealed && (
         <div className="space-y-5">
           {typeof result.correct === 'boolean' && (
             <div className={`result-banner ${result.correct ? 'is-correct' : 'is-wrong'}`} role="status">
@@ -166,8 +196,9 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true }) {
               <p className="type-caption mb-2" style={{ color: 'var(--text-tertiary)' }}>本次掌握程度</p>
               <div className="flex flex-wrap gap-2">
                 {allowedRatings.map((key) => (
-                  <button key={key} type="button" disabled={loading} onClick={() => rate(key)} className={`btn-status rating-${key}`}>
+                  <button key={key} type="button" disabled={loading} onClick={() => rate(key)} className={`btn-status rating-${key}${key === suggestedRating ? ' is-suggested' : ''}`}>
                     {REVIEW_RATINGS[key].label}
+                    {key === suggestedRating && <span className="ai-suggest-badge">AI 建议</span>}
                   </button>
                 ))}
               </div>

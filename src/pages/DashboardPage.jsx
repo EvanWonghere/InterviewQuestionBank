@@ -1,5 +1,6 @@
 import { useQuestions } from '@/context/QuestionsContext';
 import ProgressPanel from '@/components/dashboard/ProgressPanel';
+import PracticeHeatmap from '@/components/dashboard/PracticeHeatmap';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
@@ -54,6 +55,8 @@ export default function DashboardPage() {
           </Link>
         </div>
       </section>
+
+      <PracticeHeatmap />
 
       <ProgressPanel categories={categories} questions={questions} />
     </div>

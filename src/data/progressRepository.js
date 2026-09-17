@@ -17,7 +17,7 @@ export async function loadCloudLearningData(userId) {
   const [{ data: states, error: stateError }, { data: notes, error: notesError }, { data: attempts, error: attemptsError }] = await Promise.all([
     client.from('review_states').select('*').eq('user_id', userId),
     client.from('notes').select('question_id,body_md').eq('user_id', userId),
-    client.from('attempts').select('*').eq('user_id', userId).order('answered_at', { ascending: false }).limit(500),
+    client.from('attempts').select('*, ai_evaluation:ai_evaluations(score)').eq('user_id', userId).order('answered_at', { ascending: false }).limit(500),
   ]);
   if (stateError) throw stateError;
   if (notesError) throw notesError;
@@ -29,7 +29,7 @@ export async function loadCloudLearningData(userId) {
   };
 }
 
-export async function saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons = [], customErrorReason = '', assistanceUsed = null }, previous) {
+export async function saveCloudAttempt({ userId, questionId, submission, correct, quality, errorReasons = [], customErrorReason = '', assistanceUsed = null, aiEvaluationId = null }, previous) {
   const client = requireSupabase();
   const next = nextSm2State(previous, quality);
   const { error: attemptError } = await client.from('attempts').insert({
@@ -37,7 +37,8 @@ export async function saveCloudAttempt({ userId, questionId, submission, correct
     question_id: questionId,
     submission,
     is_correct: correct,
-          assistance_used: assistanceUsed,
+    assistance_used: assistanceUsed,
+    ai_evaluation_id: aiEvaluationId,
     quality,
     error_reasons: errorReasons,
     custom_error_reason: customErrorReason || null,
