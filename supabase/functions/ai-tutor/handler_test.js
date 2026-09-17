@@ -14,7 +14,7 @@ Deno.test('expired token cannot check admin or access service role',async()=>{
  const fake=()=>({auth:{getUser:async()=>({data:{user:null},error:Error('expired')})},rpc:()=>{throw Error('must not query');}});
  const res=await handleRequest(req(),fake);if(res.status!==401)throw Error('expected401');
 });
-for (const action of ['evaluate','interview-report','weakness-report']) {
+for (const action of ['evaluate','interview-report','weakness-report','draft-question','draft-weakness-questions']) {
  Deno.test(`${action} is admin-only before any service client`,async()=>{
   let calls=0;
   const fake=()=>{calls++;return {auth:{getUser:async()=>({data:{user:{id:'user'}},error:null})},rpc:async()=>({data:false,error:null})};};

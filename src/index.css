@@ -1221,3 +1221,5 @@ button.heat-cell {
 .bank-recommend { color:var(--warning-fg); }
 /* An open generator needs the full row for its previews. */
 .weakness-card:has(.bank-draft) { grid-column:1 / -1; }
+
+.unrated-note { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem .75rem; padding:.7rem 1rem; border-radius:.9rem; background:var(--warning-bg); color:var(--warning-fg); font-size:14px; }

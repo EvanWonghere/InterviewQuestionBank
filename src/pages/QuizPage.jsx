@@ -66,35 +66,40 @@ export default function QuizPage() {
   const availableTypes = useMemo(() => [...new Set(questionsFilteredBySearch.map((question) => question.type).filter(Boolean))], [questionsFilteredBySearch]);
   const availableTags = useMemo(() => [...new Set(questionsFilteredBySearch.flatMap((question) => question.tags ?? []))].sort(), [questionsFilteredBySearch]);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Track the open question by id, not position: list refreshes (e.g. an AI draft saved with sort_order 0)
+  // and status changes (rating a question out of 错题本) must not swap the question being answered.
+  const [selection, setSelection] = useState({ id: null, index: 0 });
   const [showAnswer, setShowAnswer] = useState(false);
-  const current = questions[currentIndex] ?? null;
+  const foundIndex = selection.id ? questions.findIndex((q) => q.id === selection.id) : -1;
+  const detached = selection.id && foundIndex < 0 ? allQuestions.find((q) => q.id === selection.id) ?? null : null;
+  const currentIndex = foundIndex >= 0 ? foundIndex : Math.min(selection.index, Math.max(0, questions.length - 1));
+  const current = foundIndex >= 0 ? questions[foundIndex] : detached ?? questions[currentIndex] ?? null;
 
-  const goPrev = useCallback(() => {
-    setCurrentIndex((i) => Math.max(0, i - 1));
+  const select = useCallback((index) => {
+    const target = questions[index];
+    if (!target) return;
+    setSelection({ id: target.id, index });
     setShowAnswer(false);
-  }, []);
-  const goNext = useCallback(() => {
-    setCurrentIndex((i) => Math.min(questions.length - 1, i + 1));
-    setShowAnswer(false);
-  }, [questions.length]);
+  }, [questions]);
+  // A detached question has left the list; the one that slid into its slot is "next".
+  const prevIndex = detached ? selection.index - 1 : currentIndex - 1;
+  const nextIndex = detached ? selection.index : currentIndex + 1;
+  const goPrev = useCallback(() => select(prevIndex), [select, prevIndex]);
+  const goNext = useCallback(() => select(nextIndex), [select, nextIndex]);
   const toggleAnswer = useCallback(() => setShowAnswer((v) => !v), []);
   useEffect(() => {
-    setCurrentIndex(0);
+    setSelection({ id: null, index: 0 });
     setShowAnswer(false);
     setDifficultyFilter('');
     setTypeFilter('');
     setTagFilter('');
   }, [categoryId, listStatus, searchQuery]);
 
+  const currentId = current?.id;
   useEffect(() => {
-    setCurrentIndex((i) => Math.min(i, Math.max(0, questions.length - 1)));
-  }, [questions.length]);
-
-  useEffect(() => {
-    if (!cardContainerRef.current || !current) return;
+    if (!cardContainerRef.current || !currentId) return;
     cardContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [current]);
+  }, [currentId]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -134,7 +139,8 @@ export default function QuizPage() {
       </div>
     );
   }
-  if (!questionsByCategoryOrList.length) {
+  // Keep a just-rated question open even if it emptied the list (e.g. the last item in 错题本).
+  if (!questionsByCategoryOrList.length && !detached) {
     const listMeta = listStatus ? LIST_STATUS_LABELS[listStatus] : null;
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
@@ -148,7 +154,7 @@ export default function QuizPage() {
     );
   }
 
-  if (searchQuery.trim() && !questionsFilteredBySearch.length) {
+  if (searchQuery.trim() && !questionsFilteredBySearch.length && !detached) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
         <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>
@@ -161,7 +167,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!questions.length) {
+  if (!questions.length && !detached) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
         <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>
@@ -224,11 +230,8 @@ export default function QuizPage() {
             <li key={q.id}>
               <button
                 type="button"
-                onClick={() => {
-                  setCurrentIndex(i);
-                  setShowAnswer(false);
-                }}
-                className={`quiz-list-item ${i === currentIndex ? 'is-active' : ''}`}
+                onClick={() => select(i)}
+                className={`quiz-list-item ${q.id === current?.id ? 'is-active' : ''}`}
               >
                 <span className={statusDotClass(q)} />
                 <span className="truncate">{q.title}</span>
@@ -253,7 +256,7 @@ export default function QuizPage() {
           <button
             type="button"
             onClick={goPrev}
-            disabled={currentIndex === 0}
+            disabled={prevIndex < 0}
             className="btn-neutral"
           >
             上一题
@@ -262,12 +265,12 @@ export default function QuizPage() {
             className="type-caption min-w-[4.5rem] text-center tabular-nums"
             style={{ color: 'var(--text-tertiary)' }}
           >
-            {currentIndex + 1} / {questions.length}
+            {detached ? '已移出列表' : `${currentIndex + 1} / ${questions.length}`}
           </span>
           <button
             type="button"
             onClick={goNext}
-            disabled={currentIndex === questions.length - 1}
+            disabled={nextIndex > questions.length - 1}
             className="btn-neutral"
           >
             下一题
@@ -276,7 +279,7 @@ export default function QuizPage() {
             className="type-micro hidden sm:inline"
             style={{ color: 'var(--text-quaternary)' }}
           >
-            ← → 翻页 · 完成作答与自评后进入复习计划
+            ← → 翻页 · 选择掌握程度后才计入历史与复习计划
           </span>
         </div>
       </div>

@@ -48,6 +48,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
   const [errorReasons, setErrorReasons] = useState([]);
   const [customErrorReason, setCustomErrorReason] = useState('');
   const [aiEvaluation, setAiEvaluation] = useState(null);
+  const ratingRef = useRef(null);
   // Interview mode keeps the reference hidden until the AI follow-ups finish, are skipped, or AI is unavailable.
   const [revealed, setRevealed] = useState(evaluationMode !== 'interview');
   const reveal = useCallback(() => setRevealed(true), []);
@@ -150,6 +151,13 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
         </details>
       )}
 
+      {result && revealed && !saved && (
+        <p className="unrated-note mb-5" role="note">
+          <span>还差一步：选择“本次掌握程度”后，才会计入作答历史、错题本和刷题日历。</span>
+          <button type="button" className="btn-neutral" onClick={() => ratingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>去评分</button>
+        </p>
+      )}
+
       {/* One stable position so revealing the reference does not remount (and re-run) the evaluation. */}
       {evaluation && <div className="mb-5">{evaluation}</div>}
 
@@ -190,7 +198,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
           )}
 
           {!saved ? (
-            <div>
+            <div ref={ratingRef}>
               <p className="type-caption mb-2" style={{ color: 'var(--text-tertiary)' }}>本次掌握程度</p>
               <div className="flex flex-wrap gap-2">
                 {allowedRatings.map((key) => (
@@ -202,7 +210,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
               </div>
             </div>
           ) : (
-            <p className="type-caption" style={{ color: 'var(--success-fg)' }}>已记录，本题已进入自适应复习计划。</p>
+            <p className="type-caption" style={{ color: 'var(--success-fg)' }}>已记录：已计入作答历史和刷题日历，并进入自适应复习计划。</p>
           )}
           <NoteEditor questionId={question.id} />
         </div>

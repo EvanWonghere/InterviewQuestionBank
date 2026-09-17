@@ -317,3 +317,33 @@ test('weakness card drafts targeted questions and saves only the ticked ones',as
  await expect(card.getByRole('textbox',{name:'标题'})).toHaveValue('哪些回调适合成对订阅与退订');
  expect(errors).toEqual([]);
 });
+test('saving a follow-up draft in the full list keeps the open question and reminds to rate',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('./#/quiz');
+ await page.getByRole('button',{name:'服务器权威与状态同步'}).click();
+ await expect(page.getByText('2 / 2')).toBeVisible();
+ await page.getByPlaceholder('用自己的话作答…').fill('客户端预测，服务器校正');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ const note=page.getByRole('note');
+ await expect(note).toContainText('选择“本次掌握程度”后，才会计入作答历史、错题本和刷题日历');
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await page.getByRole('textbox',{name:'回答追问'}).fill('不确定');
+ await page.getByRole('button',{name:'回答追问',exact:true}).click();
+ await page.getByRole('button',{name:'加入题库'}).click();
+ await page.getByRole('button',{name:'生成题目'}).click();
+ await page.getByRole('button',{name:'保存到题库（私有草稿）'}).click();
+ await expect(page.getByText('已加入题库：')).toBeVisible();
+ // The new draft sorts first (sort_order 0); the open question, answer and evaluation must stay.
+ await expect(page.getByRole('heading',{name:'服务器权威与状态同步'})).toBeVisible();
+ await expect(page.getByText('3 / 3')).toBeVisible();
+ await expect(page.locator('details.submission-card').first()).toContainText('客户端预测，服务器校正');
+ await expect(page.getByText('补充了禁用场景，仍可更严谨')).toBeVisible();
+ await note.getByRole('button',{name:'去评分'}).click();
+ await page.getByRole('button',{name:/困难\s*AI 建议/}).click();
+ await expect(page.getByText(/已记录：已计入作答历史和刷题日历/)).toBeVisible();
+ await expect(page.getByRole('note')).toHaveCount(0);
+ expect(s.attempts).toHaveLength(1);
+ await page.goto('./#/review/history');
+ await expect(page.getByRole('heading',{name:'服务器权威与状态同步'})).toBeVisible();
+ expect(errors).toEqual([]);
+});
