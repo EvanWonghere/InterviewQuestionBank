@@ -35,4 +35,4 @@ The old GitHub Gist reader remains only for the one-time migration wizard. Do no
 
 ## Deployment
 
-Pushes to `main` run lint, unit tests and the Vite build, then copy `dist/` to the blog repository's `static/quiz/`. Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `BLOG_REPO`, and `API_TOKEN_GITHUB` as GitHub Actions secrets/variables. GitHub OAuth must redirect to the public `/quiz/` URL; the callback code restores the HashRouter destination.
+Pushes to `main` run lint, unit tests and the Vite build, then copy `dist/` to the blog repository's `static/quiz/`. Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CONCEPT_LAB_URL`, `BLOG_REPO`, and `API_TOKEN_GITHUB` as GitHub Actions secrets/variables. GitHub OAuth must redirect to the public `/quiz/` URL; the callback code restores the HashRouter destination. ConceptLab login uses the same project and needs `https://yufenghuang.tech/labs/` on the Auth redirect allow list.

@@ -1,0 +1,1122 @@
+{
+  "labs": [
+    {
+      "id": "cpp-dispatch",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "同一个调用，为什么结果不同？",
+      "question": "Base* 指向 Derived，调用的究竟是谁？",
+      "intro": "把静态类型与动态类型分开看。点击单步，跟踪对象、指针、函数选择。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "dynamic",
+          "label": "实际对象",
+          "type": "select",
+          "value": "Derived",
+          "options": [
+            "Base",
+            "Derived"
+          ]
+        },
+        {
+          "key": "virtual",
+          "label": "使用 virtual",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "overrideKeyword",
+          "label": "显式 override（仅虚函数模式）",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "static",
+          "label": "访问类型",
+          "type": "select",
+          "value": "Base",
+          "options": [
+            "Base",
+            "Derived"
+          ]
+        }
+      ],
+      "challenge": "最终调用的是 Base::speak 还是 Derived::speak？填写 Base 或 Derived。",
+      "variant": "保持 Base*，关闭 virtual；再让实际对象变为 Base。",
+      "explanation": "普通成员调用按表达式的静态类型选择。虚调用按对象的动态类型选择最终覆盖者。override 用来让编译器检查覆盖关系，并非打开动态分派的开关。",
+      "boundary": "Derived 访问 Base 实例并不合法。本实验会显示不合法组合，不执行向下强转。虚表图是实现示意。",
+      "sources": [
+        "abi",
+        "ce"
+      ],
+      "questions": [
+        "q-040",
+        "q-045"
+      ],
+      "native": "python3 native/run.py --lab cpp-dispatch",
+      "checkRules": [
+        "拒绝静态 Derived 指向实际 Base 的不合法组合。",
+        "virtual 时按动态类型选择覆盖者；非 virtual 时按静态类型。",
+        "省略 override 关键字不会关闭已有虚函数覆盖；它提供编译期检查。"
+      ]
+    },
+    {
+      "id": "cpp-layout",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "对象里真的放了一整张虚表吗？",
+      "question": "创建三个同类型对象，会复制三张虚表吗？",
+      "intro": "调整对象数和多态开关，比较每对象开销与类型共享信息。",
+      "prerequisites": [
+        "cpp-dispatch"
+      ],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "对象个数",
+          "type": "range",
+          "value": 3,
+          "min": 1,
+          "max": 8
+        },
+        {
+          "key": "virtual",
+          "label": "含虚函数",
+          "type": "checkbox",
+          "value": true
+        }
+      ],
+      "challenge": "在这个单继承模型中，一共有几个对象内的 vptr？填写整数。",
+      "variant": "把对象数从 3 改到 6，哪些数据翻倍，哪些不变？",
+      "explanation": "常见 ABI 中，每个多态对象有虚表指针；同一种最派生类型的实例共享虚表。sizeof 还受字段、对齐和继承布局影响。",
+      "boundary": "不承诺所有 C++ ABI 都使用相同布局。本机证据来自 Clang 布局报告与 sizeof，不读取未定义的内存地址。",
+      "sources": [
+        "abi",
+        "ce"
+      ],
+      "questions": [
+        "q-045",
+        "q-063"
+      ],
+      "native": "python3 native/run.py --lab cpp-layout",
+      "checkRules": [
+        "单继承教学模型：多态对象的 vptr 数 = 对象数，否则为 0。",
+        "共享虚表数不随同类型对象数增加；不推断实际 ABI 字节偏移。"
+      ]
+    },
+    {
+      "id": "cpp-lifetime",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "为什么构造时没有调用派生实现？",
+      "question": "切片、构造阶段和析构阶段如何改变虚调用？",
+      "intro": "切换生命周期阶段，观察有效动态类型；再按值复制基类。",
+      "prerequisites": [
+        "cpp-dispatch"
+      ],
+      "controls": [
+        {
+          "key": "phase",
+          "label": "观察阶段",
+          "type": "select",
+          "value": "alive",
+          "options": [
+            "base-constructor",
+            "alive",
+            "base-destructor"
+          ]
+        },
+        {
+          "key": "slice",
+          "label": "按值切成 Base",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "当前阶段调用 Base 还是 Derived？填写 Base 或 Derived。",
+      "variant": "在基类构造阶段开启 virtual，为什么依然是 Base？",
+      "explanation": "构造和析构期间，虚调用受当前构造/析构类限制。按值复制 Base 会切掉派生部分；保持引用或指针才能保留多态对象身份。通过基类删除派生对象时需要合适的虚析构函数。",
+      "boundary": "不运行通过非虚析构基类删除派生对象等未定义行为。动画展示的是有效行为。",
+      "sources": [
+        "abi",
+        "ce"
+      ],
+      "questions": [
+        "q-040",
+        "q-045"
+      ],
+      "native": "python3 native/run.py --lab cpp-lifetime",
+      "checkRules": [
+        "存活且不切片时 Derived；基类构造、基类析构或值切片时 Base。"
+      ]
+    },
+    {
+      "id": "cpp-adjust",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "两个基类指针为何不一定相同？",
+      "question": "多继承中 this 如何调整？优化后还一定查虚表吗？",
+      "intro": "在 Left 和 Right 子对象之间切换，再对比优化假设。",
+      "prerequisites": [
+        "cpp-layout"
+      ],
+      "controls": [
+        {
+          "key": "base",
+          "label": "通过哪个基类访问",
+          "type": "select",
+          "value": "Right",
+          "options": [
+            "Left",
+            "Right"
+          ]
+        },
+        {
+          "key": "known",
+          "label": "编译器已知具体类型",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "final",
+          "label": "派生类型标为 final",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "本教学布局中，是否需要把 Right 子对象地址调整回完整对象？填 yes 或 no。",
+      "variant": "选择 Right 并开启已知类型：地址调整语义与是否间接调用是同一件事吗？",
+      "explanation": "转换到非首要基类可能改变指针值，覆盖函数入口可能通过 thunk 调整 this。编译器能证明目标时可能去虚化，final 可以提供证明条件，但不保证每次优化都发生。",
+      "boundary": "模型不填虚构字节偏移。真实偏移仅由本机构建中 char* 地址差测得，汇编是否去虚化需要比较具体编译参数。",
+      "sources": [
+        "abi",
+        "ce"
+      ],
+      "questions": [
+        "q-040",
+        "q-045"
+      ],
+      "native": "python3 native/run.py --lab cpp-adjust",
+      "checkRules": [
+        "此教学布局中 Right 转换需要调整，Left 不需要；实际字节由本机验证。",
+        "已知类型或 final 只支持可能去虚化，不保证每个编译器一定优化。"
+      ]
+    },
+    {
+      "id": "gc-roots",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "互相引用的对象还能被回收吗？",
+      "question": "GC 判断的是引用次数，还是从根能否走到对象？",
+      "intro": "切断根引用，逐步观察标记集合。循环引用不会自动成为根。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "root",
+          "label": "根 → A",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "ab",
+          "label": "A → B",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "ba",
+          "label": "B → A",
+          "type": "checkbox",
+          "value": true
+        }
+      ],
+      "challenge": "完整追踪回收后，A/B 中有几个对象可回收？填整数。",
+      "variant": "保留 A↔B 循环，但移除根；再只保留根→A。",
+      "explanation": "追踪式 GC 从根出发遍历可达对象。没有根能到达的循环可以回收；把一个变量赋 null 只删除一条引用。",
+      "boundary": "这是精确追踪教学模型。真实回收时机、JIT 局部变量存活和保守扫描会影响观测；不把一次弱引用结果当语言保证。",
+      "sources": [
+        "dotnet",
+        "unitygc",
+        "craft"
+      ],
+      "questions": [
+        "q-002"
+      ],
+      "native": "python3 native/run.py --lab gc-roots",
+      "checkRules": [
+        "从根沿有向引用遍历，回收数量等于不可达对象数量；环不会产生根。"
+      ]
+    },
+    {
+      "id": "gc-events",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "对象明明不用了，为什么还活着？",
+      "question": "发布者的事件订阅能留住订阅者吗？",
+      "intro": "控制局部引用与事件订阅，沿根→发布者→委托→订阅者定位保留链。",
+      "prerequisites": [
+        "gc-roots"
+      ],
+      "controls": [
+        {
+          "key": "subscribed",
+          "label": "仍订阅发布者事件",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "local",
+          "label": "还有局部强引用",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "订阅者是否仍可达？填 yes 或 no。",
+      "variant": "清掉局部引用后仍活着；取消订阅会怎样？",
+      "explanation": "长期存活的发布者持有委托，委托可能持有订阅者目标。GC 不知道业务已经不需要它；应按生命周期成对订阅和退订。静态缓存也会形成类似保留链。",
+      "boundary": "泄漏指业务不再需要但仍可达。事件实现和闭包捕获会改变引用链，本机示例采用实例方法订阅。",
+      "sources": [
+        "dotnet",
+        "unitygc"
+      ],
+      "questions": [
+        "q-002",
+        "q-063"
+      ],
+      "native": "python3 native/run.py --lab gc-events",
+      "checkRules": [
+        "存在局部根或发布者事件订阅中的任一保留路径，订阅者仍可达。"
+      ]
+    },
+    {
+      "id": "gc-alloc",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "零 GC.Alloc 就代表内存更少吗？",
+      "question": "对象池降低分配的同时保留了什么？装箱如何产生对象？",
+      "intro": "比较装箱、每次 new、预热后的复用和数值累加。",
+      "prerequisites": [
+        "gc-roots"
+      ],
+      "controls": [
+        {
+          "key": "iterations",
+          "label": "操作次数",
+          "type": "range",
+          "value": 100,
+          "min": 10,
+          "max": 500
+        },
+        {
+          "key": "mode",
+          "label": "分配策略",
+          "type": "select",
+          "value": "boxing",
+          "options": [
+            "boxing",
+            "new",
+            "pool",
+            "value"
+          ]
+        }
+      ],
+      "challenge": "不计预热，这个模型中有几次托管对象分配？填整数。",
+      "variant": "对比 pool 和 value：每次分配都是零，但保留的容量是否相同？",
+      "explanation": "装箱会把值包装为对象；对象池把重复分配换成预先分配与保留容量。降低 GC.Alloc 不代表总内存下降，也不能保证整个帧更快。",
+      "boundary": "模型统计分配次数，不伪造字节数。本机用 GC.GetAllocatedBytesForCurrentThread 记录实际差值，保留输出以避免优化消除。",
+      "sources": [
+        "dotnet",
+        "unitygc"
+      ],
+      "questions": [
+        "q-018",
+        "q-002"
+      ],
+      "native": "python3 native/run.py --lab gc-alloc",
+      "checkRules": [
+        "模型 boxing/new 分配次数等于迭代数；预热后的 pool/value 为 0。",
+        "分配次数与真实字节及池保留量分开观测。"
+      ]
+    },
+    {
+      "id": "gc-collect",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "增量 GC 是每次只收年轻对象吗？",
+      "question": "分代和增量分别沿什么维度切分工作？",
+      "intro": "分别选择 .NET 分代模型与 Unity 增量模型，观察工作范围和帧间切片。",
+      "prerequisites": [
+        "gc-roots"
+      ],
+      "controls": [
+        {
+          "key": "runtime",
+          "label": "教学运行时",
+          "type": "select",
+          "value": ".NET",
+          "options": [
+            ".NET",
+            "Unity"
+          ]
+        },
+        {
+          "key": "generation",
+          "label": "回收代数",
+          "type": "select",
+          "value": "0",
+          "options": [
+            "0",
+            "1",
+            "2"
+          ]
+        },
+        {
+          "key": "slice",
+          "label": "Unity 每帧处理单位",
+          "type": "range",
+          "value": 2,
+          "min": 1,
+          "max": 8
+        }
+      ],
+      "challenge": "模型需要几帧完成此次回收？.NET 简化为一次暂停，Unity 按 8 个单位切片。填整数。",
+      "variant": "把分代选择改成 2，再切 Unity：代数为什么不参与 Unity 模型？",
+      "explanation": "分代决定本轮扫描哪些年龄区域；增量把工作分散到多个帧。Unity 6000.0 使用 Boehm 回收器，不能把 .NET 的 0/1/2 代直接套用。增量不等于总工作减少。",
+      "boundary": "帧数是教学单位，不是 Unity 性能预测。.NET 后台/并发 GC 不在这张简化图里；Unity 的实际模式与时间由原生实验记录。",
+      "sources": [
+        "dotnet",
+        "unitygc"
+      ],
+      "questions": [
+        "q-002"
+      ],
+      "native": "python3 native/run.py --lab gc-collect；Unity 菜单 ConceptLab → GC 场景",
+      "checkRules": [
+        "Unity 教学模型切片数 ceil(8/slice)，不是分代。",
+        ".NET 页面演示一次指定代的阻塞请求；不代表全部 GC 模式。"
+      ]
+    },
+    {
+      "id": "render-draws",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "100 个对象一定是 100 次 DrawCall 吗？",
+      "question": "绘制命令数量由场景对象数直接决定吗？",
+      "intro": "实际向 WebGL2 提交相同网格，切换逐对象绘制与实例化。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "对象个数",
+          "type": "range",
+          "value": 24,
+          "min": 1,
+          "max": 120
+        },
+        {
+          "key": "instanced",
+          "label": "使用实例化",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "每帧实际绘制命令应有几次？填整数。",
+      "variant": "把对象数改为 80，然后开启实例化；顶点工作也减少到一份了吗？",
+      "explanation": "DrawCall 是一次绘制提交，不是对象本身。一个命令可以绘制多个实例，一个对象也可以因多个 Pass 被重复绘制。实例化减少提交，并不消除所有几何和像素处理。",
+      "boundary": "这里统计本画布的 WebGL 绘制命令，不等于整个浏览器或 Unity 的命令数。",
+      "sources": [
+        "webgl",
+        "spector",
+        "srp"
+      ],
+      "questions": [
+        "q-032",
+        "q-007"
+      ],
+      "native": "Unity 菜单 ConceptLab → 渲染场景",
+      "checkRules": [
+        "实际 WebGL2 普通提交 = 对象数，实例化提交 = 1。"
+      ]
+    },
+    {
+      "id": "render-state",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "材质没变，为何又多画了一遍？",
+      "question": "材质切换次数与 DrawCall 次数相同吗？",
+      "intro": "调整 Pass 数、材质数和排序，查看实际命令日志。",
+      "prerequisites": [
+        "render-draws"
+      ],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 12,
+          "min": 1,
+          "max": 40
+        },
+        {
+          "key": "materials",
+          "label": "颜色状态数量",
+          "type": "range",
+          "value": 3,
+          "min": 1,
+          "max": 6
+        },
+        {
+          "key": "passes",
+          "label": "Pass 次数",
+          "type": "range",
+          "value": 2,
+          "min": 1,
+          "max": 3
+        },
+        {
+          "key": "sorted",
+          "label": "按颜色排序",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "每帧 DrawCall 数是多少？填整数。",
+      "variant": "保持对象数，减少 Pass；再只改变排序，比较绘制次数与颜色状态上传次数。",
+      "explanation": "Pass 增加通常意味着再次提交绘制。整理状态可以减少重复设置，即使 draw 次数没有变化。Unity 的材质、Shader 变体和渲染顺序还受实际管线约束。",
+      "boundary": "网页用颜色 uniform 状态演示切换，不声称实现了 Unity 材质系统；透明对象排序不能任意交换。",
+      "sources": [
+        "webgl",
+        "spector",
+        "srp"
+      ],
+      "questions": [
+        "q-007",
+        "q-032"
+      ],
+      "native": "Unity 渲染场景：切换材质数，打开 Frame Debugger",
+      "checkRules": [
+        "实际提交 = 对象数 × Pass 次数；排序只改变材质状态上传路径。"
+      ]
+    },
+    {
+      "id": "render-batch",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "合批后 DrawCall 为什么没少？",
+      "question": "SRP Batcher 和 GPU Instancing 优化的是同一个环节吗？",
+      "intro": "比较逐对象提交、缓存状态和实例化，查看调用计数与 CPU 提交耗时。",
+      "prerequisites": [
+        "render-state"
+      ],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 48,
+          "min": 1,
+          "max": 120
+        },
+        {
+          "key": "mode",
+          "label": "提交策略",
+          "type": "select",
+          "value": "ordinary",
+          "options": [
+            "ordinary",
+            "cached-state",
+            "instanced"
+          ]
+        }
+      ],
+      "challenge": "该策略每帧绘制命令数是多少？填整数。",
+      "variant": "比较 cached-state 与 instanced：哪一个减少 draw 次数，哪一个只减少设置？",
+      "explanation": "SRP Batcher 降低 CPU 准备与状态切换开销，批次数不必减少；实例化可以把多个相同网格实例放进一次绘制。实际瓶颈必须测量。",
+      "boundary": "网页 cached-state 只是同类优化思想，不是 Unity SRP Batcher。真实 SRP 行为需在配套 URP 工程中捕帧。",
+      "sources": [
+        "srp",
+        "webgl",
+        "spector"
+      ],
+      "questions": [
+        "q-174",
+        "q-007"
+      ],
+      "native": "Unity 渲染场景：切换 SRP Batcher 并比较 Frame Debugger",
+      "checkRules": [
+        "普通与缓存状态均提交对象数次，实例化为 1 次。",
+        "状态缓存是 WebGL 类比，不是 Unity SRP Batcher 实现。"
+      ]
+    },
+    {
+      "id": "render-overdraw",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "DrawCall 很少，为什么仍然卡？",
+      "question": "分辨率、重叠和片元计算会怎样改变帧时间？",
+      "intro": "用同样的提交数量，增加重叠、画布分辨率和片元计算。",
+      "prerequisites": [
+        "render-draws"
+      ],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "透明层数",
+          "type": "range",
+          "value": 16,
+          "min": 1,
+          "max": 48
+        },
+        {
+          "key": "resolution",
+          "label": "画布宽度",
+          "type": "range",
+          "value": 480,
+          "min": 240,
+          "max": 960
+        },
+        {
+          "key": "overlap",
+          "label": "全部重叠",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "work",
+          "label": "片元计算重复次数",
+          "type": "range",
+          "value": 8,
+          "min": 1,
+          "max": 64
+        }
+      ],
+      "challenge": "保持层数不变，仅改分辨率，DrawCall 会变化吗？填 yes 或 no。",
+      "variant": "同时观察 rAF 帧间隔和 CPU 提交耗时；这两个数能当 GPU 时间吗？",
+      "explanation": "绘制次数无法描述像素覆盖与着色成本。透明叠加、分辨率和复杂片元计算都可能增大 GPU 负担。只优化 DrawCall 可能碰不到瓶颈。",
+      "boundary": "CPU 提交时间不是 GPU 时间，rAF 帧间隔包含调度和垂直同步。不支持 GPU timer 时明确显示不可用，不推算伪造 GPU 耗时。",
+      "sources": [
+        "webgl",
+        "spector",
+        "srp"
+      ],
+      "questions": [
+        "q-032",
+        "q-007"
+      ],
+      "native": "Unity 渲染场景：启用透明重叠并查看 GPU Profiler",
+      "checkRules": [
+        "改变分辨率、重叠和片元工作量不改变该实验的提交数。",
+        "所有时间均为实际观测，不将 CPU 或帧间隔当 GPU 时间。"
+      ]
+    },
+    {
+      "id": "cpp-smartptr",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "unique_ptr 走了，对象为什么还在？",
+      "question": "重置所有者之后，对象还被谁活着？",
+      "intro": "切换 unique / shared / weak，再决定要不要留下第二个共享者，观察销毁。",
+      "prerequisites": [
+        "cpp-lifetime"
+      ],
+      "controls": [
+        {
+          "key": "kind",
+          "label": "指针类型",
+          "type": "select",
+          "value": "unique",
+          "options": [
+            "unique",
+            "shared",
+            "weak"
+          ]
+        },
+        {
+          "key": "extraShare",
+          "label": "另有一个 shared_ptr",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "重置主所有者后，对象还活着吗？填 0 或 1。",
+      "variant": "改成 shared 并勾选第二个共享者；再换成 weak 观察它能不能保活。",
+      "explanation": "unique_ptr 独占所有权，释放后对象销毁。shared_ptr 按引用计数；还有其他 shared_ptr 时对象仍在。weak_ptr 不增加计数，不能单独保住对象。",
+      "boundary": "教学模型只演示所有权，不是完整控制块布局。线程安全与自定义删除器另测。",
+      "sources": [
+        "smartptr",
+        "abi"
+      ],
+      "questions": [
+        "q-039",
+        "q-038"
+      ],
+      "native": "python3 native/run.py --lab cpp-smartptr --mode shared",
+      "checkRules": [
+        "unique 或单独的 shared/weak 在重置后存活数为 0。",
+        "shared 且另有共享者时存活数为 1；weak 不能保活。"
+      ]
+    },
+    {
+      "id": "cpp-move",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "这次到底拷贝了还是搬走了？",
+      "question": "用旧对象初始化新对象时，走拷贝还是移动？",
+      "intro": "切换拷贝与移动，统计构造次数；对照本机移动构造日志。",
+      "prerequisites": [
+        "cpp-lifetime"
+      ],
+      "controls": [
+        {
+          "key": "mode",
+          "label": "转移方式",
+          "type": "select",
+          "value": "copy",
+          "options": [
+            "copy",
+            "move"
+          ]
+        }
+      ],
+      "challenge": "这次资源转移走的是 copy 还是 move？",
+      "variant": "改成 move；再看本机 O0/O2，RVO 可能把你预期的移动也优化掉。",
+      "explanation": "拷贝构造复制资源；移动构造从右值窃取并清空源。std::move 只是把左值标成右值，不保证发生移动。编译器返回值优化可以既不拷贝也不移动。",
+      "boundary": "本实验禁止 RVO 的示意计数；真实编译器在 O2 可能消除这些调用，以导入的汇编为准。",
+      "sources": [
+        "move",
+        "ce"
+      ],
+      "questions": [
+        "q-046",
+        "q-132"
+      ],
+      "native": "python3 native/run.py --lab cpp-move --mode move",
+      "checkRules": [
+        "copy 模式答案为 copy；move 模式答案为 move。"
+      ]
+    },
+    {
+      "id": "cpp-vector",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "为什么插入后旧指针失效了？",
+      "question": "vector 扩容几次，会不会让元素指针失效？",
+      "intro": "改初始容量和插入个数，观察何时分配新缓冲、旧指针失效。",
+      "prerequisites": [
+        "cpp-layout"
+      ],
+      "controls": [
+        {
+          "key": "items",
+          "label": "插入个数",
+          "type": "range",
+          "value": 8,
+          "min": 1,
+          "max": 32
+        },
+        {
+          "key": "capacity",
+          "label": "起始容量",
+          "type": "range",
+          "value": 1,
+          "min": 1,
+          "max": 16
+        }
+      ],
+      "challenge": "插入完成后发生了几次扩容？填整数。",
+      "variant": "把起始容量改到不小于插入个数；旧指针还应失效吗？",
+      "explanation": "size 达到 capacity 时 vector 分配更大缓冲、移动或拷贝旧元素并释放旧存储。指向旧缓冲的指针、引用和迭代器全部失效。emplace_back 能避免额外临时对象，但挡不住扩容。",
+      "boundary": "模型按容量翻倍增长，这是常见实现而不是标准保证。标准只要求摊还常数复杂度。",
+      "sources": [
+        "vector",
+        "ce"
+      ],
+      "questions": [
+        "q-043",
+        "q-044"
+      ],
+      "native": "python3 native/run.py --lab cpp-vector --mode grow",
+      "checkRules": [
+        "扩容次数按 size==capacity 时翻倍计算；未扩容则旧指针仍有效。"
+      ]
+    },
+    {
+      "id": "gc-string",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "加号拼接为什么一直在分配？",
+      "question": "循环里 s += x 和 StringBuilder 谁在制造短命字符串？",
+      "intro": "改片段数量和拼接方式，对照分配次数；.NET 测真实线程分配字节。",
+      "prerequisites": [
+        "gc-alloc"
+      ],
+      "controls": [
+        {
+          "key": "mode",
+          "label": "拼接方式",
+          "type": "select",
+          "value": "concat",
+          "options": [
+            "concat",
+            "builder"
+          ]
+        },
+        {
+          "key": "pieces",
+          "label": "片段数",
+          "type": "range",
+          "value": 20,
+          "min": 2,
+          "max": 80
+        }
+      ],
+      "challenge": "模型统计的分配次数是多少？填整数。",
+      "variant": "改成 builder；再把片段数加大，看分配次数是否仍接近常数。",
+      "explanation": ".NET 字符串不可变，每次 + 都可能分配新字符串并复制旧内容。StringBuilder 在可增长缓冲上追加，最后才 ToString 一次。Unity 热路径里的飘字和日志同样适用。",
+      "boundary": "模型把 concat 计为每片段一次分配、builder 计为 1。真实字节受驻留、容量翻倍和运行时影响，以 .NET 观测为准。",
+      "sources": [
+        "dotnet",
+        "unitygc"
+      ],
+      "questions": [
+        "q-003",
+        "q-002"
+      ],
+      "native": "python3 native/run.py --lab gc-string --mode builder --iterations 20",
+      "checkRules": [
+        "concat 的模型分配次数等于片段数；builder 为 1。"
+      ]
+    },
+    {
+      "id": "mem-locality",
+      "version": 1,
+      "track": "内存与 GC",
+      "title": "同样是求和，为什么按列更慢？",
+      "question": "行优先和列优先各碰到多少次缓存行？",
+      "intro": "改矩阵边长和遍历方向，估计缓存行触达次数；本机对照相同校验和。",
+      "prerequisites": [
+        "cpp-layout"
+      ],
+      "controls": [
+        {
+          "key": "layout",
+          "label": "遍历",
+          "type": "select",
+          "value": "row",
+          "options": [
+            "row",
+            "column"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "边长",
+          "type": "range",
+          "value": 16,
+          "min": 8,
+          "max": 64
+        }
+      ],
+      "challenge": "模型估计的缓存行触达次数？填整数。",
+      "variant": "改成按列；边长变大时列访问触达次数为什么升得更快？",
+      "explanation": "CPU 按缓存行（本模型 64 字节）加载。行优先在 C/C# 的行主序数组上连续访问；列优先每次跨过一整行，更容易每次都未命中。这与对象里字段排列、AoS/SoA 是同一件事。",
+      "boundary": "模型假设 int32、64 字节行、无预取。真实时间受缓存大小、预取器和优化器影响，本机只保证两种遍历结果相同，不把某次计时当定律。",
+      "sources": [
+        "cache",
+        "ce"
+      ],
+      "questions": [
+        "q-136",
+        "q-011"
+      ],
+      "native": "python3 native/run.py --lab mem-locality --mode column",
+      "checkRules": [
+        "行优先触达次数为 ceil(n*n*4/64)。",
+        "列优先按每次跨行计为一次触达，等于 n*n。"
+      ]
+    },
+    {
+      "id": "render-atlas",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "为什么拆成很多小图会变卡？",
+      "question": "独立纹理和图集，各会绑定几次贴图？",
+      "intro": "用真实 WebGL2 切换独立小纹理与一张图集，数 bindTexture 与绘制次数。",
+      "prerequisites": [
+        "render-draws"
+      ],
+      "controls": [
+        {
+          "key": "sprites",
+          "label": "Sprite 个数",
+          "type": "range",
+          "value": 16,
+          "min": 2,
+          "max": 48
+        },
+        {
+          "key": "atlas",
+          "label": "打入一张图集",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "本帧绑定了几次纹理？填整数。",
+      "variant": "打开图集；绑定次数下降后，显存一定更少吗？Max Size 过大的代价是什么？",
+      "explanation": "独立纹理通常各自一次绑定，并打断合批。图集让多个 sprite 共享一张贴图，绑定可以降到 1，也才有机会合成一次绘制。图集过大、碎片和 Padding 会浪费显存，不能只看 DrawCall。",
+      "boundary": "网页用小块纯色纹理示意绑定，不是 Unity Sprite Atlas 打包器。碎片、Max Size、压缩格式要在编辑器里看。",
+      "sources": [
+        "atlas",
+        "webgl",
+        "spector"
+      ],
+      "questions": [
+        "q-013",
+        "q-007"
+      ],
+      "native": "Unity 渲染场景：对比多材质与共享纹理；用 Frame Debugger 看纹理绑定",
+      "checkRules": [
+        "独立纹理绑定次数等于 sprite 数；图集为 1，并可以一次实例化绘制。"
+      ]
+    },
+    {
+      "id": "render-material",
+      "version": 1,
+      "track": "渲染与提交",
+      "title": "改一个颜色，为什么合批断了？",
+      "question": "每对象一份材质实例，和共享材质 + 属性块，提交次数差在哪？",
+      "intro": "切换“每对象独立材质”与“共享材质实例化”，看真实 WebGL 提交。",
+      "prerequisites": [
+        "render-state"
+      ],
+      "controls": [
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 12,
+          "min": 2,
+          "max": 48
+        },
+        {
+          "key": "unique",
+          "label": "每对象独立材质",
+          "type": "checkbox",
+          "value": true
+        }
+      ],
+      "challenge": "本帧绘制命令几次？填整数。",
+      "variant": "取消独立材质（相当于 MPB/共享材质 + 实例化）；再打开独立材质对照。",
+      "explanation": "修改 material.color 通常会生成材质实例，SRP Batcher 和 GPU Instancing 都可能失败。MaterialPropertyBlock 或着色器实例属性写每对象数据，材质资源保持共享，才有机会一次提交。",
+      "boundary": "网页用颜色 uniform 表示材质实例，不是 Unity 材质资源。真实 SRP Batcher 与 MPB 要在 URP 工程验证。",
+      "sources": [
+        "srp",
+        "webgl",
+        "spector"
+      ],
+      "questions": [
+        "q-009",
+        "q-174"
+      ],
+      "native": "Unity 渲染场景：每对象 renderer.material 对比 MaterialPropertyBlock",
+      "checkRules": [
+        "独立材质提交次数等于对象数；共享材质走实例化时为 1。"
+      ]
+    },
+    {
+      "id": "unity-lifecycle",
+      "version": 1,
+      "track": "时间与同步",
+      "title": "物体是关掉的，Start 还会跑吗？",
+      "question": "失活的 GameObject 会不会调用 Start？",
+      "intro": "切换是否激活，观察 Awake / OnEnable / Start 是否发生。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "active",
+          "label": "GameObject 开始时激活",
+          "type": "checkbox",
+          "value": true
+        }
+      ],
+      "challenge": "Start 被调用了几次？填 0 或 1。",
+      "variant": "关掉激活；Awake 和 Start 还会按你记忆的顺序出现吗？",
+      "explanation": "未激活的 GameObject 不会在加载时调用 Awake/OnEnable/Start。第一次激活时才走 Awake → OnEnable → Start。Start 在第一次 Update 之前、且仅一次。协程也绑在这个行为上。",
+      "boundary": "这是 Unity 文档顺序的教学模型，不是完整 PlayerLoop。脚本执行顺序、编辑器/运行模式差异以手册和实机日志为准。",
+      "sources": [
+        "lifecycle"
+      ],
+      "questions": [
+        "q-016",
+        "q-021"
+      ],
+      "native": "在配套 Unity 工程中失活物体并看 Console 生命周期日志",
+      "checkRules": [
+        "激活时 Start 为 1；开始即失活时 Start 为 0。"
+      ]
+    },
+    {
+      "id": "net-predict",
+      "version": 1,
+      "track": "时间与同步",
+      "title": "有延迟时，为什么角色会被拉回去？",
+      "question": "关闭预测后，画面落后服务器几帧？",
+      "intro": "改延迟帧数，开关客户端预测，看显示位置与权威位置的差距。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "latency",
+          "label": "单向延迟（帧）",
+          "type": "range",
+          "value": 6,
+          "min": 0,
+          "max": 12
+        },
+        {
+          "key": "predict",
+          "label": "客户端预测",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "画面相对权威位置落后几帧？填整数。",
+      "variant": "打开预测；再加大延迟，预测能消灭校正回弹吗？",
+      "explanation": "无预测时，画面等到权威快照才动，落后约一个 RTT。预测让本地立即应用输入，画面落后为 0，但错误预测会在服务器校正时回弹。预测不是同步本身。",
+      "boundary": "离散帧模型，没有真实套接字、丢包或抖动。不能代替双客户端联机验收。",
+      "sources": [
+        "predict"
+      ],
+      "questions": [
+        "q-098",
+        "q-050"
+      ],
+      "native": "需要双客户端时另测；本实验只导出教学延迟模型，不冒充网络测量",
+      "checkRules": [
+        "关闭预测时落后帧数等于延迟；打开预测时为 0。"
+      ]
+    }
+  ],
+  "sources": {
+    "abi": {
+      "title": "Itanium C++ ABI",
+      "url": "https://itanium-cxx-abi.github.io/cxx-abi/abi.html",
+      "section": "§2.5 虚表、§2.6 构造阶段、§3.2 虚调用",
+      "purpose": "核对布局与 this 调整，不把 ABI 当语言标准",
+      "license": "仅链接；引用前核对原站版权",
+      "checked": "2026-09-18"
+    },
+    "ce": {
+      "title": "Compiler Explorer",
+      "url": "https://github.com/compiler-explorer/compiler-explorer/blob/main/docs/WhatIsCompilerExplorer.md",
+      "section": "源码与汇编对应视图",
+      "purpose": "复制合成示例，比较 O0/O2，定位间接调用",
+      "license": "仅链接，不内嵌服务",
+      "checked": "2026-09-18"
+    },
+    "dotnet": {
+      "title": ".NET GC fundamentals",
+      "url": "https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals",
+      "section": "Memory release / Generations",
+      "purpose": "验证根、可达性与分代回收",
+      "license": "仅链接；Microsoft Learn 内容条款",
+      "checked": "2026-09-18"
+    },
+    "unitygc": {
+      "title": "Unity 6000.0 增量 GC",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/performance-incremental-garbage-collection.html",
+      "section": "Incremental garbage collection",
+      "purpose": "核对运行时、切片与 Profiler 观察方式",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-18"
+    },
+    "srp": {
+      "title": "Unity 6000.0 SRP Batcher",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/SRPBatcher.html",
+      "section": "How the SRP Batcher works",
+      "purpose": "区分提交开销与绘制次数，指引真实捕帧",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-18"
+    },
+    "webgl": {
+      "title": "WebGL2 Fundamentals · Instanced Drawing",
+      "url": "https://webgl2fundamentals.org/webgl/lessons/webgl-instanced-drawing.html",
+      "section": "drawArraysInstanced 与 divisor",
+      "purpose": "验证一个命令绘制多个实例；本项目渲染器为独立实现",
+      "license": "仅链接，未复制文章与示例",
+      "checked": "2026-09-18"
+    },
+    "spector": {
+      "title": "Spector.js",
+      "url": "https://github.com/BabylonJS/Spector.js",
+      "section": "Use as a Module / Capture",
+      "purpose": "按需加载捕帧，检查真实 WebGL 命令",
+      "license": "MIT；依赖保留原许可",
+      "checked": "2026-09-18"
+    },
+    "craft": {
+      "title": "Crafting Interpreters · 开源配套代码",
+      "url": "https://github.com/munificent/craftinginterpreters",
+      "section": "clox memory.c",
+      "purpose": "选读标记清除实现，连接引用图与真实算法",
+      "license": "仅链接；代码与书籍分别遵循上游许可",
+      "checked": "2026-09-18"
+    },
+    "smartptr": {
+      "title": "cppreference · unique_ptr / shared_ptr / weak_ptr",
+      "url": "https://en.cppreference.com/w/cpp/memory/unique_ptr",
+      "section": "Ownership, use_count, expired",
+      "purpose": "核对独占、共享计数与 weak 不能保活；对照本机 reset 后的存活",
+      "license": "仅链接，不内嵌 cppreference 正文",
+      "checked": "2026-09-19"
+    },
+    "move": {
+      "title": "cppreference · Move constructors",
+      "url": "https://en.cppreference.com/w/cpp/language/move_constructor",
+      "section": "Implicitly-declared / Trivial / Elision",
+      "purpose": "区分拷贝、移动与返回值优化；以本机构造计数和汇编为准",
+      "license": "仅链接，不内嵌 cppreference 正文",
+      "checked": "2026-09-19"
+    },
+    "vector": {
+      "title": "cppreference · std::vector",
+      "url": "https://en.cppreference.com/w/cpp/container/vector",
+      "section": "Iterator invalidation / Capacity",
+      "purpose": "核对扩容后指针与迭代器失效；增长因子不是标准保证",
+      "license": "仅链接，不内嵌 cppreference 正文",
+      "checked": "2026-09-19"
+    },
+    "cache": {
+      "title": "Unity 6000.0 · Data-oriented design",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/performance-data-oriented-design.html",
+      "section": "Organizing data for the CPU cache",
+      "purpose": "连接行主序遍历与缓存行；本机只保证两种遍历结果相同",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-19"
+    },
+    "atlas": {
+      "title": "Unity 6000.0 · Sprite Atlas",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/class-SpriteAtlas.html",
+      "section": "Sprite Atlas assets / packing",
+      "purpose": "对照独立纹理绑定与图集合批；网页只演示 bindTexture 次数",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-19"
+    },
+    "lifecycle": {
+      "title": "Unity 6000.0 · Event function execution order",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/execution-order.html",
+      "section": "Script lifecycle flowchart / Awake Start",
+      "purpose": "核对失活物体是否调用 Start；这是文档顺序，不是完整 PlayerLoop",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-19"
+    },
+    "predict": {
+      "title": "Unity Netcode · Client-side prediction",
+      "url": "https://docs.unity3d.com/Packages/com.unity.netcode.gameobjects@2.3/manual/advanced-topics/prediction.html",
+      "section": "Client-side prediction / reconciliation",
+      "purpose": "区分本地预测与权威校正；本实验是离散帧教学模型",
+      "license": "仅链接；Unity 文档条款",
+      "checked": "2026-09-19"
+    }
+  }
+}

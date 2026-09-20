@@ -34,7 +34,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 1. 创建 Supabase 项目，用 Supabase CLI 应用 `supabase/migrations/` 下的 migration。
 2. 在 Auth Providers 启用 GitHub；GitHub OAuth App 的 callback 使用 Supabase 控制台给出的 `/auth/v1/callback`。
-3. 在 Supabase URL allow list 加入本地开发地址和 `https://yufenghuang.tech/quiz/`。
+3. 在 Supabase URL allow list 加入本地开发地址、`https://yufenghuang.tech/quiz/` 和 `https://yufenghuang.tech/labs/`。
 4. 首次通过 `/quiz/#/manage/questions` 登录后，在 Supabase SQL Editor 执行：
 
 ```sql
@@ -79,6 +79,7 @@ npm run test:e2e
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_CONCEPT_LAB_URL`（`https://yufenghuang.tech/labs/`，题目页实验入口）
 
 跨仓库部署继续使用现有 `API_TOKEN_GITHUB` Secret。
 

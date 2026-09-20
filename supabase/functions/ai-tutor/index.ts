@@ -4,6 +4,7 @@ import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeakn
 import { modelFailure } from './modelErrors.js';
 import { MODEL_TIMEOUT_MS, modelOptions, normalizeEffort, outputBudget, REASONING_EFFORTS } from './modelOptions.js';
 import { callModel as callModelWith } from './modelClient.js';
+import { handleLab } from './labs.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -26,6 +27,12 @@ export async function handleRequest(req: Request, factory = createClient) {
   const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
+  if (typeof action === 'string' && action.startsWith('lab-')) {
+   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
+   const configured = settings?.model && env('AI_API_KEY');
+   return await handleLab(input,{uid,db,json,model:settings?.model,authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
+    callModel:configured ? (messages:unknown[])=>callModel(endpoint(settings.base_url,env('AI_ALLOWED_ORIGINS')),settings.model,messages,{effort:settings.reasoning_effort}) : undefined});
+  }
   if (action === 'settings') {
    const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
    return json({ settings: settings ?? {base_url:'',model:'',reasoning_effort:'high'}, reasoningEfforts: REASONING_EFFORTS, configured: Boolean(env('AI_API_KEY')), allowedOrigins:env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean) });

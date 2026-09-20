@@ -1,5 +1,6 @@
 import QuestionContent from './QuestionContent';
 import AnswerPanel from './AnswerPanel';
+import ConceptLabLinks from './ConceptLabLinks';
 import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 
 /**
@@ -54,6 +55,7 @@ export default function QuestionCard({ question, cardRef, onRated }) {
           <QuestionContent content={question.question} />
         </div>
 
+        <ConceptLabLinks question={question} />
         <AnswerPanel question={question} onRated={onRated} />
       </div>
     </article>
