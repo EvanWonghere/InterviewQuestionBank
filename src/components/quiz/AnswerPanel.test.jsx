@@ -72,6 +72,22 @@ describe('AnswerPanel AI evaluation', () => {
     expect(state.recordAttempt.mock.calls[0][0]).toMatchObject({ quality: 4, aiEvaluationId: 'eval-1', aiScore: 64, errorReasons: ['boundary_case'] });
   });
 
+  it('does not file a follow-up round slip as an error reason for the original answer', async () => {
+    await submit({});
+    entryProps().onEvaluated({ id: 'eval-1', round: 1, score: 40, result: { weaknesses: [{ tag: '边界', point: '原题漏了空输入', errorReason: 'boundary_case' }] } });
+    entryProps().onEvaluated({
+      id: 'eval-2', round: 2, score: 55,
+      result: {
+        weaknesses: [
+          { tag: '复杂度', point: '追问里算错了复杂度', errorReason: 'complexity', origin: 'this_answer' },
+          { tag: '边界', point: '原题仍未纠正：空输入', errorReason: 'boundary_case', origin: 'unresolved' },
+        ],
+      },
+    });
+    expect(await screen.findByLabelText('边界遗漏')).toBeChecked();
+    expect(screen.getByLabelText('复杂度错误')).not.toBeChecked();
+  });
+
   it('does not render the evaluation entry when disabled', async () => {
     render(<AnswerPanel question={question} evaluationMode="off" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x' } });

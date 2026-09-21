@@ -1,6 +1,7 @@
 // Shared by the Edge Function and the browser: validation, parsing and aggregation only (no prompts).
 export const ERROR_REASON_KEYS = ['concept_gap', 'pattern_missing', 'spec_misread', 'boundary_case', 'complexity', 'implementation_bug', 'careless'];
 export const RATING_KEYS = ['again', 'hard', 'good', 'easy'];
+export const WEAKNESS_ORIGINS = ['this_answer', 'unresolved'];
 // Total rounds including the initial answer; mirrored in ai_begin_evaluation.
 export const MAX_ROUNDS = { practice: 4, interview: 3 };
 
@@ -63,12 +64,16 @@ export function parseEvaluation(raw, { correct = null, allowFollowUp = true, isF
   const score = clampInt(data.score, 0, 100);
   if (score === null) throw new Error('evaluation_parse');
   const weaknesses = list(data.weaknesses, 5)
-    .map((w) => ({
-      tag: text(w?.tag, 40),
-      point: text(w?.point, 300),
-      errorReason: ERROR_REASON_KEYS.includes(w?.errorReason) ? w.errorReason : null,
-      severity: ['low', 'mid', 'high'].includes(w?.severity) ? w.severity : 'mid',
-    }))
+    .map((w) => {
+      const origin = WEAKNESS_ORIGINS.includes(w?.origin) ? w.origin : null;
+      return {
+        tag: text(w?.tag, 40),
+        point: text(w?.point, 300),
+        errorReason: ERROR_REASON_KEYS.includes(w?.errorReason) ? w.errorReason : null,
+        severity: ['low', 'mid', 'high'].includes(w?.severity) ? w.severity : 'mid',
+        ...(origin ? { origin } : {}),
+      };
+    })
     .filter((w) => w.tag && w.point);
   const followQuestion = allowFollowUp ? text(data.followUp?.question, 600) : '';
   return {
@@ -88,6 +93,44 @@ export function parseEvaluation(raw, { correct = null, allowFollowUp = true, isF
 
 export function weaknessTags(result) {
   return [...new Set(result.weaknesses.map((w) => w.tag))];
+}
+
+/**
+ * @param {Array<any>} [weaknesses]
+ * @param {{isFollowUp?:boolean}} [options]
+ */
+export function partitionWeaknesses(weaknesses = [], { isFollowUp = false } = {}) {
+  if (!isFollowUp) return { thisAnswer: weaknesses, unresolved: [], unlabeled: [] };
+  const thisAnswer = [];
+  const unresolved = [];
+  const unlabeled = [];
+  for (const w of weaknesses) {
+    if (w.origin === 'this_answer') thisAnswer.push(w);
+    else if (w.origin === 'unresolved') unresolved.push(w);
+    else unlabeled.push(w);
+  }
+  return { thisAnswer, unresolved, unlabeled };
+}
+
+/**
+ * What this round's own answer showed: labeled this-round items, or unlabeled legacy ones.
+ * @param {any} result
+ * @param {{isFollowUp?:boolean}} [options]
+ */
+export function thisAnswerWeaknesses(result, { isFollowUp = false } = {}) {
+  const { thisAnswer, unlabeled } = partitionWeaknesses(result?.weaknesses, { isFollowUp });
+  return thisAnswer.length ? thisAnswer : unlabeled;
+}
+
+/**
+ * What the original answer is still accountable for: everything on an original round, and on a
+ * follow-up round only the leftovers plus unlabeled legacy items.
+ * @param {any} result
+ * @param {{isFollowUp?:boolean}} [options]
+ */
+export function originalAnswerWeaknesses(result, { isFollowUp = false } = {}) {
+  const { thisAnswer, unresolved, unlabeled } = partitionWeaknesses(result?.weaknesses, { isFollowUp });
+  return isFollowUp ? [...unresolved, ...unlabeled] : thisAnswer;
 }
 
 const filterIds = (ids, allowed) => [...new Set(list(ids, 10).filter((id) => allowed.has(id)))];
@@ -126,22 +169,46 @@ export function parseWeaknessReport(raw, candidateIds) {
   };
 }
 
+const pointKey = (point) => String(point ?? '').replace(/^原题仍未纠正：/, '').trim();
+
+/**
+ * The newest complete evaluation per question, which is the last round of its newest chain.
+ * Used to observe whether a tag is still listed after the follow-ups, never to declare mastery.
+ */
+function newestPerQuestion(evaluations) {
+  const newest = new Map();
+  for (const e of evaluations) {
+    const current = newest.get(e.question_id);
+    if (!current
+      || (e.created_at ?? '') > (current.created_at ?? '')
+      || ((e.created_at ?? '') === (current.created_at ?? '') && (e.round ?? 1) > (current.round ?? 1))) {
+      newest.set(e.question_id, e);
+    }
+  }
+  return newest;
+}
+
 /**
  * Deterministic weakness aggregation over complete evaluations (newest first or any order).
  * Tags are grouped case-insensitively; each question counts once per tag so long follow-up chains do not dominate.
+ * openQuestionIds are the questions whose newest evaluation still lists the tag.
  */
 export function aggregateWeaknesses(evaluations, { limit = 12 } = {}) {
+  const complete = evaluations.filter((e) => e.status === 'complete' && e.result);
+  const newest = newestPerQuestion(complete);
+  const stillListed = (questionId, key) => (newest.get(questionId)?.result?.weaknesses ?? [])
+    .some((w) => String(w.tag ?? '').trim().toLowerCase() === key);
   const groups = new Map();
-  for (const e of evaluations) {
-    if (e.status !== 'complete' || !e.result) continue;
+  for (const e of complete) {
     for (const w of e.result.weaknesses ?? []) {
       const key = String(w.tag ?? '').trim().toLowerCase();
       if (!key) continue;
-      const g = groups.get(key) ?? { tag: String(w.tag).trim(), questions: new Map(), points: [], lastSeen: '' };
+      const g = groups.get(key) ?? { key, tag: String(w.tag).trim(), questions: new Map(), points: [], lastSeen: '' };
       const previous = g.questions.get(e.question_id);
       // Keep the lowest score per question: the weakest showing is the relevant one.
       if (previous == null || e.score < previous) g.questions.set(e.question_id, e.score);
-      if (w.point && !g.points.includes(w.point)) g.points.push(w.point);
+      // The same gap restated as "原题仍未纠正：…" is one point, not two.
+      if (w.point && !g.points.some((p) => pointKey(p) === pointKey(w.point))) g.points.push(w.point);
       if (e.created_at > g.lastSeen) g.lastSeen = e.created_at;
       groups.set(key, g);
     }
@@ -149,11 +216,13 @@ export function aggregateWeaknesses(evaluations, { limit = 12 } = {}) {
   return [...groups.values()]
     .map((g) => {
       const scores = [...g.questions.values()].filter((s) => typeof s === 'number');
+      const questionIds = [...g.questions.entries()].sort((a, b) => (a[1] ?? 101) - (b[1] ?? 101)).map(([id]) => id);
       return {
         tag: g.tag,
         count: g.questions.size,
         avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
-        questionIds: [...g.questions.entries()].sort((a, b) => (a[1] ?? 101) - (b[1] ?? 101)).map(([id]) => id),
+        questionIds,
+        openQuestionIds: questionIds.filter((id) => stillListed(id, g.key)),
         points: g.points.slice(0, 3),
         lastSeen: g.lastSeen,
       };

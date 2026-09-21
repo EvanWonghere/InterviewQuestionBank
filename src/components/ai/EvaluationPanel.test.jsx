@@ -87,4 +87,35 @@ describe('EvaluationPanel', () => {
     expect(container).toBeEmptyDOMElement();
     expect(state.evaluate).not.toHaveBeenCalled();
   });
+
+  it('separates this-round follow-up mistakes from leftover original-answer gaps', async () => {
+    state.evaluate.mockResolvedValueOnce(evaluation(2, null, {
+      result: {
+        verdict: '第2轮结论',
+        dimensions: [],
+        strengths: [],
+        weaknesses: [
+          { tag: '边界', point: '追问里漏了空输入', origin: 'this_answer', severity: 'high' },
+          { tag: '生命周期', point: '原题仍未纠正：OnDisable 与 OnDestroy 未区分', origin: 'unresolved', severity: 'mid' },
+        ],
+        followUp: null,
+        summaryMd: '',
+      },
+    }));
+    render(<EvaluationPanel question={question} submission={{}} />);
+    expect(await screen.findByText('这轮追问回答里的问题')).toBeVisible();
+    expect(screen.getByText('追问里漏了空输入')).toBeVisible();
+    expect(screen.getByText('原题仍未纠正')).toBeVisible();
+    expect(screen.getByText(/OnDisable 与 OnDestroy/)).toBeVisible();
+    expect(screen.getByText(/这轮追问里没有再说同样的话/)).toBeVisible();
+    expect(screen.queryByText('待加强')).toBeNull();
+  });
+
+  it('does not treat unlabeled follow-up weaknesses as words said in this round', async () => {
+    state.evaluate.mockResolvedValueOnce(evaluation(2, null));
+    render(<EvaluationPanel question={question} submission={{}} />);
+    expect(await screen.findByText('待加强')).toBeVisible();
+    expect(screen.getByText(/不代表你在追问里又说了同样的话/)).toBeVisible();
+    expect(screen.getByText('漏了空输入')).toBeVisible();
+  });
 });

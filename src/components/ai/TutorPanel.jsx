@@ -80,7 +80,8 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     try {
       await streamChat(request, { signal: controller.signal, onEvent: event => {
         if (!alive.current) return;
-        if (event.truncated) setNotice('上下文仅包含最近20条及长度预算内内容；历史不会被删除。');
+        if (event.truncated) setNotice('更早的对话超出条数或长度预算，未随本次请求发送；历史不会被删除。');
+        else if (event.phaseFiltered) setNotice(phaseRef.current === 'hint' ? '答前提示只发送答前阶段的对话；答后内容未发送。' : '未完成的回复不会随本次请求发送。');
         if (event.thinking) setMessages(prev => prev.map(m => m.id === localId ? { ...m, thinking: true } : m));
         if (event.text) {
           markAssisted();
@@ -147,7 +148,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}
-      <details className="my-3"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；' : '不发送参考解析；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>
+      <details className="my-3"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；本题最近一次 AI 评估的结论（分轮次标注，教练不能据此改分）；' : '不发送参考解析，也不发送 AI 评估结论；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>
       {notice && <p role="status" className="ai-notice">{notice}</p>}
       {loading && <p role="status">正在读取本题对话…</p>}
       <div role="log" aria-label="本题AI对话" aria-live="polite">

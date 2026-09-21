@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  aggregateWeaknesses, constrainRating, extractJson, parseEvaluation, parseInterviewReport, parseWeaknessReport, validateEvaluateInput, MAX_ROUNDS,
+  aggregateWeaknesses, constrainRating, extractJson, originalAnswerWeaknesses, parseEvaluation, parseInterviewReport, parseWeaknessReport, partitionWeaknesses, thisAnswerWeaknesses, validateEvaluateInput, MAX_ROUNDS,
 } from '../../supabase/functions/ai-tutor/evaluation.js';
 import { buildEvaluationMessages, buildInterviewReportMessages, buildWeaknessReportMessages } from '../../supabase/functions/ai-tutor/evaluationPrompts.js';
 
@@ -53,6 +53,22 @@ describe('extractJson / parseEvaluation', () => {
     expect(parseEvaluation(JSON.stringify({ ...full, suggestedRating: 'easy' }), { correct: false }).suggestedRating).toBe('again');
     expect(parseEvaluation(JSON.stringify({ ...full, suggestedRating: 'again' }), { correct: true }).suggestedRating).toBe('hard');
   });
+
+  it('keeps this-round vs unresolved origins and ignores unknown ones', () => {
+    const parsed = parseEvaluation(JSON.stringify({
+      score: 70,
+      weaknesses: [
+        { tag: '边界', point: '追问漏了空数组', origin: 'this_answer', errorReason: 'boundary_case', severity: 'high' },
+        { tag: '生命周期', point: '原题仍未纠正：未区分 OnDisable', origin: 'unresolved', severity: 'mid' },
+        { tag: '其它', point: '来源不明', origin: 'elsewhere' },
+      ],
+    }));
+    expect(parsed.weaknesses).toEqual([
+      { tag: '边界', point: '追问漏了空数组', errorReason: 'boundary_case', severity: 'high', origin: 'this_answer' },
+      { tag: '生命周期', point: '原题仍未纠正：未区分 OnDisable', errorReason: null, severity: 'mid', origin: 'unresolved' },
+      { tag: '其它', point: '来源不明', errorReason: null, severity: 'mid' },
+    ]);
+  });
 });
 
 describe('constrainRating', () => {
@@ -87,9 +103,15 @@ describe('evaluation prompts', () => {
     const messages = buildEvaluationMessages({ question, solution: { referenceAnswerMd: '参考' }, correct: true, mode: 'interview', chain, current: { followUpQuestion: '追问二', answer: { answerMd: '三答' } } });
     expect(messages).toHaveLength(2);
     expect(messages[0].content).toContain('不得透露参考答案');
+    expect(messages[0].content).toContain('this_answer');
+    expect(messages[1].content).toContain('evaluate 为 true');
     const material = JSON.parse(messages[1].content.slice(messages[1].content.indexOf('\n') + 1));
     expect(material).toMatchObject({ mode: 'interview', allowFollowUp: false, objectiveCorrect: true, reference: { referenceAnswerMd: '参考' } });
-    expect(material.rounds.map((r) => [r.round, r.followUp, r.answer.answerMd])).toEqual([[1, undefined, '初答'], [2, '追问一', '二答'], [3, '追问二', '三答']]);
+    expect(material.rounds.map((r) => [r.round, r.kind, r.evaluate, r.followUp, r.answer.answerMd])).toEqual([
+      [1, 'original', false, undefined, '初答'],
+      [2, 'follow_up', false, '追问一', '二答'],
+      [3, 'follow_up', true, '追问二', '三答'],
+    ]);
     expect(material.rounds[0].evaluation).toEqual({ score: 60, verdict: '一般', weaknesses: [{ tag: 'a' }] });
     const first = buildEvaluationMessages({ question, solution: null, correct: null, mode: 'practice', chain: [], current: { answer: {} } });
     expect(JSON.parse(first[1].content.slice(first[1].content.indexOf('\n') + 1))).not.toHaveProperty('objectiveCorrect');
@@ -105,6 +127,27 @@ describe('evaluation prompts', () => {
     expect(() => buildEvaluationMessages({ question, solution: { referenceAnswerMd: 'x'.repeat(41000) }, mode: 'practice', chain: [], current: { answer: {} } })).toThrow('过长');
     expect(() => buildInterviewReportMessages([{ title: 'x'.repeat(41000) }])).toThrow('过长');
     expect(buildWeaknessReportMessages({ weaknesses: [], candidates: [] })[0].content).toContain('candidates');
+  });
+});
+
+describe('weakness origin', () => {
+  const thisRound = { tag: '边界', point: '追问漏了', origin: 'this_answer' };
+  const leftover = { tag: '生命周期', point: '原题仍未纠正', origin: 'unresolved' };
+  const unlabeled = { tag: '其它', point: '未标明' };
+
+  it('splits follow-up weaknesses and prefers this-round items for drafts', () => {
+    expect(partitionWeaknesses([thisRound, leftover, unlabeled], { isFollowUp: true })).toEqual({
+      thisAnswer: [thisRound], unresolved: [leftover], unlabeled: [unlabeled],
+    });
+    expect(thisAnswerWeaknesses({ weaknesses: [thisRound, leftover, unlabeled] }, { isFollowUp: true })).toEqual([thisRound]);
+    expect(thisAnswerWeaknesses({ weaknesses: [leftover, unlabeled] }, { isFollowUp: true })).toEqual([unlabeled]);
+    expect(partitionWeaknesses([leftover], { isFollowUp: false })).toEqual({ thisAnswer: [leftover], unresolved: [], unlabeled: [] });
+  });
+
+  it('keeps the original answer accountable only for leftovers on a follow-up round', () => {
+    const result = { weaknesses: [thisRound, leftover, unlabeled] };
+    expect(originalAnswerWeaknesses(result, { isFollowUp: true })).toEqual([leftover, unlabeled]);
+    expect(originalAnswerWeaknesses({ weaknesses: [thisRound] })).toEqual([thisRound]);
   });
 });
 
@@ -139,5 +182,29 @@ describe('aggregateWeaknesses', () => {
     expect(result[1].questionIds).toEqual(['q1', 'q2']);
     expect(result[0].lastSeen).toBe('2026-09-04');
     expect(result[1].points).toEqual(['边界条件@q1', '边界条件 @q1', '边界条件@q2']);
+  });
+
+  it('marks whether the newest evaluation of each question still lists the tag', () => {
+    const round = (questionId, round, createdAt, tags) => ({
+      question_id: questionId, round, score: 60, status: 'complete', created_at: createdAt,
+      result: { weaknesses: tags.map((tag) => ({ tag, point: `${tag}@${questionId}r${round}` })) },
+    });
+    const [group] = aggregateWeaknesses([
+      // q1's follow-up no longer lists 边界; q2's newest round still does.
+      round('q1', 1, '2026-09-01', ['边界']),
+      round('q1', 2, '2026-09-02', ['表达']),
+      round('q2', 1, '2026-09-03', ['边界']),
+    ]).filter((g) => g.tag === '边界');
+    expect(group.count).toBe(2);
+    expect(group.openQuestionIds).toEqual(['q2']);
+  });
+
+  it('counts a gap restated as an unresolved leftover only once', () => {
+    const [group] = aggregateWeaknesses([
+      { question_id: 'q1', round: 1, score: 40, status: 'complete', created_at: '2026-09-01', result: { weaknesses: [{ tag: 'GC', point: '没提析构' }] } },
+      { question_id: 'q1', round: 2, score: 55, status: 'complete', created_at: '2026-09-02', result: { weaknesses: [{ tag: 'GC', point: '原题仍未纠正：没提析构', origin: 'unresolved' }] } },
+    ]);
+    expect(group.points).toEqual(['没提析构']);
+    expect(group.openQuestionIds).toEqual(['q1']);
   });
 });

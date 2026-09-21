@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
-import { endpoint, validateChat, buildContext, sseData } from './core.js';
-import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeaknessQuestions, handleWeaknessReport } from './evaluate.ts';
+import { endpoint, validateChat, buildContext, sseData, HISTORY_TURNS } from './core.js';
+import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeaknessQuestions, handleWeaknessReport, latestEvaluationSummary } from './evaluate.ts';
 import { modelFailure } from './modelErrors.js';
 import { MODEL_TIMEOUT_MS, modelOptions, normalizeEffort, outputBudget, REASONING_EFFORTS } from './modelOptions.js';
 import { callModel as callModelWith } from './modelClient.js';
@@ -90,8 +90,10 @@ export async function handleRequest(req: Request, factory = createClient) {
   const solution=input.phase==='review' ? must(await db.from('question_solutions').select('solution').eq('question_id',q.id).maybeSingle())?.solution : undefined;
   const note=input.includeNote ? must(await db.from('notes').select('body_md').eq('user_id',uid).eq('question_id',q.id).maybeSingle())?.body_md : undefined;
   const c=must(await db.from('ai_conversations').select('id').eq('user_id',uid).eq('question_id',q.id).maybeSingle());
-  const history=c ? (must(await db.from('ai_messages').select('role,body,phase,status').eq('conversation_id',c.id).order('created_at',{ascending:false}).order('request_id',{ascending:false}).order('role',{ascending:true}).limit(20)) ?? []).reverse() : [];
-  const context=buildContext({question:q,solution,submission:input.submission,phase:input.phase,note,history});
+  // One row past the window so buildContext can tell a hit row cap from a phase filter.
+  const history=c ? (must(await db.from('ai_messages').select('role,body,phase,status').eq('conversation_id',c.id).order('created_at',{ascending:false}).order('request_id',{ascending:false}).order('role',{ascending:true}).limit(HISTORY_TURNS+1)) ?? []).reverse() : [];
+  const evaluation=input.phase==='review' ? await latestEvaluationSummary(db,uid,q.id,must) : undefined;
+  const context=buildContext({question:q,solution,submission:input.submission,phase:input.phase,note,history,evaluation});
   const begin=must(await db.rpc('ai_begin',{p_user:uid,p_question:q.id,p_version:q.updated_at,p_request:input.requestId,p_body:input.message,p_phase:input.phase,p_model:settings.model}));
   if(begin.duplicate) return json({error:'此请求已接收，请重新加载历史确认结果；不会重复调用',duplicate:true},409);
   const abort=new AbortController(); let disconnected=false;
@@ -104,7 +106,7 @@ export async function handleRequest(req: Request, factory = createClient) {
    const persist=async()=>must(await db.from('ai_messages').update({body}).eq('id',begin.message.id));
    const poll=setInterval(async()=>{if(polling)return;polling=true;try{const m=must(await db.from('ai_messages').select('status').eq('id',begin.message.id).single());if(!m || m.status!=='running'){disconnected=true;abort.abort();}}catch{abort.abort();}finally{polling=false;}},1000);
    try {
-    emit('meta',{truncated:context.truncated,model:settings.model,version:q.updated_at});
+    emit('meta',{truncated:context.truncated,phaseFiltered:context.phaseFiltered,model:settings.model,version:q.updated_at});
     const upstream=await fetch(url,{method:'POST',redirect:'error',signal:abort.signal,headers:{Authorization:`Bearer ${env('AI_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify({model:settings.model,messages:[...context.messages,{role:'user',content:input.message}],max_tokens:outputBudget(url,settings.reasoning_effort),stream:true,...modelOptions(url,{effort:settings.reasoning_effort})})});
     if(!upstream.ok) throw new Error(`upstream_http_${upstream.status}`);
     if(!upstream.body) throw new Error('upstream_format');

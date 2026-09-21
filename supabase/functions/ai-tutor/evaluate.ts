@@ -1,4 +1,4 @@
-import { aggregateWeaknesses, MAX_ROUNDS, parseEvaluation, parseInterviewReport, parseWeaknessReport, validateEvaluateInput, validateReportInput, weaknessTags } from './evaluation.js';
+import { aggregateWeaknesses, MAX_ROUNDS, parseEvaluation, parseInterviewReport, parseWeaknessReport, partitionWeaknesses, thisAnswerWeaknesses, validateEvaluateInput, validateReportInput, weaknessTags } from './evaluation.js';
 import { buildEvaluationMessages, buildInterviewReportMessages, buildWeaknessReportMessages } from './evaluationPrompts.js';
 import { modelFailure } from './modelErrors.js';
 import { parseGeneratedQuestion, parseGeneratedQuestionSet, validateDraftInput, validateWeaknessDraftInput } from './questionDraft.js';
@@ -63,6 +63,36 @@ export async function handleEvaluate(input: Row, ctx: EvaluationContext) {
   }
 }
 
+/**
+ * Read-only recap of the newest complete evaluation chain for one question, handed to the chat
+ * coach in review phase so the admin can ask why a round was judged that way. Chat never writes
+ * ai_evaluations, so this direction cannot contaminate the measurement.
+ */
+export async function latestEvaluationSummary(db: any, uid: string, questionId: string, must: Must) {
+  const rows = must(await db.from('ai_evaluations').select('id,root_id,round,follow_up_question,submission,score,result,created_at')
+    .eq('user_id', uid).eq('question_id', questionId).eq('status', 'complete')
+    .order('created_at', { ascending: false }).limit(MAX_ROUNDS.practice * 2)) as Row[] | null;
+  if (!rows?.length) return undefined;
+  const newest = rows[0];
+  const chainId = newest.root_id ?? newest.id;
+  const chain = rows.filter((r) => (r.root_id ?? r.id) === chainId).sort((a, b) => a.round - b.round);
+  const last = chain.at(-1);
+  return {
+    evaluatedAt: last?.created_at,
+    finalScore: last?.score,
+    rounds: chain.map((r) => ({
+      round: r.round,
+      kind: r.round === 1 ? 'original' : 'follow_up',
+      ...(r.round > 1 ? { followUp: r.follow_up_question, answer: String(r.submission?.answerMd ?? '').slice(0, 2000) } : {}),
+      chainScore: r.score,
+      answerScore: r.result?.followUpAnswerScore ?? null,
+      verdict: r.result?.verdict,
+      weaknesses: thisAnswerWeaknesses(r.result, { isFollowUp: r.round > 1 }),
+    })),
+    unresolved: partitionWeaknesses(last?.result?.weaknesses, { isFollowUp: (last?.round ?? 1) > 1 }).unresolved,
+  };
+}
+
 async function runReport(ctx: EvaluationContext, input: Row, kind: 'interview' | 'weakness', produce: () => Promise<unknown>) {
   const { uid, db, must, json } = ctx;
   const begin = must(await db.rpc('ai_begin_report', { p_user: uid, p_kind: kind, p_session: input.sessionId ?? null, p_request: input.requestId, p_model: ctx.model })) as Row;
@@ -94,10 +124,22 @@ export async function handleInterviewReport(input: Row, ctx: EvaluationContext) 
   const byId = new Map(questions.map((x) => [x.id, x]));
   const items = ids.map((id) => {
     const rounds = rows.filter((r) => r.question_id === id);
+    const last = rounds.at(-1);
     return {
       questionId: id, title: byId.get(id)?.title ?? '', type: byId.get(id)?.type ?? '',
-      finalScore: rounds.at(-1)?.score,
-      rounds: rounds.map((r) => ({ round: r.round, followUp: r.follow_up_question, score: r.score, verdict: r.result?.verdict, weaknesses: r.result?.weaknesses })),
+      finalScore: last?.score,
+      // Per round only what that round's answer showed; leftovers are listed once for the
+      // whole question so the report cannot read one unresolved gap as a repeated mistake.
+      rounds: rounds.map((r) => ({
+        round: r.round,
+        kind: r.round === 1 ? 'original' : 'follow_up',
+        followUp: r.follow_up_question,
+        chainScore: r.score,
+        answerScore: r.result?.followUpAnswerScore ?? null,
+        verdict: r.result?.verdict,
+        weaknesses: thisAnswerWeaknesses(r.result, { isFollowUp: r.round > 1 }),
+      })),
+      unresolved: partitionWeaknesses(last?.result?.weaknesses, { isFollowUp: (last?.round ?? 1) > 1 }).unresolved,
     };
   });
   return runReport(ctx, input, 'interview', async () => {
@@ -109,7 +151,7 @@ export async function handleInterviewReport(input: Row, ctx: EvaluationContext) 
 export async function handleWeaknessReport(input: Row, ctx: EvaluationContext) {
   const { uid, db, must, json } = ctx;
   validateReportInput(input);
-  const rows = must(await db.from('ai_evaluations').select('question_id,score,result,status,created_at')
+  const rows = must(await db.from('ai_evaluations').select('question_id,round,score,result,status,created_at')
     .eq('user_id', uid).eq('status', 'complete').order('created_at', { ascending: false }).limit(200)) as Row[];
   const weaknesses = aggregateWeaknesses(rows ?? []);
   if (!weaknesses.length) return json({ error: '暂无包含薄弱点的AI评估记录' }, 400);
@@ -131,22 +173,31 @@ export async function handleWeaknessReport(input: Row, ctx: EvaluationContext) {
 export async function handleDraftQuestion(input: Row, ctx: EvaluationContext) {
   const { uid, db, must, json } = ctx;
   validateDraftInput(input);
-  const evaluation = must(await db.from('ai_evaluations').select('id,question_id,round,follow_up_question,submission,score,result,status')
+  const evaluation = must(await db.from('ai_evaluations').select('id,question_id,round,root_id,follow_up_question,submission,score,result,status')
     .eq('user_id', uid).eq('id', input.evaluationId).maybeSingle()) as Row | null;
   if (!evaluation || evaluation.status !== 'complete' || evaluation.round < 2 || !evaluation.follow_up_question) {
     return json({ error: '只能把已回答并完成评估的追问加入题库' }, 400);
   }
   const source = must(await db.from('questions').select('title,type,prompt_md,difficulty,question_tags(tags(name))').eq('id', evaluation.question_id).single()) as Row;
   const solution = must(await db.from('question_solutions').select('solution').eq('question_id', evaluation.question_id).maybeSingle()) as Row | null;
+  const prior = (evaluation.root_id
+    ? must(await db.from('ai_evaluations').select('round,follow_up_question').eq('user_id', uid)
+      .or(`id.eq.${evaluation.root_id},root_id.eq.${evaluation.root_id}`).eq('status', 'complete').lt('round', evaluation.round).order('round')) as Row[] | null
+    : null) ?? [];
   const messages = buildQuestionDraftMessages({
     requestedType: input.type,
     source: {
       title: source.title, type: source.type, prompt: source.prompt_md, difficulty: source.difficulty,
       tags: (source.question_tags ?? []).map((t: Row) => t.tags?.name).filter(Boolean), reference: solution?.solution ?? null,
     },
+    priorFollowUps: prior.map((r) => r.follow_up_question).filter(Boolean),
     followUp: evaluation.follow_up_question,
     answer: evaluation.submission?.answerMd ?? '',
-    evaluation: { score: evaluation.result?.followUpAnswerScore ?? evaluation.score, verdict: evaluation.result?.verdict, weaknesses: evaluation.result?.weaknesses },
+    evaluation: {
+      score: evaluation.result?.followUpAnswerScore ?? evaluation.score,
+      verdict: evaluation.result?.verdict,
+      weaknesses: evaluation.result?.weaknesses ?? [],
+    },
   });
   // Generation is billable, so it shares the per-minute limit with chat and evaluation.
   must(await db.rpc('ai_take_rate', { p_user: uid }));
@@ -167,7 +218,7 @@ export async function handleDraftQuestion(input: Row, ctx: EvaluationContext) {
 export async function handleWeaknessQuestions(input: Row, ctx: EvaluationContext) {
   const { uid, db, must, json } = ctx;
   validateWeaknessDraftInput(input);
-  const rows = must(await db.from('ai_evaluations').select('question_id,score,result,status,created_at')
+  const rows = must(await db.from('ai_evaluations').select('question_id,round,score,result,status,created_at')
     .eq('user_id', uid).eq('status', 'complete').order('created_at', { ascending: false }).limit(200)) as Row[];
   const key = input.tag.trim().toLowerCase();
   const group = aggregateWeaknesses(rows ?? [], { limit: 1000 }).find((g) => g.tag.toLowerCase() === key);

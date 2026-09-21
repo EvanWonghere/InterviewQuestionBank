@@ -16,10 +16,18 @@ export function validateDraftInput(input) {
   if (input.type !== 'auto' && !DRAFT_TYPES.includes(input.type)) throw new Error('无效题型');
 }
 
-/** The follow-up answer's own score; older evaluations fall back to the overall score. */
-export function followUpScore(evaluation) {
+/** The follow-up answer's own score, or null when the evaluation never produced one. */
+export function ownFollowUpScore(evaluation) {
   const own = evaluation?.result?.followUpAnswerScore;
-  return typeof own === 'number' ? own : evaluation?.score ?? null;
+  return typeof own === 'number' ? own : null;
+}
+
+/**
+ * Score to screen a follow-up by. Evaluations saved before followUpAnswerScore existed only
+ * carry the chain-wide score, so callers must label which one they are showing.
+ */
+export function followUpScore(evaluation) {
+  return ownFollowUpScore(evaluation) ?? evaluation?.score ?? null;
 }
 
 export function parseGeneratedQuestion(raw, { requestedType = 'auto' } = {}) {

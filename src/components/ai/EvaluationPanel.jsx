@@ -4,8 +4,8 @@ import { REVIEW_RATINGS } from '@/lib/sm2';
 import { ChatMarkdown } from './TutorPanel';
 import Elapsed from './Elapsed';
 import AddFollowUpToBank from './AddFollowUpToBank';
-import { followUpScore } from '../../../supabase/functions/ai-tutor/questionDraft.js';
-import { MAX_ROUNDS } from '../../../supabase/functions/ai-tutor/evaluation.js';
+import { ownFollowUpScore } from '../../../supabase/functions/ai-tutor/questionDraft.js';
+import { MAX_ROUNDS, partitionWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 import { useAuth } from '@/context/AuthContext';
 import { useAIDraft } from '@/lib/aiDrafts';
 
@@ -141,27 +141,49 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
   );
 }
 
+function WeaknessList({ title, items, hint }) {
+  if (!items?.length) return null;
+  return (
+    <div className="mt-4">
+      <p className="type-caption-bold" style={{ color: 'var(--warning-fg)' }}>{title}</p>
+      {hint && <p className="type-micro mt-1" style={{ color: 'var(--text-tertiary)' }}>{hint}</p>}
+      <ul className="mt-1 space-y-2">
+        {items.map((w) => (
+          <li key={`${w.tag}-${w.point}`} className="type-caption">
+            <span className={`chip mr-2 ${SEVERITY[w.severity]?.[1] ?? ''}`}>{w.tag} · {SEVERITY[w.severity]?.[0]}</span>
+            {w.point}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RoundCard({ evaluation, mode, categoryId }) {
   const r = evaluation.result ?? {};
-  const ownScore = evaluation.round > 1 ? followUpScore(evaluation) : null;
+  const isFollowUp = evaluation.round > 1;
+  const ownScore = isFollowUp ? ownFollowUpScore(evaluation) : null;
+  const { thisAnswer, unresolved, unlabeled } = partitionWeaknesses(r.weaknesses, { isFollowUp });
   return (
     <article className="ai-eval-round mt-4">
-      {evaluation.round > 1 && (
+      {isFollowUp && (
         <div className="ai-eval-followup mb-3">
           <p className="type-micro-bold">追问 {evaluation.round - 1}</p>
           <ChatMarkdown content={evaluation.follow_up_question ?? ''} />
           <p className="type-micro-bold mt-2">我的回答</p>
           <p className="type-caption whitespace-pre-wrap">{evaluation.submission?.answerMd}</p>
-          {ownScore != null && <p className="type-micro mt-2" style={{ color: 'var(--text-tertiary)' }}>这轮追问回答得分 {ownScore}</p>}
+          <p className="type-micro mt-2" style={{ color: 'var(--text-tertiary)' }}>
+            {ownScore != null ? `这轮追问回答得分 ${ownScore}` : '这条记录没有单独的本轮评分，下面只有综合掌握分'}
+          </p>
           {mode === 'interview'
             ? <p className="type-micro mt-1" style={{ color: 'var(--text-tertiary)' }}>面试结束后可在“薄弱知识点 → 待入库的追问”中加入题库。</p>
             : <AddFollowUpToBank evaluation={evaluation} sourceCategoryId={categoryId} />}
         </div>
       )}
       <div className="flex items-start gap-4">
-        <div className="ai-eval-score" aria-label={`AI评分 ${evaluation.score}`}>
+        <div className="ai-eval-score" aria-label={isFollowUp ? `综合掌握 ${evaluation.score}` : `AI评分 ${evaluation.score}`}>
           <span className="type-display-md">{evaluation.score}</span>
-          <span className="type-micro">/100</span>
+          <span className="type-micro">{isFollowUp ? '综合掌握 /100' : '/100'}</span>
         </div>
         <div className="min-w-0 flex-1">
           <p className="type-body-emphasis">{r.verdict}</p>
@@ -191,18 +213,14 @@ function RoundCard({ evaluation, mode, categoryId }) {
         </div>
       )}
 
-      {r.weaknesses?.length > 0 && (
-        <div className="mt-4">
-          <p className="type-caption-bold" style={{ color: 'var(--warning-fg)' }}>待加强</p>
-          <ul className="mt-1 space-y-2">
-            {r.weaknesses.map((w) => (
-              <li key={`${w.tag}-${w.point}`} className="type-caption">
-                <span className={`chip mr-2 ${SEVERITY[w.severity]?.[1] ?? ''}`}>{w.tag} · {SEVERITY[w.severity]?.[0]}</span>
-                {w.point}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {isFollowUp ? (
+        <>
+          <WeaknessList title="这轮追问回答里的问题" items={thisAnswer} />
+          <WeaknessList title="原题仍未纠正" items={unresolved} hint="这些问题来自原题作答，这轮追问里没有再说同样的话。" />
+          <WeaknessList title="待加强" items={unlabeled} hint="未标明来自哪一轮，可能包含原题未纠正的问题，不代表你在追问里又说了同样的话。" />
+        </>
+      ) : (
+        <WeaknessList title="待加强" items={r.weaknesses} />
       )}
 
       {r.summaryMd && <div className="mt-4"><ChatMarkdown content={r.summaryMd} /></div>}

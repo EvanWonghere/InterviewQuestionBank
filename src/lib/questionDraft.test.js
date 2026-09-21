@@ -64,7 +64,9 @@ describe('follow-up scoring', () => {
     expect(() => validateDraftInput({ evaluationId: '00000000-0000-4000-8000-000000000001', type: 'essay' })).toThrow('无效题型');
     const messages = buildQuestionDraftMessages({ source: {}, followUp: '用 C# 实现', answer: '', evaluation: {}, requestedType: 'algorithm' });
     expect(messages[0].content).toContain('json');
+    expect(messages[0].content).toContain('sourceQuestion');
     expect(messages[1].content).toContain('"requestedType":"algorithm"');
+    expect(messages[1].content).toContain('"priorFollowUps":[]');
   });
 });
 

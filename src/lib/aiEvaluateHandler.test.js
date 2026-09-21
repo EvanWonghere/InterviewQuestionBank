@@ -119,7 +119,22 @@ describe('handleEvaluate', () => {
 describe('reports', () => {
   it('builds an interview report restricted to the session questions', async () => {
     const db = fakeDb({
-      ai_evaluations: () => ({ data: [{ question_id: id(1), round: 1, score: 40, result: { verdict: 'v', weaknesses: [] } }, { question_id: id(1), round: 2, score: 65, result: {} }], error: null }),
+      ai_evaluations: () => ({
+        data: [
+          { question_id: id(1), round: 1, score: 40, result: { verdict: 'v', weaknesses: [{ tag: '边界', point: '原题漏了空输入' }] } },
+          {
+            question_id: id(1), round: 2, score: 65,
+            result: {
+              followUpAnswerScore: 80,
+              weaknesses: [
+                { tag: '术语', point: '追问里混淆了协程和线程', origin: 'this_answer' },
+                { tag: '边界', point: '原题仍未纠正：空输入', origin: 'unresolved' },
+              ],
+            },
+          },
+        ],
+        error: null,
+      }),
       questions: () => ({ data: [{ id: id(1), title: '协程', type: 'short_answer' }], error: null }),
       ai_reports: (q) => ({ data: q.op === 'update' ? [{ id: 'r1', ...q.payload }] : null, error: null }),
     });
@@ -129,6 +144,36 @@ describe('reports', () => {
     expect(res.status).toBe(200);
     expect(res.data.report.result.weaknesses[0].questionIds).toEqual([id(1)]);
     expect(res.data.report.result.questionScores).toEqual([{ questionId: id(1), title: '协程', score: 65, rounds: 2 }]);
+    // The leftover original-answer gap is listed once for the question, never as a second round's mistake.
+    const material = JSON.parse(callModel.mock.calls[0][0][1].content.split('\n').slice(1).join('\n'));
+    const [item] = material.questions;
+    expect(item.rounds.map((r) => [r.kind, r.answerScore, r.weaknesses.map((w) => w.tag)])).toEqual([
+      ['original', null, ['边界']],
+      ['follow_up', 80, ['术语']],
+    ]);
+    expect(item.unresolved.map((w) => w.tag)).toEqual(['边界']);
+  });
+
+  it('recaps only the newest chain for the chat coach, split by round', async () => {
+    const { latestEvaluationSummary } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const db = fakeDb({
+      ai_evaluations: () => ({
+        data: [
+          { id: id(3), root_id: id(2), round: 2, created_at: '2026-09-05', follow_up_question: '空输入呢？', submission: { answerMd: '返回空列表' }, score: 72, result: { followUpAnswerScore: 85, weaknesses: [{ tag: 'GC', point: '原题仍未纠正：没提析构', origin: 'unresolved' }] } },
+          { id: id(2), root_id: null, round: 1, created_at: '2026-09-04', score: 50, result: { verdict: '一般', weaknesses: [{ tag: 'GC', point: '没提析构' }] } },
+          { id: id(1), root_id: null, round: 1, created_at: '2026-09-01', score: 30, result: { weaknesses: [{ tag: '旧链', point: '不该出现' }] } },
+        ],
+        error: null,
+      }),
+    });
+    const recap = await latestEvaluationSummary(db, 'u', id(9), must);
+    expect(recap.finalScore).toBe(72);
+    expect(recap.rounds.map((r) => [r.round, r.kind, r.answerScore])).toEqual([[1, 'original', null], [2, 'follow_up', 85]]);
+    expect(recap.rounds[1].answer).toBe('返回空列表');
+    expect(recap.unresolved.map((w) => w.tag)).toEqual(['GC']);
+    // The follow-up round carries no this-round weakness, so nothing is attributed to it.
+    expect(recap.rounds[1].weaknesses).toEqual([]);
+    expect(JSON.stringify(recap)).not.toContain('旧链');
   });
 
   it('refuses reports without data before charging a request', async () => {
@@ -142,7 +187,11 @@ describe('reports', () => {
 describe('handleDraftQuestion', () => {
   const draftDb = (evaluation) => {
     const db = fakeDb({
-      ai_evaluations: () => ({ data: evaluation, error: null }),
+      ai_evaluations: (q) => {
+        const byId = q.filters.some(([k, field]) => k === 'eq' && field === 'id');
+        if (byId) return { data: evaluation, error: null };
+        return { data: [{ round: 1, follow_up_question: null }, { round: 2, follow_up_question: '订阅后何时重新绑定？' }], error: null };
+      },
       questions: () => ({ data: { title: '事件订阅', type: 'short_answer', prompt_md: 'p', difficulty: 'medium', question_tags: [{ tags: { name: 'Unity' } }] }, error: null }),
       question_solutions: () => ({ data: { solution: { referenceAnswerMd: 'ref' } }, error: null }),
     });
@@ -151,7 +200,18 @@ describe('handleDraftQuestion', () => {
   };
   it('drafts from an answered follow-up without writing questions', async () => {
     const { handleDraftQuestion } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
-    const db = draftDb({ id: id(7), question_id: id(1), round: 2, follow_up_question: '禁用时何时退订？', submission: { answerMd: '不知道' }, score: 60, result: { followUpAnswerScore: 30 }, status: 'complete' });
+    const db = draftDb({
+      id: id(7), question_id: id(1), round: 3, root_id: id(1), follow_up_question: '禁用时何时退订？',
+      submission: { answerMd: '不知道' }, score: 60,
+      result: {
+        followUpAnswerScore: 30,
+        weaknesses: [
+          { tag: '退订', point: '追问没答 OnDisable', origin: 'this_answer' },
+          { tag: 'GC', point: '原题仍未纠正：没提析构', origin: 'unresolved' },
+        ],
+      },
+      status: 'complete',
+    });
     const callModel = vi.fn(async () => JSON.stringify({ type: 'single_choice', title: 't', promptMd: 'p', payload: { options: [{ id: '1', text: 'OnDisable' }, { id: '2', text: 'Update' }] }, solution: { correctOptionIds: ['1'] } }));
     const res = await handleDraftQuestion({ evaluationId: id(7), type: 'auto' }, { uid: 'u', db, model: 'm', json, must, callModel });
     expect(res.status).toBe(200);
@@ -159,7 +219,11 @@ describe('handleDraftQuestion', () => {
     expect(db.rpc).toHaveBeenCalledWith('ai_take_rate', { p_user: 'u' });
     const material = callModel.mock.calls[0][0][1].content;
     expect(material).toContain('禁用时何时退订？');
+    expect(material).toContain('订阅后何时重新绑定？');
     expect(material).toContain('"score":30');
+    expect(material).toContain('追问没答 OnDisable');
+    expect(material).toContain('没提析构');
+    expect(material).toContain('"origin":"unresolved"');
     expect(db.calls.some((c) => c.op !== 'select')).toBe(false);
   });
   it('rejects initial-answer rounds before charging', async () => {

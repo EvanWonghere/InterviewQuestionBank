@@ -10,7 +10,7 @@ import NoteEditor from './NoteEditor';
 import SubmissionView from './SubmissionView';
 import TutorEntry from '@/components/ai/TutorEntry';
 import EvaluationEntry from '@/components/ai/EvaluationEntry';
-import { constrainRating } from '../../../supabase/functions/ai-tutor/evaluation.js';
+import { constrainRating, originalAnswerWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 
 const ERROR_REASONS = [
   ['concept_gap', '知识盲区'],
@@ -54,7 +54,10 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
   const reveal = useCallback(() => setRevealed(true), []);
   const applyEvaluation = useCallback((evaluation) => {
     setAiEvaluation(evaluation);
-    const reasons = (evaluation.result?.weaknesses ?? []).map((w) => w.errorReason).filter(Boolean);
+    // Error reasons belong to this attempt, which is the original answer; a slip made only in a
+    // follow-up round must not be filed against it.
+    const reasons = originalAnswerWeaknesses(evaluation.result, { isFollowUp: evaluation.round > 1 })
+      .map((w) => w.errorReason).filter(Boolean);
     if (reasons.length) setErrorReasons((items) => [...new Set([...items, ...reasons])]);
   }, []);
 

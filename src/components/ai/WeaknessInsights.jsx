@@ -6,7 +6,7 @@ import Elapsed from './Elapsed';
 import AddFollowUpToBank from './AddFollowUpToBank';
 import WeaknessQuestionGenerator from './WeaknessQuestionGenerator';
 import { useQuestions } from '@/context/QuestionsContext';
-import { followUpScore, WEAK_FOLLOW_UP_SCORE } from '../../../supabase/functions/ai-tutor/questionDraft.js';
+import { followUpScore, ownFollowUpScore, WEAK_FOLLOW_UP_SCORE } from '../../../supabase/functions/ai-tutor/questionDraft.js';
 import { aggregateWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 
 // Loaded lazily by ReviewPage after the admin check.
@@ -76,6 +76,11 @@ export default function WeaknessInsights({ questionMap }) {
                   {g.avgScore != null && <span className={`chip ${g.avgScore < 60 ? 'chip-difficulty-hard' : g.avgScore < 80 ? 'chip-difficulty-medium' : 'chip-difficulty-easy'}`}>均分 {g.avgScore}</span>}
                 </span>
               </div>
+              <p className="type-micro mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                {g.openQuestionIds.length === 0
+                  ? '最近一轮评估已不再列出这个薄弱点；是否真的掌握仍由你判断。'
+                  : `最近一轮评估仍列出 ${g.openQuestionIds.length}/${g.count} 题。`}
+              </p>
               <ul className="mt-2 list-disc pl-5 type-caption" style={{ color: 'var(--text-secondary)' }}>{g.points.map((p) => <li key={p}>{p}</li>)}</ul>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{questionLinks(g.questionIds)}</div>
               <WeaknessQuestionGenerator group={g} questionMap={questionMap} />
@@ -114,12 +119,13 @@ export default function WeaknessInsights({ questionMap }) {
       {pendingFollowUps.length > 0 && (
         <div className="mt-6">
           <h3 className="type-body-emphasis">待入库的追问</h3>
-          <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>回答得分低于 {WEAK_FOLLOW_UP_SCORE} 的追问（含模拟面试），可一键生成题目加入题库。</p>
+          <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>回答得分低于 {WEAK_FOLLOW_UP_SCORE} 的追问（含模拟面试），可一键生成题目加入题库。没有本轮单独评分的旧记录按综合掌握分列出。</p>
           <div className="mt-3 space-y-3">
             {pendingFollowUps.map((e) => (
               <article key={e.id} className="surface-card p-5">
                 <p className="type-micro" style={{ color: 'var(--text-tertiary)' }}>
-                  来自：{titleFor(e.question_id) ?? '已归档题目'} · {e.mode === 'interview' ? '模拟面试' : '刷题'} · 回答得分 {followUpScore(e)}
+                  来自：{titleFor(e.question_id) ?? '已归档题目'} · {e.mode === 'interview' ? '模拟面试' : '刷题'} ·{' '}
+                  {ownFollowUpScore(e) != null ? `回答得分 ${ownFollowUpScore(e)}` : `综合掌握 ${followUpScore(e)}（无本轮单独评分）`}
                 </p>
                 <div className="mt-2"><ChatMarkdown content={e.follow_up_question} /></div>
                 {e.submission?.answerMd && (
