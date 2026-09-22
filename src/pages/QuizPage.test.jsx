@@ -11,7 +11,7 @@ vi.mock('@/components/quiz/QuestionCard', () => ({
   default: ({ question }) => <div><h2>{question?.title}</h2><input aria-label="作答" /></div>,
 }));
 
-const q = (id, order, title = id) => ({ id, order, title, categoryId: 'c', type: 'short_answer', tags: [] });
+const q = (id, order, title = id, legacyId = null) => ({ id, order, title, legacyId, categoryId: 'c', type: 'short_answer', tags: [] });
 const view = (path) => (
   <MemoryRouter initialEntries={[path]}>
     <Routes><Route path="/quiz" element={<QuizPage />} /><Route path="/list/:status" element={<QuizPage />} /></Routes>
@@ -27,6 +27,31 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('QuizPage current question', () => {
+  it('opens the exact question from a stable database ID', () => {
+    render(view('/quiz?questionId=b'));
+    expect(heading()).toBe('b');
+    expect(screen.getByText('2 / 3')).toBeVisible();
+  });
+
+  it('opens the exact question from a legacy ID', () => {
+    state.questions = [q('uuid-a', 1, 'A', 'q-040'), q('uuid-b', 2, 'B', 'q-045')];
+    render(view('/quiz?questionId=q-045'));
+    expect(heading()).toBe('B');
+  });
+
+  it('does not fall back to another question when a stable ID is missing', () => {
+    render(view('/quiz?questionId=q-does-not-exist'));
+    expect(screen.getByRole('alert')).toHaveTextContent('未找到题目「q-does-not-exist」');
+    expect(screen.getByRole('alert')).toHaveTextContent('不会自动打开其他题目');
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+  });
+
+  it('keeps q as keyword search when questionId is not provided', () => {
+    render(view('/quiz?q=b'));
+    expect(heading()).toBe('b');
+    expect(screen.getByText('搜索结果 · 1')).toBeVisible();
+  });
+
   it('stays on the same question when a new one is inserted before it', () => {
     const { rerender } = render(view('/quiz'));
     fireEvent.click(screen.getByRole('button', { name: 'b' }));

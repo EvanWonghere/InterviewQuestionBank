@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { aiRequest, evaluateAnswer } from '@/data/aiRepository';
 import { REVIEW_RATINGS } from '@/lib/sm2';
-import { ChatMarkdown } from './TutorPanel';
+import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import Elapsed from './Elapsed';
 import AddFollowUpToBank from './AddFollowUpToBank';
 import { ownFollowUpScore } from '../../../supabase/functions/ai-tutor/questionDraft.js';

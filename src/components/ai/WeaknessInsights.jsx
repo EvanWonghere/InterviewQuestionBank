@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { latestReport, listEvaluations, requestWeaknessReport } from '@/data/aiRepository';
-import { ChatMarkdown } from './TutorPanel';
+import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import Elapsed from './Elapsed';
 import AddFollowUpToBank from './AddFollowUpToBank';
 import WeaknessQuestionGenerator from './WeaknessQuestionGenerator';
+import ConceptLabLinks from '@/components/quiz/ConceptLabLinks';
 import { useQuestions } from '@/context/QuestionsContext';
 import { followUpScore, ownFollowUpScore, WEAK_FOLLOW_UP_SCORE } from '../../../supabase/functions/ai-tutor/questionDraft.js';
 import { aggregateWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
+import { questionHref } from '@/lib/questionNavigation';
 
 // Loaded lazily by ReviewPage after the admin check.
 export default function WeaknessInsights({ questionMap }) {
@@ -34,7 +36,8 @@ export default function WeaknessInsights({ questionMap }) {
       .filter((e) => e.round > 1 && e.follow_up_question && !added.has(e.id) && (followUpScore(e) ?? 100) < WEAK_FOLLOW_UP_SCORE)
       .slice(0, 10);
   }, [evaluations, questions]);
-  const titleFor = (id) => questionMap.get(id)?.title;
+  const questionFor = (id) => questionMap.get(id) ?? null;
+  const titleFor = (id) => questionFor(id)?.title;
 
   const generate = async () => {
     setGenerating(true);
@@ -50,9 +53,15 @@ export default function WeaknessInsights({ questionMap }) {
     }
   };
 
-  const questionLinks = (ids, max = 3) => ids.filter(titleFor).slice(0, max).map((id) => (
-    <Link key={id} to={`/quiz?q=${encodeURIComponent(titleFor(id))}`} className="type-caption" style={{ color: 'var(--accent)' }}>{titleFor(id)}</Link>
-  ));
+  const questionLinks = (ids, max = 3) => ids.filter((id) => questionFor(id)).slice(0, max).map((id) => {
+    const question = questionFor(id);
+    return (
+      <span key={id} className="inline-flex flex-col gap-1">
+        <Link to={questionHref(question)} className="type-caption" style={{ color: 'var(--accent)' }}>{question.title}</Link>
+        <ConceptLabLinks question={question} compact />
+      </span>
+    );
+  });
 
   return (
     <section className="mb-10" aria-labelledby="ai-weakness-title">

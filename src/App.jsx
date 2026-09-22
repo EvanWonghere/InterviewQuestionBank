@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { QuestionsProvider } from '@/context/QuestionsContext';
 import Layout from '@/components/layout/Layout';
@@ -11,6 +12,8 @@ import ReviewPage from '@/pages/ReviewPage';
 import MigrationPage from '@/pages/MigrationPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
+
+const ChatMarkdownFixturePage = lazy(() => import('@/pages/ChatMarkdownFixturePage'));
 
 function CloudLearningInit() {
   useCloudLearning();
@@ -35,7 +38,7 @@ export default function App() {
               <Route path="manage/questions" element={<ManageQuestionsPage />} />
               <Route path="manage/questions/new" element={<QuestionEditorPage />} />
               <Route path="manage/questions/:id/edit" element={<QuestionEditorPage />} />
-              <Route path="manage/migrate" element={<MigrationPage />} />
+              <Route path="dev/chat-markdown" element={<Suspense fallback={<p>正在加载渲染夹具…</p>}><ChatMarkdownFixturePage /></Suspense>} />
             </Route>
           </Routes>
         </HashRouter>

@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useReviewStore } from '@/store/reviewStore';
 import { REVIEW_RATINGS } from '@/lib/sm2';
+import { questionHref } from '@/lib/questionNavigation';
 import { loadFirstAttemptAt, loadPracticeCalendar, loadPracticeDay } from '@/data/calendarRepository';
 import {
   METRICS, addDays, aggregateLocalAttempts, buildCalendarGrid, computeStreaks, dayKey, describeDay, levelFor, localTimeZone, rangeFor, scaleFor,
@@ -24,7 +25,10 @@ function HeatmapState({ cloudUserId }) {
   const [today] = useState(() => dayKey(Date.now(), timeZone));
   const localAttempts = useReviewStore((state) => state.attempts);
   const { questions } = useQuestions();
-  const questionMap = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
+  const questionMap = useMemo(() => new Map(questions.flatMap((question) => [
+    [question.id, question],
+    ...(question.legacyId ? [[question.legacyId, question]] : []),
+  ])), [questions]);
 
   const [range, setRange] = useState('recent');
   const [metric, setMetric] = useState('attempts');
@@ -220,7 +224,7 @@ function DayDetail({ day, row, attempts, loading, error, questionMap }) {
             return (
               <li key={attempt.id} className="flex flex-wrap items-center justify-between gap-2 type-caption">
                 {question
-                  ? <Link to={`/quiz?q=${encodeURIComponent(question.title)}`} style={{ color: 'var(--accent)' }}>{question.title}</Link>
+                  ? <Link to={questionHref(question)} style={{ color: 'var(--accent)' }}>{question.title}</Link>
                   : <span style={{ color: 'var(--text-tertiary)' }}>已归档题目</span>}
                 <span className="flex flex-wrap gap-2" style={{ color: 'var(--text-tertiary)' }}>
                   {typeof attempt.is_correct === 'boolean' && <span>{attempt.is_correct ? '正确' : '错误'}</span>}

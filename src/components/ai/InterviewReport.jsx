@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { latestReport, listEvaluations, requestInterviewReport } from '@/data/aiRepository';
-import { ChatMarkdown } from './TutorPanel';
+import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import Elapsed from './Elapsed';
+import { findQuestionByStableId, questionHref } from '@/lib/questionNavigation';
 
 // Admin-only session recap. Generates once per session; revisits reuse the stored report.
 export default function InterviewReport({ sessionId, questions }) {
@@ -18,7 +19,8 @@ function ReportState({ sessionId, questions }) {
   const [error, setError] = useState('');
   const requestId = useRef(crypto.randomUUID());
   const started = useRef(false);
-  const titleFor = (id) => questions.find((q) => q.id === id)?.title ?? '已归档题目';
+  const questionFor = (id) => findQuestionByStableId(questions, id);
+  const titleFor = (id) => questionFor(id)?.title ?? '已归档题目';
 
   const generate = async () => {
     setStatus('generating');
@@ -100,7 +102,9 @@ function ReportState({ sessionId, questions }) {
                     <span className="chip mr-2">{w.tag}</span>{w.detail}
                     {w.questionIds.length > 0 && (
                       <span className="mt-1 flex flex-wrap gap-2">
-                        {w.questionIds.map((id) => <Link key={id} to={`/quiz?q=${encodeURIComponent(titleFor(id))}`} style={{ color: 'var(--accent)' }}>{titleFor(id)}</Link>)}
+                        {w.questionIds.map((id) => questionFor(id)
+                          ? <Link key={id} to={questionHref(questionFor(id))} style={{ color: 'var(--accent)' }}>{titleFor(id)}</Link>
+                          : <span key={id}>{titleFor(id)}</span>)}
                       </span>
                     )}
                   </li>

@@ -48,6 +48,7 @@ export default function RandomPracticePage() {
   const [phase, setPhase] = useState('setup');
   const [endlessMode, setEndlessMode] = useState(false);
   const [allowRepeat, setAllowRepeat] = useState(false);
+  const [requireRating, setRequireRating] = useState(true);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
@@ -55,6 +56,7 @@ export default function RandomPracticePage() {
   const [, setShowAnswer] = useState(false);
   const [answeredCurrent, setAnsweredCurrent] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
+  const [skippedCount, setSkippedCount] = useState(0);
   const [cycle, setCycle] = useState(1);
   const [sessionRecord, setSessionRecord] = useState(/** @type {Record<string, 'mastered'|'review'|'wrong'>} */ ({}));
 
@@ -81,6 +83,7 @@ export default function RandomPracticePage() {
     setShowAnswer(false);
     setAnsweredCurrent(false);
     setCompletedCount(0);
+    setSkippedCount(0);
     setCycle(1);
     setSessionRecord({});
     setPhase('practicing');
@@ -100,7 +103,8 @@ export default function RandomPracticePage() {
   );
 
   const goNext = useCallback(() => {
-    if (!answeredCurrent || !allQuestionIds.length) return;
+    if ((requireRating && !answeredCurrent) || !allQuestionIds.length) return;
+    if (!answeredCurrent) setSkippedCount((count) => count + 1);
 
     if (!endlessMode) {
       if (!pendingIds.length) {
@@ -138,7 +142,7 @@ export default function RandomPracticePage() {
     setPendingIds(rest);
     setShowAnswer(false);
     setAnsweredCurrent(false);
-  }, [allQuestionIds, allowRepeat, answeredCurrent, endlessMode, pendingIds]);
+  }, [allQuestionIds, allowRepeat, answeredCurrent, endlessMode, pendingIds, requireRating]);
 
   const resetToSetup = useCallback(() => {
     setPhase('setup');
@@ -147,6 +151,7 @@ export default function RandomPracticePage() {
     setShowAnswer(false);
     setAnsweredCurrent(false);
     setCompletedCount(0);
+    setSkippedCount(0);
     setCycle(1);
     setSessionRecord({});
   }, []);
@@ -198,7 +203,7 @@ export default function RandomPracticePage() {
             随机刷题
           </h1>
           <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>
-            题目分类和难度随机抽取，必须先标记本题结果，才能进入下一题。
+            题目分类和难度随机抽取。开始前可选择是否必须先标记本题结果，才能进入下一题。
           </p>
         </header>
 
@@ -253,6 +258,27 @@ export default function RandomPracticePage() {
                   {endlessMode
                     ? '关闭后每轮刷完全部题目之前不会重复。'
                     : '该开关仅在无尽模式下生效。'}
+                </span>
+              </span>
+            </label>
+
+            <label
+              className="flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3"
+              style={{ background: 'var(--filter-bg)' }}
+            >
+              <input
+                type="checkbox"
+                checked={requireRating}
+                onChange={(e) => setRequireRating(e.target.checked)}
+                className="mt-1 h-4 w-4"
+                style={{ accentColor: 'var(--apple-blue)' }}
+              />
+              <span>
+                <span className="type-body-emphasis block" style={{ color: 'var(--text-primary)' }}>
+                  必须先标记再下一题
+                </span>
+                <span className="type-caption block mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  关闭后可以先跳过；未标记的题目不会写入掌握、复习或错题。
                 </span>
               </span>
             </label>
@@ -407,15 +433,21 @@ export default function RandomPracticePage() {
             随机刷题
           </span>
           <span className="mx-2" style={{ color: 'var(--text-quaternary)' }}>·</span>
+          <span>{requireRating ? '须标记' : '可跳过'}</span>
+          <span className="mx-2" style={{ color: 'var(--text-quaternary)' }}>·</span>
           {endlessMode ? (
             <>
               <span>无尽模式</span>
               <span className="mx-2" style={{ color: 'var(--text-quaternary)' }}>·</span>
               <span>{allowRepeat ? '允许重复' : `第 ${cycle} 轮`}</span>
             </>
-          ) : (
+          ) : requireRating ? (
             <span>
               进度 {completedCount} / {totalCount} · 剩余 {remainingCount}
+            </span>
+          ) : (
+            <span>
+              已标记 {completedCount} · 已跳过 {skippedCount} · 剩余 {pendingIds.length}
             </span>
           )}
         </div>
@@ -446,7 +478,7 @@ export default function RandomPracticePage() {
         <button
           type="button"
           onClick={goNext}
-          disabled={!answeredCurrent}
+          disabled={requireRating && !answeredCurrent}
           className="btn-blue"
         >
           下一题

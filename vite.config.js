@@ -21,7 +21,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
           if (id.includes('@supabase')) return 'supabase'
-          if (/react-markdown|remark-|rehype-|katex/.test(id)) return 'markdown'
+          if (/react-markdown|remark-|rehype-|katex|highlight\.js/.test(id)) return 'markdown'
           return undefined
         },
       },

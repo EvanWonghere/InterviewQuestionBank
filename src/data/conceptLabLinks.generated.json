@@ -1,0 +1,272 @@
+{
+  "q-040": [
+    {
+      "id": "cpp-dispatch",
+      "title": "同一个调用，为什么结果不同？"
+    },
+    {
+      "id": "cpp-lifetime",
+      "title": "为什么构造时没有调用派生实现？"
+    },
+    {
+      "id": "cpp-adjust",
+      "title": "两个基类指针为何不一定相同？"
+    },
+    {
+      "id": "cpp-virtual-base",
+      "title": "谁负责初始化虚基类？"
+    }
+  ],
+  "q-045": [
+    {
+      "id": "cpp-dispatch",
+      "title": "同一个调用，为什么结果不同？"
+    },
+    {
+      "id": "cpp-layout",
+      "title": "对象里真的放了一整张虚表吗？"
+    },
+    {
+      "id": "cpp-lifetime",
+      "title": "为什么构造时没有调用派生实现？"
+    },
+    {
+      "id": "cpp-adjust",
+      "title": "两个基类指针为何不一定相同？"
+    },
+    {
+      "id": "cpp-diamond",
+      "title": "菱形继承到底有几个基类？"
+    }
+  ],
+  "q-063": [
+    {
+      "id": "cpp-layout",
+      "title": "对象里真的放了一整张虚表吗？"
+    },
+    {
+      "id": "gc-events",
+      "title": "对象明明不用了，为什么还活着？"
+    },
+    {
+      "id": "cs-events",
+      "title": "事件和委托字段的权限差在哪？"
+    }
+  ],
+  "q-002": [
+    {
+      "id": "gc-roots",
+      "title": "互相引用的对象还能被回收吗？"
+    },
+    {
+      "id": "gc-events",
+      "title": "对象明明不用了，为什么还活着？"
+    },
+    {
+      "id": "gc-alloc",
+      "title": "零 GC.Alloc 就代表内存更少吗？"
+    },
+    {
+      "id": "gc-collect",
+      "title": "增量 GC 是每次只收年轻对象吗？"
+    },
+    {
+      "id": "gc-string",
+      "title": "加号拼接为什么一直在分配？"
+    }
+  ],
+  "q-018": [
+    {
+      "id": "gc-alloc",
+      "title": "零 GC.Alloc 就代表内存更少吗？"
+    }
+  ],
+  "q-032": [
+    {
+      "id": "render-draws",
+      "title": "100 个对象一定是 100 次 DrawCall 吗？"
+    },
+    {
+      "id": "render-state",
+      "title": "材质没变，为何又多画了一遍？"
+    },
+    {
+      "id": "render-overdraw",
+      "title": "DrawCall 很少，为什么仍然卡？"
+    }
+  ],
+  "q-007": [
+    {
+      "id": "render-draws",
+      "title": "100 个对象一定是 100 次 DrawCall 吗？"
+    },
+    {
+      "id": "render-state",
+      "title": "材质没变，为何又多画了一遍？"
+    },
+    {
+      "id": "render-batch",
+      "title": "合批后 DrawCall 为什么没少？"
+    },
+    {
+      "id": "render-overdraw",
+      "title": "DrawCall 很少，为什么仍然卡？"
+    },
+    {
+      "id": "render-atlas",
+      "title": "为什么拆成很多小图会变卡？"
+    }
+  ],
+  "q-174": [
+    {
+      "id": "render-batch",
+      "title": "合批后 DrawCall 为什么没少？"
+    },
+    {
+      "id": "render-material",
+      "title": "改一个颜色，为什么合批断了？"
+    }
+  ],
+  "q-039": [
+    {
+      "id": "cpp-smartptr",
+      "title": "unique_ptr 走了，对象为什么还在？"
+    }
+  ],
+  "q-038": [
+    {
+      "id": "cpp-smartptr",
+      "title": "unique_ptr 走了，对象为什么还在？"
+    }
+  ],
+  "q-046": [
+    {
+      "id": "cpp-move",
+      "title": "这次到底拷贝了还是搬走了？"
+    }
+  ],
+  "q-132": [
+    {
+      "id": "cpp-move",
+      "title": "这次到底拷贝了还是搬走了？"
+    }
+  ],
+  "q-043": [
+    {
+      "id": "cpp-vector",
+      "title": "为什么插入后旧指针失效了？"
+    }
+  ],
+  "q-044": [
+    {
+      "id": "cpp-vector",
+      "title": "为什么插入后旧指针失效了？"
+    }
+  ],
+  "q-003": [
+    {
+      "id": "gc-string",
+      "title": "加号拼接为什么一直在分配？"
+    }
+  ],
+  "q-136": [
+    {
+      "id": "mem-locality",
+      "title": "同样是求和，为什么按列更慢？"
+    }
+  ],
+  "q-011": [
+    {
+      "id": "mem-locality",
+      "title": "同样是求和，为什么按列更慢？"
+    }
+  ],
+  "q-013": [
+    {
+      "id": "render-atlas",
+      "title": "为什么拆成很多小图会变卡？"
+    }
+  ],
+  "q-009": [
+    {
+      "id": "render-material",
+      "title": "改一个颜色，为什么合批断了？"
+    }
+  ],
+  "q-016": [
+    {
+      "id": "unity-lifecycle",
+      "title": "物体是关掉的，Start 还会跑吗？"
+    }
+  ],
+  "q-021": [
+    {
+      "id": "unity-lifecycle",
+      "title": "物体是关掉的，Start 还会跑吗？"
+    }
+  ],
+  "q-098": [
+    {
+      "id": "net-predict",
+      "title": "有延迟时，为什么角色会被拉回去？"
+    }
+  ],
+  "q-050": [
+    {
+      "id": "net-predict",
+      "title": "有延迟时，为什么角色会被拉回去？"
+    }
+  ],
+  "q-070": [
+    {
+      "id": "cpp-diamond",
+      "title": "菱形继承到底有几个基类？"
+    },
+    {
+      "id": "cpp-virtual-base",
+      "title": "谁负责初始化虚基类？"
+    }
+  ],
+  "q-010": [
+    {
+      "id": "spatial-broadphase",
+      "title": "包围盒相交就算真正碰撞吗？"
+    },
+    {
+      "id": "spatial-grid",
+      "title": "均匀网格的格子应该多大？"
+    },
+    {
+      "id": "spatial-quadtree",
+      "title": "跨越分割线的对象放在哪？"
+    },
+    {
+      "id": "spatial-loose",
+      "title": "松散四叉树为什么适合移动对象？"
+    }
+  ],
+  "q-119": [
+    {
+      "id": "cpp-deduction",
+      "title": "auto 到底复制了还是引用了？"
+    }
+  ],
+  "q-133": [
+    {
+      "id": "cpp-build",
+      "title": "代码到底在哪一步失败？"
+    }
+  ],
+  "q-090": [
+    {
+      "id": "cs-variance",
+      "title": "生产者和消费者为什么方向相反？"
+    }
+  ],
+  "q-026": [
+    {
+      "id": "cs-events",
+      "title": "事件和委托字段的权限差在哪？"
+    }
+  ]
+}

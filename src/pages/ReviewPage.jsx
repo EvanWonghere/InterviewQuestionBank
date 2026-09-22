@@ -4,7 +4,9 @@ import { useQuestions } from '@/context/QuestionsContext';
 import { useAuth } from '@/context/AuthContext';
 import TutorEntry from '@/components/ai/TutorEntry';
 import SubmissionView from '@/components/quiz/SubmissionView';
+import ConceptLabLinks from '@/components/quiz/ConceptLabLinks';
 import { useReviewStore } from '@/store/reviewStore';
+import { questionHref } from '@/lib/questionNavigation';
 
 const WeaknessInsights = lazy(() => import('@/components/ai/WeaknessInsights'));
 
@@ -22,7 +24,10 @@ export default function ReviewPage() {
   const { questions } = useQuestions();
   const states = useReviewStore((state) => state.reviewStates);
   const attempts = useReviewStore((state) => state.attempts);
-  const questionMap = useMemo(() => new Map(questions.map((question) => [question.id, question])), [questions]);
+  const questionMap = useMemo(() => new Map(questions.flatMap((question) => [
+    [question.id, question],
+    ...(question.legacyId ? [[question.legacyId, question]] : []),
+  ])), [questions]);
   const [now] = useState(() => Date.now());
 
   const filtered = useMemo(() => questions.filter((question) => {
@@ -58,7 +63,7 @@ export default function ReviewPage() {
 }
 
 function QuestionRow({ question, state }) {
-  return <Link to={`/quiz?q=${encodeURIComponent(question.title)}`} className="surface-card block p-5 hover:shadow-md"><div className="flex items-center justify-between gap-4"><div><h2 className="type-body-emphasis">{question.title}</h2><p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>{question.tags.join(' · ')}</p></div><div className="shrink-0 text-right type-micro" style={{ color: 'var(--text-quaternary)' }}><p>错 {state.lapseCount} 次</p><p>间隔 {state.intervalDays} 天</p></div></div></Link>;
+  return <article className="surface-card block p-5 hover:shadow-md"><Link to={questionHref(question)} className="block"><div className="flex items-center justify-between gap-4"><div><h2 className="type-body-emphasis">{question.title}</h2><p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>{question.tags.join(' · ')}</p></div><div className="shrink-0 text-right type-micro" style={{ color: 'var(--text-quaternary)' }}><p>错 {state.lapseCount} 次</p><p>间隔 {state.intervalDays} 天</p></div></div></Link><ConceptLabLinks question={question} compact /></article>;
 }
 
 function AdminWeaknessInsights({ questionMap }) {

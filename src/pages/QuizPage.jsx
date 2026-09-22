@@ -4,6 +4,7 @@ import { useQuestions } from '@/context/QuestionsContext';
 import QuestionCard from '@/components/quiz/QuestionCard';
 import { useProgressStore } from '@/store/progressStore';
 import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
+import { findQuestionByStableId } from '@/lib/questionNavigation';
 
 const LIST_STATUS_LABELS = {
   wrong: { title: '错题本', empty: '错题本暂无题目，去做题并加入错题本吧', cta: '去刷题' },
@@ -33,6 +34,7 @@ export default function QuizPage() {
   const { categoryId, status: listStatus } = useParams();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
+  const requestedQuestionId = searchParams.get('questionId')?.trim() ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
   const cardContainerRef = useRef(null);
@@ -68,10 +70,11 @@ export default function QuizPage() {
 
   // Track the open question by id, not position: list refreshes (e.g. an AI draft saved with sort_order 0)
   // and status changes (rating a question out of 错题本) must not swap the question being answered.
-  const [selection, setSelection] = useState({ id: null, index: 0 });
+  const [selection, setSelection] = useState(() => ({ id: requestedQuestionId || null, index: 0 }));
   const [showAnswer, setShowAnswer] = useState(false);
-  const foundIndex = selection.id ? questions.findIndex((q) => q.id === selection.id) : -1;
-  const detached = selection.id && foundIndex < 0 ? allQuestions.find((q) => q.id === selection.id) ?? null : null;
+  const selectedQuestion = selection.id ? findQuestionByStableId(allQuestions, selection.id) : null;
+  const foundIndex = selectedQuestion ? questions.findIndex((q) => q.id === selectedQuestion.id) : -1;
+  const detached = selectedQuestion && foundIndex < 0 ? selectedQuestion : null;
   const currentIndex = foundIndex >= 0 ? foundIndex : Math.min(selection.index, Math.max(0, questions.length - 1));
   const current = foundIndex >= 0 ? questions[foundIndex] : detached ?? questions[currentIndex] ?? null;
 
@@ -88,12 +91,12 @@ export default function QuizPage() {
   const goNext = useCallback(() => select(nextIndex), [select, nextIndex]);
   const toggleAnswer = useCallback(() => setShowAnswer((v) => !v), []);
   useEffect(() => {
-    setSelection({ id: null, index: 0 });
+    setSelection({ id: requestedQuestionId || null, index: 0 });
     setShowAnswer(false);
     setDifficultyFilter('');
     setTypeFilter('');
     setTagFilter('');
-  }, [categoryId, listStatus, searchQuery]);
+  }, [categoryId, listStatus, searchQuery, requestedQuestionId]);
 
   const currentId = current?.id;
   useEffect(() => {
@@ -136,6 +139,19 @@ export default function QuizPage() {
         style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}
       >
         {error}
+      </div>
+    );
+  }
+  const requestedQuestion = requestedQuestionId
+    ? findQuestionByStableId(allQuestions, requestedQuestionId)
+    : null;
+  if (requestedQuestionId && !requestedQuestion) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
+        <p role="alert" className="type-body" style={{ color: 'var(--text-tertiary)' }}>
+          未找到题目「{requestedQuestionId}」，链接可能已失效或题目已归档。不会自动打开其他题目。
+        </p>
+        <Link to="/quiz" className="btn-blue-outline">查看全部题目</Link>
       </div>
     );
   }

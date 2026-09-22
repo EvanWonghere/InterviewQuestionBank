@@ -7,7 +7,7 @@ vi.mock('@/data/aiRepository', () => ({
   aiRequest: async () => state.settings,
   evaluateAnswer: (...args) => state.evaluate(...args),
 }));
-vi.mock('./TutorPanel', () => ({ ChatMarkdown: ({ content }) => <div>{content}</div> }));
+vi.mock('@/components/ai/ChatMarkdown', () => ({ ChatMarkdown: ({ content }) => <div>{content}</div> }));
 vi.mock('@/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }));
 vi.mock('./AddFollowUpToBank', () => ({ default: ({ evaluation }) => <div data-testid="add-to-bank">bank:{evaluation.id}</div> }));
 
