@@ -37,6 +37,10 @@ export function labHistory(rows:any[],phase:string,{turns=6,budget=16000}={}){
 }
 export function labMessages(lab:any,input:any,history:any[]){
  if(!['predict','explain','variant'].includes(input.phase)||typeof input.message!=='string'||!input.message.trim()||input.message.length>6000||!input.context||typeof input.context!=='object'||JSON.stringify(input.context).length>12000)throw Error('实验上下文或问题不合法');
+ const contextValue=input.context as any;
+ const runId=contextValue.runId;
+ const draftId=input.draftId??contextValue.draftId;
+ if(runId!=null&&(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(runId)))||draftId!=null&&(typeof draftId!=='string'||draftId.length<1||draftId.length>200))throw Error('实验上下文或问题不合法');
  const context={prediction:String(input.context.prediction??'').slice(0,4000),parameters:input.context.parameters??{},observation:String(input.context.observation??'').slice(0,4000),explanation:String(input.context.explanation??'').slice(0,4000)};
  const phaseRule=input.phase==='predict'
   ?'当前是预测阶段：材料里不含实验解释与判定规则，你也不要直接宣布最终答案或代替用户预测；只给可操作的提示、需要排除的假设和值得先看的量。'
@@ -47,21 +51,40 @@ export async function handleLab(input:any,ctx:Context){
  const {uid,db,json}=ctx;let lab;try{lab=validateLab(input);}catch(e){return json({error:String(e),settled:true},400);}
  if(input.action==='lab-history'){
   must(await db.from('lab_messages').update({status:'failed',body:'请求未在期限内完成；可手动发起新请求。'}).eq('user_id',uid).eq('status','running').lt('created_at',new Date(Date.now()-150000).toISOString()));
-  const rows=must(await db.from('lab_messages').select('request_id,role,body,status,created_at').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(100));return json({messages:(rows??[]).reverse()});
+  const rows=must(await db.from('lab_messages').select('request_id,role,body,status,created_at,attempt_id,draft_id').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(100));return json({messages:(rows??[]).reverse()});
  }
  if(input.action==='lab-sync'){
   if(input.direction==='push'){
    if(!Array.isArray(input.runs)||input.runs.length>20)return json({error:'每次最多同步 20 次实验'},400);
-   const rows=[];
-   for(const run of input.runs){if(!/^[0-9a-f-]{36}$/i.test(run.id)||typeof run.prediction!=='string'||!run.parameters||run.observation?.labId!==lab.id||run.observation?.labVersion!==lab.version||JSON.stringify(run).length>24000)return json({error:'无效实验记录'},400);rows.push({user_id:uid,id:run.id,lab_id:lab.id,lab_version:lab.version,payload:run});}
-   if(input.flags!==undefined){
-    if(!input.flags||Array.isArray(input.flags)||Object.entries(input.flags).some(([k,v])=>!['seen','hint','independent','variant'].includes(k)||typeof v!=='boolean'))return json({error:'无效本人确认状态'},400);
-    must(await db.from('lab_progress').upsert({user_id:uid,lab_id:lab.id,lab_version:lab.version,flags:input.flags,updated_at:new Date().toISOString()}));
+   const runs=[];
+   for(const inputRun of input.runs){
+    const envelope=inputRun&&typeof inputRun==='object'&&inputRun.payload&&typeof inputRun.payload==='object' ? inputRun : {id:inputRun?.id,baseRevision:0,payload:inputRun};
+    const run=envelope.payload;
+    const baseRevision=envelope.baseRevision==null?0:Number(envelope.baseRevision);
+    if(!/^[0-9a-f-]{36}$/i.test(String(envelope.id))||String(run?.id)!==String(envelope.id)||!Number.isInteger(baseRevision)||baseRevision<0||typeof run?.prediction!=='string'||!run?.parameters||run?.observation?.labId!==lab.id||run?.observation?.labVersion!==lab.version||JSON.stringify(run).length>24000)return json({error:'无效实验记录'},400);
+    const payload=JSON.parse(JSON.stringify(run));delete payload.revision;delete payload.dirty;
+    runs.push({id:envelope.id,baseRevision,payload});
    }
-   if(rows.length)must(await db.from('lab_runs').upsert(rows,{onConflict:'user_id,id',ignoreDuplicates:true}));return json({ok:true});
+   let flags;
+   if(input.flags!==undefined){
+    const envelope=input.flags&&typeof input.flags==='object'&&!Array.isArray(input.flags)&&input.flags.flags&&typeof input.flags.flags==='object' ? input.flags : {flags:input.flags,baseRevision:0};
+    if(!envelope.flags||Array.isArray(envelope.flags)||Object.entries(envelope.flags).some(([k,v])=>!['seen','hint','independent','variant'].includes(k)||typeof v!=='boolean')||!Number.isInteger(Number(envelope.baseRevision??0))||Number(envelope.baseRevision??0)<0)return json({error:'无效本人确认状态'},400);
+    flags={flags:envelope.flags,baseRevision:Number(envelope.baseRevision??0)};
+   }
+   try{
+    const result=must(await db.rpc('lab_sync',{p_user:uid,p_lab:lab.id,p_version:lab.version,p_runs:runs,p_flags:flags??null}));
+    // A conflict is a successful, inspectable response.  Returning 200 keeps
+    // the browser-side API from converting the remote payload into a generic
+    // error and lets the learner explicitly pick local or cloud data.
+    return json(result??{ok:true});
+   }catch(e){
+    const text=String(e);
+    if(text.includes('lab_sync')||text.includes('revision')||text.includes('immutable'))return json({error:'同步版本校验失败，请重新取回云端记录后选择保留版本'},409);
+    throw e;
+   }
   }
   if(input.direction!=='pull')return json({error:'未知同步方向'},400);
-  const rows=must(await db.from('lab_runs').select('payload').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).order('created_at',{ascending:false}).limit(100));const progress=must(await db.from('lab_progress').select('flags').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).maybeSingle());return json({runs:(rows??[]).map((r:any)=>r.payload),flags:progress?.flags??{}});
+  const rows=must(await db.from('lab_runs').select('payload,revision,updated_at').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).order('created_at',{ascending:false}).limit(100));const progress=must(await db.from('lab_progress').select('flags,revision,updated_at').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).maybeSingle());return json({runs:(rows??[]).map((r:any)=>({payload:r.payload,revision:r.revision,updatedAt:r.updated_at})),flags:progress?.flags??{},flagsRevision:progress?.revision,updatedAt:progress?.updated_at});
  }
  if(input.action!=='lab-chat')return json({error:'未知实验操作'},400);
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId))return json({error:'无效请求 ID',settled:true},400);
@@ -73,7 +96,9 @@ export async function handleLab(input:any,ctx:Context){
   messages=labMessages(lab,input,history.messages);
  }catch(e){return json({error:String(e),settled:true},400);}
  if(!ctx.callModel||!ctx.model)return json({error:'请先在题库助手配置 API、model 和服务端密钥',settled:true},503);
- let begin;try{begin=must(await db.rpc('lab_begin',{p_user:uid,p_lab:lab.id,p_version:lab.version,p_request:input.requestId,p_body:input.message,p_model:ctx.model,p_phase:input.phase}));}catch(e){return json({error:String(e),settled:false},409);}
+ const originRunId=typeof input.context?.runId==='string'?input.context.runId:null;
+ const originDraftId=typeof input.draftId==='string'?input.draftId:typeof input.context?.draftId==='string'?input.context.draftId:null;
+ let begin;try{begin=must(await db.rpc('lab_begin',{p_user:uid,p_lab:lab.id,p_version:lab.version,p_request:input.requestId,p_body:input.message,p_model:ctx.model,p_phase:input.phase,p_attempt:originRunId,p_draft:originDraftId}));}catch(e){return json({error:String(e),settled:false},409);}
  if(begin.duplicate){if(begin.message.status==='complete')return json({body:begin.message.body,recovered:true});return json({error:begin.message.status==='running'?'请求仍在处理，请稍后核对历史':'此请求已结束；请恢复历史后手动发起新请求',settled:begin.message.status!=='running'},409);}
  try{
   const body=await ctx.callModel(messages);

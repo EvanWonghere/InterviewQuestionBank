@@ -3,6 +3,12 @@
     {
       "id": "cpp-dispatch",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "Base",
+        "Derived",
+        "invalid"
+      ],
       "track": "C++ 对象",
       "title": "同一个调用，为什么结果不同？",
       "question": "Base* 指向 Derived，调用的究竟是谁？",
@@ -63,7 +69,8 @@
     },
     {
       "id": "cpp-layout",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "C++ 对象",
       "title": "对象里真的放了一整张虚表吗？",
       "question": "创建三个同类型对象，会复制三张虚表吗？",
@@ -108,6 +115,11 @@
     {
       "id": "cpp-lifetime",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "Base",
+        "Derived"
+      ],
       "track": "C++ 对象",
       "title": "为什么构造时没有调用派生实现？",
       "question": "切片、构造阶段和析构阶段如何改变虚调用？",
@@ -154,6 +166,11 @@
     {
       "id": "cpp-adjust",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "yes",
+        "no"
+      ],
       "track": "C++ 对象",
       "title": "两个基类指针为何不一定相同？",
       "question": "多继承中 this 如何调整？优化后还一定查虚表吗？",
@@ -205,7 +222,8 @@
     },
     {
       "id": "gc-roots",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "内存与 GC",
       "title": "互相引用的对象还能被回收吗？",
       "question": "GC 判断的是引用次数，还是从根能否走到对象？",
@@ -251,6 +269,11 @@
     {
       "id": "gc-events",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "yes",
+        "no"
+      ],
       "track": "内存与 GC",
       "title": "对象明明不用了，为什么还活着？",
       "question": "发布者的事件订阅能留住订阅者吗？",
@@ -291,7 +314,8 @@
     },
     {
       "id": "gc-alloc",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "内存与 GC",
       "title": "零 GC.Alloc 就代表内存更少吗？",
       "question": "对象池降低分配的同时保留了什么？装箱如何产生对象？",
@@ -341,7 +365,8 @@
     },
     {
       "id": "gc-collect",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "内存与 GC",
       "title": "增量 GC 是每次只收年轻对象吗？",
       "question": "分代和增量分别沿什么维度切分工作？",
@@ -399,7 +424,8 @@
     },
     {
       "id": "render-draws",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "渲染与提交",
       "title": "100 个对象一定是 100 次 DrawCall 吗？",
       "question": "绘制命令数量由场景对象数直接决定吗？",
@@ -441,7 +467,8 @@
     },
     {
       "id": "render-state",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "渲染与提交",
       "title": "材质没变，为何又多画了一遍？",
       "question": "材质切换次数与 DrawCall 次数相同吗？",
@@ -501,7 +528,8 @@
     },
     {
       "id": "render-batch",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "渲染与提交",
       "title": "合批后 DrawCall 为什么没少？",
       "question": "SRP Batcher 和 GPU Instancing 优化的是同一个环节吗？",
@@ -552,6 +580,11 @@
     {
       "id": "render-overdraw",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "yes",
+        "no"
+      ],
       "track": "渲染与提交",
       "title": "DrawCall 很少，为什么仍然卡？",
       "question": "分辨率、重叠和片元计算会怎样改变帧时间？",
@@ -612,7 +645,8 @@
     },
     {
       "id": "cpp-smartptr",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "C++ 对象",
       "title": "unique_ptr 走了，对象为什么还在？",
       "question": "重置所有者之后，对象还被谁活着？",
@@ -660,6 +694,11 @@
     {
       "id": "cpp-move",
       "version": 1,
+      "answerKind": "enum",
+      "answerOptions": [
+        "copy",
+        "move"
+      ],
       "track": "C++ 对象",
       "title": "这次到底拷贝了还是搬走了？",
       "question": "用旧对象初始化新对象时，走拷贝还是移动？",
@@ -698,7 +737,8 @@
     },
     {
       "id": "cpp-vector",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "C++ 对象",
       "title": "为什么插入后旧指针失效了？",
       "question": "vector 扩容几次，会不会让元素指针失效？",
@@ -743,7 +783,8 @@
     },
     {
       "id": "gc-string",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "内存与 GC",
       "title": "加号拼接为什么一直在分配？",
       "question": "循环里 s += x 和 StringBuilder 谁在制造短命字符串？",
@@ -790,7 +831,8 @@
     },
     {
       "id": "mem-locality",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "内存与 GC",
       "title": "同样是求和，为什么按列更慢？",
       "question": "行优先和列优先各碰到多少次缓存行？",
@@ -838,7 +880,8 @@
     },
     {
       "id": "render-atlas",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "渲染与提交",
       "title": "为什么拆成很多小图会变卡？",
       "question": "独立纹理和图集，各会绑定几次贴图？",
@@ -882,7 +925,8 @@
     },
     {
       "id": "render-material",
-      "version": 1,
+      "answerKind": "number",
+      "version": 2,
       "track": "渲染与提交",
       "title": "改一个颜色，为什么合批断了？",
       "question": "每对象一份材质实例，和共享材质 + 属性块，提交次数差在哪？",
@@ -926,7 +970,8 @@
     },
     {
       "id": "unity-lifecycle",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "时间与同步",
       "title": "物体是关掉的，Start 还会跑吗？",
       "question": "失活的 GameObject 会不会调用 Start？",
@@ -958,7 +1003,8 @@
     },
     {
       "id": "net-predict",
-      "version": 1,
+      "version": 2,
+      "answerKind": "number",
       "track": "时间与同步",
       "title": "有延迟时，为什么角色会被拉回去？",
       "question": "关闭预测后，画面落后服务器几帧？",
@@ -994,6 +1040,624 @@
       "native": "需要双客户端时另测；本实验只导出教学延迟模型，不冒充网络测量",
       "checkRules": [
         "关闭预测时落后帧数等于延迟；打开预测时为 0。"
+      ]
+    },
+    {
+      "id": "cpp-diamond",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "菱形继承到底有几个基类？",
+      "question": "两条继承路径都指向 Base，virtual 改变了什么？",
+      "intro": "切换两条继承边的 virtual，观察 Base 子对象数量、状态副本和转换歧义。",
+      "prerequisites": [
+        "cpp-layout",
+        "cpp-adjust"
+      ],
+      "controls": [
+        {
+          "key": "leftVirtual",
+          "label": "Left → Base 使用 virtual",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "rightVirtual",
+          "label": "Right → Base 使用 virtual",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "access",
+          "label": "访问表达式",
+          "type": "select",
+          "value": "left",
+          "options": [
+            "left",
+            "right",
+            "base"
+          ]
+        }
+      ],
+      "challenge": "当前对象模型中有几个 Base 子对象？填 1 或 2。",
+      "variant": "只关闭一条 virtual，再访问 Base::value；为什么转换可能变得不明确？",
+      "explanation": "两条非虚继承路径各自带一份 Base。只有两条路径都使用虚继承时，最派生对象共享一个虚基类子对象；只虚化一条路径仍然留下两个 Base，向 Base 转换可能不明确。",
+      "boundary": "网页画的是教学对象图。具体 vbase offset、指针调整和布局由本机 Clang ABI 报告验证，不把某个 ABI 当成 C++ 标准。",
+      "sources": [
+        "cppderived",
+        "abi"
+      ],
+      "questions": [
+        "q-070",
+        "q-045"
+      ],
+      "native": "python3 native/run.py --lab cpp-diamond --mode virtual",
+      "checkRules": [
+        "两条边均为 virtual 时 Base 子对象为 1；否则为 2。",
+        "只有一个 Base 子对象时到 Base 的转换无歧义。"
+      ],
+      "answerKind": "number",
+      "answerOptions": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "cpp-virtual-base",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "谁负责初始化虚基类？",
+      "question": "虚继承、构造顺序和最终覆盖函数如何一起工作？",
+      "intro": "改变最派生类型和覆盖冲突，观察虚基类初始化责任与构造阶段的限制。",
+      "prerequisites": [
+        "cpp-diamond"
+      ],
+      "controls": [
+        {
+          "key": "virtualBase",
+          "label": "使用虚继承",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "mostDerived",
+          "label": "最派生构造函数",
+          "type": "select",
+          "value": "Diamond",
+          "options": [
+            "Diamond",
+            "Left",
+            "Right"
+          ]
+        },
+        {
+          "key": "conflictingOverrides",
+          "label": "两条路径各自覆盖同一函数",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "虚继承时直接初始化虚基类的是谁？填 Diamond、Left、Right 或 ambiguous。",
+      "variant": "开启覆盖冲突；为什么仅仅继承两个覆盖函数不能自动决定最终 overrider？",
+      "explanation": "最派生类负责初始化虚基类；中间类的虚基初始化在构造最派生对象时被忽略。最终 overrider 必须唯一，否则程序不成立；构造和析构期间的虚调用也受当前阶段限制。",
+      "boundary": "这是语言层面的构造规则。构造函数实际生成的 vptr 写入顺序属于实现细节，只用日志和 ABI 报告观察。",
+      "sources": [
+        "cppderived",
+        "cppinit",
+        "abi"
+      ],
+      "questions": [
+        "q-070",
+        "q-040"
+      ],
+      "native": "python3 native/run.py --lab cpp-virtual-base --mode virtual",
+      "checkRules": [
+        "虚继承时答案等于最派生类型；非虚继承示例由 Left 初始化。",
+        "两个冲突覆盖且没有最终覆盖者时答案为 ambiguous。"
+      ],
+      "answerKind": "enum",
+      "answerOptions": [
+        "Diamond",
+        "Left",
+        "Right",
+        "ambiguous"
+      ]
+    },
+    {
+      "id": "spatial-broadphase",
+      "version": 1,
+      "track": "空间碰撞检测",
+      "title": "包围盒相交就算真正碰撞吗？",
+      "question": "粗筛候选和圆形精测之间会多出什么？",
+      "intro": "在同一批确定性对象上比较暴力配对与 AABB 粗筛，直接观察误报和漏检。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "method",
+          "label": "候选方法",
+          "type": "select",
+          "value": "aabb",
+          "options": [
+            "brute",
+            "aabb"
+          ]
+        },
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 18,
+          "min": 4,
+          "max": 48
+        },
+        {
+          "key": "distribution",
+          "label": "分布",
+          "type": "select",
+          "value": "uniform",
+          "options": [
+            "uniform",
+            "clustered"
+          ]
+        },
+        {
+          "key": "radius",
+          "label": "平均半径",
+          "type": "range",
+          "value": 2,
+          "min": 1,
+          "max": 5
+        }
+      ],
+      "challenge": "当前设置产生多少个候选对？填整数。",
+      "variant": "改成聚集分布，再比较候选对、真实相交对和误报数。",
+      "explanation": "粗筛只保证不漏掉可能相交的对象，AABB 相交不代表圆形真的相交；候选必须再经过窄相位精测。暴力精测是本实验的正确性基准。",
+      "boundary": "对象是二维圆，空间范围固定，浮点相切按小于等于处理。候选数量与索引结构有关，不能当作统一性能定律。",
+      "sources": [
+        "spatial"
+      ],
+      "questions": [
+        "q-010"
+      ],
+      "native": "python3 native/run.py --lab spatial-broadphase --mode aabb",
+      "checkRules": [
+        "候选集必须包含全部圆形精测结果；AABB 可有误报但不能漏检。",
+        "切换分布或半径会改变候选与精测数量。"
+      ],
+      "answerKind": "number"
+    },
+    {
+      "id": "spatial-grid",
+      "version": 1,
+      "track": "空间碰撞检测",
+      "title": "均匀网格的格子应该多大？",
+      "question": "对象跨越多个格子时，为什么候选要去重？",
+      "intro": "改变格子尺寸和对象分布，观察插入重复、候选去重和精测成本。",
+      "prerequisites": [
+        "spatial-broadphase"
+      ],
+      "controls": [
+        {
+          "key": "cellSize",
+          "label": "格子边长",
+          "type": "range",
+          "value": 10,
+          "min": 4,
+          "max": 24
+        },
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 24,
+          "min": 4,
+          "max": 64
+        },
+        {
+          "key": "distribution",
+          "label": "分布",
+          "type": "select",
+          "value": "uniform",
+          "options": [
+            "uniform",
+            "clustered"
+          ]
+        },
+        {
+          "key": "radius",
+          "label": "平均半径",
+          "type": "range",
+          "value": 2,
+          "min": 1,
+          "max": 5
+        }
+      ],
+      "challenge": "去重后的网格候选对有多少？填整数。",
+      "variant": "把格子改得比对象小，再拖动一个跨格对象；为什么插入和候选检查都会增加？",
+      "explanation": "对象的 AABB 覆盖多个格子时，会被放入每个覆盖格。相邻对象可能在多个共同格子出现，所以候选必须按对象 ID 去重；格子太小增加插入和重复工作，太大又接近暴力。",
+      "boundary": "这是均匀网格 broad phase，不是 Unity Physics 的内部实现。网格只负责候选生成，真实相交仍用圆形精测。",
+      "sources": [
+        "spatial"
+      ],
+      "questions": [
+        "q-010"
+      ],
+      "native": "python3 native/run.py --lab spatial-grid --mode default",
+      "checkRules": [
+        "去重候选必须包含全部圆形精测结果；每个对象按 AABB 覆盖所有格子。",
+        "改变格子尺寸应改变非空格子或候选检查成本。"
+      ],
+      "answerKind": "number"
+    },
+    {
+      "id": "spatial-quadtree",
+      "version": 1,
+      "track": "空间碰撞检测",
+      "title": "跨越分割线的对象放在哪？",
+      "question": "四叉树为什么不能把每个对象都塞进叶子？",
+      "intro": "改变容量和最大深度，单步查看节点边界、父节点保留对象和查询路径。",
+      "prerequisites": [
+        "spatial-broadphase"
+      ],
+      "controls": [
+        {
+          "key": "capacity",
+          "label": "每节点容量",
+          "type": "range",
+          "value": 4,
+          "min": 1,
+          "max": 10
+        },
+        {
+          "key": "maxDepth",
+          "label": "最大深度",
+          "type": "range",
+          "value": 5,
+          "min": 1,
+          "max": 8
+        },
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 28,
+          "min": 4,
+          "max": 64
+        },
+        {
+          "key": "distribution",
+          "label": "分布",
+          "type": "select",
+          "value": "uniform",
+          "options": [
+            "uniform",
+            "clustered"
+          ]
+        }
+      ],
+      "challenge": "查询产生多少个候选对？填整数。",
+      "variant": "把容量调到 1，再拖一个跨越中心线的大对象；它为什么留在父节点？",
+      "explanation": "只有完整包围盒能放入一个子节点时，对象才下沉；跨分割线的对象留在父节点，查询父节点时仍会检查它。这样可以保持正确性，代价是候选可能增加。",
+      "boundary": "节点边界和容量是本实验自定义实现，不代表 Unity、Box2D 或其他引擎的内部树。每次查询都以暴力精测校验漏检。",
+      "sources": [
+        "spatial"
+      ],
+      "questions": [
+        "q-010"
+      ],
+      "native": "python3 native/run.py --lab spatial-quadtree --mode default",
+      "checkRules": [
+        "四叉树候选必须包含全部精测结果；跨边界对象不能被丢弃。",
+        "改变容量或深度应改变节点数或候选检查次数。"
+      ],
+      "answerKind": "number"
+    },
+    {
+      "id": "spatial-loose",
+      "version": 1,
+      "track": "空间碰撞检测",
+      "title": "松散四叉树为什么适合移动对象？",
+      "question": "扩大节点边界能怎样减少重新插入？",
+      "intro": "比较普通和松散四叉树的节点访问、候选数量与运动中的维护代价。",
+      "prerequisites": [
+        "spatial-quadtree"
+      ],
+      "controls": [
+        {
+          "key": "looseFactor",
+          "label": "节点边界放大倍数",
+          "type": "range",
+          "value": 1.75,
+          "min": 1,
+          "max": 3
+        },
+        {
+          "key": "capacity",
+          "label": "每节点容量",
+          "type": "range",
+          "value": 4,
+          "min": 1,
+          "max": 10
+        },
+        {
+          "key": "objects",
+          "label": "对象数",
+          "type": "range",
+          "value": 28,
+          "min": 4,
+          "max": 64
+        },
+        {
+          "key": "frame",
+          "label": "运动帧",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 30
+        }
+      ],
+      "challenge": "当前索引检查了多少次候选对象？填整数。",
+      "variant": "把放大倍数设为 1，再逐步增加运动帧；为什么边界越紧越容易重新跨节点？",
+      "explanation": "松散四叉树用扩大的子节点边界容纳对象，短距离移动时不必立刻重插入；扩大过多又会让查询访问更多节点和候选。这里分别显示查询检查与运动帧，不能预设优化结果。",
+      "boundary": "教学实现用固定时间步和确定性速度，不测 Unity Physics 内部 broad phase。松散边界提高容错空间，不会改变圆形精测的正确性基准。",
+      "sources": [
+        "loosequadtree",
+        "spatial"
+      ],
+      "questions": [
+        "q-010"
+      ],
+      "native": "python3 native/run.py --lab spatial-loose --mode default",
+      "checkRules": [
+        "松散四叉树候选不得漏检；放大倍数和运动帧会改变查询工作量。",
+        "松散节点边界不等于对象精确碰撞边界。"
+      ],
+      "answerKind": "number"
+    },
+    {
+      "id": "cpp-deduction",
+      "version": 1,
+      "track": "C++ 对象",
+      "title": "auto 到底复制了还是引用了？",
+      "question": "auto、引用和 decltype 的类型差异会不会改变写入对象？",
+      "intro": "切换推导形式和写入动作，观察副本、可变引用和 const 引用的区别。",
+      "prerequisites": [
+        "cpp-layout"
+      ],
+      "controls": [
+        {
+          "key": "form",
+          "label": "声明形式",
+          "type": "select",
+          "value": "auto",
+          "options": [
+            "auto",
+            "auto-ref",
+            "const-ref",
+            "decltype-value",
+            "decltype-paren"
+          ]
+        },
+        {
+          "key": "write",
+          "label": "尝试写入变量",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "这种声明在本实验中的行为是 copy、mutable-ref、const-ref、value 还是 lvalue-ref？",
+      "variant": "把 auto 改成 decltype((x))；为什么括号会让结果从值类型变成引用类型？",
+      "explanation": "auto 按模板式规则通常去掉顶层引用和 const，得到副本；auto& 保留可变引用，const auto& 绑定只读引用。decltype(x) 与 decltype((x)) 的规则不同，后者对左值表达式得到 T&。",
+      "boundary": "网页只展示类型推导和合法写入。真实大小、拷贝次数和编译诊断以 Apple Clang 的 static_assert 与本机输出为准。",
+      "sources": [
+        "cppdeduction",
+        "ce"
+      ],
+      "questions": [
+        "q-119"
+      ],
+      "native": "python3 native/run.py --lab cpp-deduction --mode auto",
+      "checkRules": [
+        "auto 为 copy；auto-ref 为 mutable-ref；const-ref 为 const-ref；decltype-value 为 value；decltype-paren 为 lvalue-ref。"
+      ],
+      "answerKind": "enum",
+      "answerOptions": [
+        "copy",
+        "mutable-ref",
+        "const-ref",
+        "value",
+        "lvalue-ref"
+      ]
+    },
+    {
+      "id": "cpp-build",
+      "version": 1,
+      "track": "C++ 工具链",
+      "title": "代码到底在哪一步失败？",
+      "question": "预处理、编译、汇编和链接错误分别发生在哪里？",
+      "intro": "切换一个故意的失败条件，追踪 Apple Clang 的阶段产物与错误位置。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "failure",
+          "label": "故意引入的问题",
+          "type": "select",
+          "value": "none",
+          "options": [
+            "none",
+            "preprocess",
+            "compile",
+            "link"
+          ]
+        },
+        {
+          "key": "optimization",
+          "label": "优化级别",
+          "type": "select",
+          "value": "O0",
+          "options": [
+            "O0",
+            "O2"
+          ]
+        }
+      ],
+      "challenge": "当前条件下程序能运行，或在哪个阶段失败？填 run、preprocess、compile 或 link。",
+      "variant": "只改优化级别并比较汇编；优化会改变语义阶段，还是只改变生成代码？",
+      "explanation": "预处理展开宏和 include，编译把源代码变成汇编，汇编生成目标文件，链接解析跨文件符号。优化级别通常改变生成代码，不会把一个合法程序变成链接阶段的语义错误。",
+      "boundary": "失败案例是隔离的合成代码，网页不执行用户上传的代码。具体诊断文本受 Apple Clang 版本影响，本机 JSON 记录环境和阶段。",
+      "sources": [
+        "cppbuild",
+        "ce"
+      ],
+      "questions": [
+        "q-133"
+      ],
+      "native": "python3 native/run.py --lab cpp-build --mode none",
+      "checkRules": [
+        "none 对应 run；每种故意错误只在标注的阶段失败。",
+        "优化级别改变汇编，不改变阶段划分。"
+      ],
+      "answerKind": "enum",
+      "answerOptions": [
+        "run",
+        "preprocess",
+        "compile",
+        "link"
+      ]
+    },
+    {
+      "id": "cs-variance",
+      "version": 1,
+      "track": "C# 类型系统",
+      "title": "生产者和消费者为什么方向相反？",
+      "question": "泛型协变、逆变与不变类型何时可以替换？",
+      "intro": "改变接口方向、类型关系和值类型，观察真实 C# 编译器允许的赋值。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "scenario",
+          "label": "观察场景",
+          "type": "select",
+          "value": "variance",
+          "options": [
+            "variance",
+            "interface",
+            "base",
+            "new"
+          ]
+        },
+        {
+          "key": "shape",
+          "label": "接口形状",
+          "type": "select",
+          "value": "producer",
+          "options": [
+            "producer",
+            "consumer",
+            "invariant"
+          ]
+        },
+        {
+          "key": "direction",
+          "label": "赋值方向",
+          "type": "select",
+          "value": "up",
+          "options": [
+            "up",
+            "down"
+          ]
+        },
+        {
+          "key": "valueType",
+          "label": "使用值类型",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "satisfies",
+          "label": "满足约束",
+          "type": "checkbox",
+          "value": true
+        }
+      ],
+      "challenge": "当前赋值或约束在 C# 中 allowed 还是 rejected？",
+      "variant": "切到 interface、base 或 new 约束，再取消满足条件；观察编译器拒绝的具体位置。",
+      "explanation": "协变 out 允许从更具体到更一般的生产者替换；逆变 in 允许消费者反向替换。不变接口两边都不自动转换，值类型也不参与泛型方差转换。interface、base 和 new() 约束则要求类型参数分别满足接口、基类或无参构造条件。",
+      "boundary": "网页只表示编译器类型检查，不运行不安全转换。约束场景使用合成类型矩阵；数组协变、委托和接口方差是相关但不同的规则。",
+      "sources": [
+        "dotnetvariance"
+      ],
+      "questions": [
+        "q-090"
+      ],
+      "native": "python3 native/run.py --lab cs-variance --mode producer-up",
+      "checkRules": [
+        "variance 场景中 producer 向上、consumer 向下的引用类型转换允许；invariant 或值类型方差转换拒绝。",
+        "interface/base/new 场景中满足约束为 allowed，不满足约束为 rejected。"
+      ],
+      "answerKind": "enum",
+      "answerOptions": [
+        "allowed",
+        "rejected"
+      ]
+    },
+    {
+      "id": "cs-events",
+      "version": 1,
+      "track": "C# 类型系统",
+      "title": "事件和委托字段的权限差在哪？",
+      "question": "订阅、赋值和触发分别是谁能做？",
+      "intro": "切换 public event 与委托字段，再切换调用位置，观察编译器保护了什么。",
+      "prerequisites": [
+        "gc-events"
+      ],
+      "controls": [
+        {
+          "key": "member",
+          "label": "公开成员",
+          "type": "select",
+          "value": "event",
+          "options": [
+            "event",
+            "delegate"
+          ]
+        },
+        {
+          "key": "operation",
+          "label": "外部操作",
+          "type": "select",
+          "value": "subscribe",
+          "options": [
+            "subscribe",
+            "assign",
+            "raise"
+          ]
+        },
+        {
+          "key": "insidePublisher",
+          "label": "代码位于发布者内部",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "当前操作能通过编译吗？填 allowed 或 rejected。",
+      "variant": "将代码移入发布者类型内部；为什么 event 的触发权限只在内部恢复？",
+      "explanation": "event 对外暴露 add/remove，外部可以 += 和 -=，但不能整体赋值或直接调用；声明 event 的类型内部还可以赋值和触发。委托字段对外仍可被替换和调用，权限边界更宽，也更容易破坏订阅关系。",
+      "boundary": "实验只判断 C# 访问规则，不把事件自动等同于弱引用。事件仍可能让长寿命发布者保留订阅者，需结合 gc-events 观察生命周期。",
+      "sources": [
+        "dotnetevents"
+      ],
+      "questions": [
+        "q-026",
+        "q-063"
+      ],
+      "native": "python3 native/run.py --lab cs-events --mode event-subscribe",
+      "checkRules": [
+        "event 外部仅允许 subscribe；assign/raise 被拒绝，声明类型内部三种操作均允许。delegate 字段三种操作均允许。"
+      ],
+      "answerKind": "enum",
+      "answerOptions": [
+        "allowed",
+        "rejected"
       ]
     }
   ],
@@ -1117,6 +1781,70 @@
       "purpose": "区分本地预测与权威校正；本实验是离散帧教学模型",
       "license": "仅链接；Unity 文档条款",
       "checked": "2026-09-19"
+    },
+    "cppderived": {
+      "title": "C++ draft · Derived classes",
+      "url": "https://eel.is/c++draft/class.derived",
+      "section": "Base class subobjects and virtual base classes",
+      "purpose": "核对菱形继承、虚基类和基类子对象的语言规则",
+      "license": "仅链接；阅读时遵循上游页面条款",
+      "checked": "2026-09-21"
+    },
+    "cppinit": {
+      "title": "C++ draft · Initializing bases and members",
+      "url": "https://eel.is/c++draft/class.base.init",
+      "section": "Virtual base initialization and construction order",
+      "purpose": "验证最派生构造函数负责虚基类初始化，以及构造顺序",
+      "license": "仅链接；阅读时遵循上游页面条款",
+      "checked": "2026-09-21"
+    },
+    "spatial": {
+      "title": "GPU Gems 3 · Broad-Phase Collision Detection",
+      "url": "https://developer.nvidia.com/gpugems/gpugems3/part-v-physics-simulation/chapter-32-broad-phase-collision-detection-cuda",
+      "section": "Broad phase and spatial subdivision",
+      "purpose": "连接粗筛候选对、精测和空间划分的边界",
+      "license": "仅链接；不复制文章内容",
+      "checked": "2026-09-21"
+    },
+    "loosequadtree": {
+      "title": "Loose Octrees",
+      "url": "https://www.cs.umd.edu/~hjs/pubs/sigmod13-header.pdf",
+      "section": "Loose hierarchical spatial partitioning",
+      "purpose": "解释扩大节点边界如何减少移动对象的重新插入",
+      "license": "仅链接；论文版权归作者与出版方",
+      "checked": "2026-09-21"
+    },
+    "cppdeduction": {
+      "title": "cppreference · Type deduction",
+      "url": "https://en.cppreference.com/w/cpp/language/template_argument_deduction",
+      "section": "auto and decltype deduction",
+      "purpose": "对照 auto、引用折叠和 decltype 的规则与类型检查",
+      "license": "仅链接，不内嵌页面正文",
+      "checked": "2026-09-21"
+    },
+    "cppbuild": {
+      "title": "Clang command guide",
+      "url": "https://clang.llvm.org/docs/CommandGuide/clang.html",
+      "section": "Preprocess, compile, assemble and link stages",
+      "purpose": "在真实 Apple Clang 上区分预处理、编译、汇编和链接错误",
+      "license": "仅链接；遵循 LLVM 文档许可",
+      "checked": "2026-09-21"
+    },
+    "dotnetvariance": {
+      "title": ".NET covariance and contravariance",
+      "url": "https://learn.microsoft.com/en-us/dotnet/standard/generics/covariance-and-contravariance",
+      "section": "Interfaces, delegates and variance",
+      "purpose": "验证生产者、消费者、值类型和不变泛型的可替换方向",
+      "license": "仅链接；Microsoft Learn 内容条款",
+      "checked": "2026-09-21"
+    },
+    "dotnetevents": {
+      "title": "C# event keyword",
+      "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/event",
+      "section": "Event accessors and external invocation",
+      "purpose": "区分事件对外暴露的订阅权限与发布者触发权限",
+      "license": "仅链接；Microsoft Learn 内容条款",
+      "checked": "2026-09-21"
     }
   }
 }
