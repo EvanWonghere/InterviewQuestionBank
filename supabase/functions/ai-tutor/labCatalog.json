@@ -18,6 +18,7 @@
         {
           "key": "dynamic",
           "label": "实际对象",
+          "hint": "栈上创建的是 Base 还是 Derived 对象",
           "type": "select",
           "value": "Derived",
           "options": [
@@ -28,18 +29,21 @@
         {
           "key": "virtual",
           "label": "使用 virtual",
+          "hint": "写在 Base::speak 的声明上，不是运行时开关",
           "type": "checkbox",
           "value": true
         },
         {
           "key": "overrideKeyword",
           "label": "显式 override（仅虚函数模式）",
+          "hint": "让编译器检查覆盖关系，不负责打开动态分派",
           "type": "checkbox",
           "value": true
         },
         {
           "key": "static",
           "label": "访问类型",
+          "hint": "指针声明是 Base* 还是 Derived*",
           "type": "select",
           "value": "Base",
           "options": [
@@ -131,6 +135,7 @@
         {
           "key": "phase",
           "label": "观察阶段",
+          "hint": "对应构造、存活或析构时调用 speak 的那一行",
           "type": "select",
           "value": "alive",
           "options": [
@@ -142,6 +147,7 @@
         {
           "key": "slice",
           "label": "按值切成 Base",
+          "hint": "写成 Base sliced = derived 而不是 Base&",
           "type": "checkbox",
           "value": false
         }
@@ -1057,18 +1063,21 @@
         {
           "key": "leftVirtual",
           "label": "Left → Base 使用 virtual",
+          "hint": "写在 struct Left : virtual Base",
           "type": "checkbox",
           "value": true
         },
         {
           "key": "rightVirtual",
           "label": "Right → Base 使用 virtual",
+          "hint": "写在 struct Right : virtual Base",
           "type": "checkbox",
           "value": true
         },
         {
           "key": "access",
           "label": "访问表达式",
+          "hint": "Left* / Right* / Base* 从完整对象转换",
           "type": "select",
           "value": "left",
           "options": [

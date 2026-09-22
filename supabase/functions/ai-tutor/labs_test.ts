@@ -18,6 +18,14 @@ Deno.test('predict phase withholds the explanation and the check rules',()=>{
  assert(predict.includes(lab.challenge),'the challenge itself is still needed');
  assert(labMessages(lab,input,[])[0].content.includes(lab.explanation),'explain phase keeps the explanation');
 });
+Deno.test('predict phase keeps the teaching skeleton and withholds the selected function',()=>{
+ const lab=validateLab(input);
+ const predict=labMessages(lab,{...input,phase:'predict'},[])[0].content;
+ assert(predict.includes('Base* p = &object'),'coach must see the same pointer declaration');
+ assert(!predict.includes('选中 Derived::speak'),'predict must not name the selected function');
+ const explain=labMessages(lab,input,[])[0].content;
+ assert(explain.includes('选中 Derived::speak'),'explain may name the selected function');
+});
 Deno.test('history keeps only completed turns of the current phase',()=>{
  const turn=(request:string,phase:string,status='complete')=>([
   {request_id:request,role:'user',body:`q-${request}`,status:'complete',phase},
