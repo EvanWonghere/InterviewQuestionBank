@@ -1,7 +1,9 @@
 import catalog from './labCatalog.json' with {type:'json'};
 import {modelFailure} from './modelErrors.js';
 import {teachingExampleForCoach} from './teachingCode.ts';
-type Context={uid:string;db:any;json:(body:unknown,status?:number)=>Response;model?:string;callModel?:(messages:unknown[])=>Promise<string>;authorize?:()=>Promise<boolean>};
+type TutorResult={body:string;decision?:{pedagogyAction?:string};execution?:{model?:string;provider?:string;tier?:string;fallbackUsed?:boolean}};
+type TutorMeta={phase:string;message:string;subject:string;recent:unknown[]};
+type Context={uid:string;db:any;json:(body:unknown,status?:number)=>Response;model?:string;callModel?:(messages:unknown[])=>Promise<string>;completeTutorText?:(messages:unknown[],meta:TutorMeta)=>Promise<TutorResult>;authorize?:()=>Promise<boolean>};
 const must=(r:any)=>{if(r.error)throw Error(r.error.message);return r.data;};
 export function validateLab(input:any){
  const lab=catalog.labs.find(x=>x.id===input.labId&&x.version===input.labVersion);if(!lab)throw Error('实验不存在或版本不匹配');return lab;
@@ -90,25 +92,35 @@ export async function handleLab(input:any,ctx:Context){
  }
  if(input.action!=='lab-chat')return json({error:'未知实验操作'},400);
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId))return json({error:'无效请求 ID',settled:true},400);
- let messages;let truncated=false;
+ let messages;let truncated=false;let recent:unknown[]=[];
  try{
   const rows=must(await db.from('lab_messages').select('request_id,role,body,status,phase').eq('user_id',uid).eq('lab_id',lab.id).eq('lab_version',lab.version).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(40));
   const history=labHistory((rows??[]).reverse(),input.phase);
   truncated=history.truncated;
+  recent=history.messages;
   messages=labMessages(lab,input,history.messages);
  }catch(e){return json({error:String(e),settled:true},400);}
- if(!ctx.callModel||!ctx.model)return json({error:'请先在题库助手配置 API、model 和服务端密钥',settled:true},503);
+ if(!ctx.completeTutorText&&(!ctx.callModel||!ctx.model))return json({error:'请先配置服务端 AI_API_KEY',settled:true},503);
  const originRunId=typeof input.context?.runId==='string'?input.context.runId:null;
  const originDraftId=typeof input.draftId==='string'?input.draftId:typeof input.context?.draftId==='string'?input.context.draftId:null;
  let begin;try{begin=must(await db.rpc('lab_begin',{p_user:uid,p_lab:lab.id,p_version:lab.version,p_request:input.requestId,p_body:input.message,p_model:ctx.model,p_phase:input.phase,p_attempt:originRunId,p_draft:originDraftId}));}catch(e){return json({error:String(e),settled:false},409);}
  if(begin.duplicate){if(begin.message.status==='complete')return json({body:begin.message.body,recovered:true});return json({error:begin.message.status==='running'?'请求仍在处理，请稍后核对历史':'此请求已结束；请恢复历史后手动发起新请求',settled:begin.message.status!=='running'},409);}
  try{
-  const body=await ctx.callModel(messages);
+  let body:string;let execution:TutorResult['execution'];let decision:TutorResult['decision'];
+  if(ctx.completeTutorText){
+   const result=await ctx.completeTutorText(messages,{phase:input.phase,message:input.message,subject:lab.id,recent});
+   body=result.body;execution=result.execution;decision=result.decision;
+  }else body=await ctx.callModel!(messages);
   if(ctx.authorize&&!await ctx.authorize()){
    must(await db.from('lab_messages').update({body:'管理员权限已撤销，未返回模型结果',status:'failed'}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running'));
    return json({error:'管理员权限已撤销',settled:true},403);
   }
   const saved=must(await db.from('lab_messages').update({body,status:'complete'}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running').select('body'));
-  if(!saved?.length)return json({error:'请求状态已改变，请恢复历史确认',settled:false},409);return json({body,truncated});
+  if(!saved?.length)return json({error:'请求状态已改变，请恢复历史确认',settled:false},409);
+  if(execution?.provider){
+   const meta=await db.from('lab_messages').update({model:execution.model,provider:execution.provider,model_tier:execution.tier??null,pedagogy_action:decision?.pedagogyAction??null,fallback_used:Boolean(execution.fallbackUsed)}).eq('user_id',uid).eq('request_id',input.requestId);
+   if(meta.error)console.error('routing metadata not saved',meta.error.message);
+  }
+  return json({body,truncated,model:execution?.model});
  }catch(e){const failure=modelFailure(e);try{must(await db.from('lab_messages').update({status:'failed',body:failure.error}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running'));return json({...failure,settled:true},failure.status);}catch{return json({error:'结果状态暂未确认，请用相同请求 ID 核对历史',settled:false},503);}}
 }

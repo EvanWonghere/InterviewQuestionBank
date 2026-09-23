@@ -20,8 +20,16 @@ npx supabase db push --dry-run
 
 | 名称 | 填写内容 |
 | --- | --- |
-| `AI_API_KEY` | 模型服务商给你的密钥 |
-| `AI_ALLOWED_ORIGINS` | Base URL 的 HTTPS origin，例如 `https://api.example.com`，不含 `/v1` 或末尾斜杠；多个用英文逗号分隔 |
+| `AI_API_KEY` | DeepSeek 密钥。只用于 DeepSeek，不要填 OpenAI 或 Jev 的密钥 |
+| `OPENAI_API_KEY` | OpenAI 密钥。高难任务和均衡/保守策略的常规对话会用到 |
+| `TYPESAFE_API_KEY` | Jev 密钥。只做教学决策，不生成给学生看的回答 |
+| `TYPESAFE_API_BASE` | 保持 `https://api.typesafe.ai`。代码会自己请求 `/v1/systemone`，不要把路径写进这个值 |
+| `AI_CREDIT_POLICY` | `aggressive`（默认）、`balanced` 或 `conservative`。不设置时按 aggressive |
+| `AI_ALLOWED_ORIGINS` | Chat Completions 的 HTTPS origin，不含 `/v1` 或末尾斜杠；多个用英文逗号分隔。需要同时包含 `https://api.deepseek.com` 和 `https://api.openai.com` |
+
+可选覆盖：`DEEPSEEK_BASE_URL`、`OPENAI_BASE_URL`、`DEEPSEEK_MODEL`（默认 `deepseek-flash`）、`OPENAI_MODEL_DEFAULT`（默认 `gpt-6-luna`）、`OPENAI_MODEL_REASONING`（默认 `gpt-6-sol`）。
+
+额度策略：aggressive 把容易和中等的实时对话、以及评估、报告、出题交给 DeepSeek；balanced 把中等实时对话交给 Luna；conservative 把实时对话的容易和中等交给 Luna。判为高难，或 Jev 认为明显超出快速模型能力时，走 Sol，不会为了消耗额度改走 DeepSeek。OpenAI 在出字前遇到超时、429、5xx 或网络错误时，同一用户请求回退一次 DeepSeek。流式聊天的回退必须还留在同一次 90 秒预算内。Jev 失败时用阶段默认教学动作继续，不因此失败整次提问。答前和实验预测阶段默认不直接给结论。
 
 Key 不填写在网页、VITE 环境变量、聊天消息或 Git 仓库中。Supabase 托管函数自动提供 `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`；当前函数使用这些内置变量。若项目停用了 legacy keys，需要先适配函数的服务端客户端配置。
 
@@ -36,8 +44,8 @@ npx supabase functions deploy ai-tutor
 ## 网页配置与使用
 
 1. 通过既有 GitHub 登录进入管理员账号，打开一题并点击“问学习助手”。模拟面试进行中不显示助手。
-2. 打开“API设置”，填写 Base URL 与 model，点击“保存设置”。例如 Base URL 为 `https://api.example.com/v1` 时，上面的允许 origin 应填写 `https://api.example.com`。
-3. 点击“测试连接”。这会调用真实模型，仅发送固定测试文本，仍可能产生少量费用。
+2. 打开“API设置”。模型由服务端按额度策略选择，网页不再填写 Base URL 或 model。这里只保存思考强度，并显示 DeepSeek、OpenAI、Jev 密钥是否已在服务端配置。
+3. 点击“测试连接”。这会调用已配置的 DeepSeek；若还配置了 OpenAI，会再发一次固定测试文本。仍可能产生少量费用。
 4. 先用一题试问：答前提示、提交后追问、刷新历史、编辑后追加笔记。发送前可展开“本次会发送什么”；附带本题笔记默认关闭。
 
 教练默认先回答具体疑问，再按需提供反例/变式；可用 Unity 项目联系、C#/C++ 对照和面试追问。答前不发送参考解析；明确要求完整解释时可直接讲解。AI 不改变分数或掌握状态，答前读过助手内容会标记辅助作答。历史按管理员和题目保存，不发送其他题目或整个学习档案。
@@ -81,13 +89,15 @@ npx supabase functions deploy ai-tutor
 
 登录过期的 401 请求会刷新登录后重试一次，沿用原请求 ID；网络错误、网关超时和“仍在生成”不会自动再次调用模型。评估与报告只有在服务端明确确认失败后才换新请求 ID。
 
-思考模式更新（迁移 `20260917002000_ai_reasoning_settings.sql`）：官方 DeepSeek API 的聊天、AI 评估、面试报告、薄弱点建议和连接测试统一使用“API设置 → 思考强度”，默认 `high`，可选关闭/低/高/最大；这些字段不发送给其他服务商。评估与报告额外启用 JSON Output（`response_format: json_object`），若服务商以 400 拒绝该参数，会去掉它重试一次（400 不产生生成费用），服务端仍严格校验 JSON。
+思考模式更新（迁移 `20260917002000_ai_reasoning_settings.sql`）：聊天、AI 评估、面试报告、薄弱点建议和连接测试统一使用“API设置 → 思考强度”，默认 `high`，可选关闭/低/高/最大。DeepSeek 收到 `thinking` 与 `reasoning_effort`；OpenAI 只收到 `reasoning_effort`，不收到 DeepSeek 的 `thinking` 对象。评估与报告对这两家都启用 JSON Output（`response_format: json_object`），若服务商以 400 拒绝该参数，会去掉它重试一次（400 不产生生成费用），服务端仍严格校验 JSON。
+
+多模型路由（迁移 `20260922120000_ai_model_routing.sql`）：`ai_messages` 与 `lab_messages` 增加可空的 `provider`、`model_tier`、`pedagogy_action`、`fallback_used`。2026-09-22 已应用到 `vtbwqnigocrbpmbkbiiv`，并部署了带路由的 `ai-tutor`。设置接口仍返回已保存的 `base_url` 与 `model`，给尚未刷新的旧页面用；生成不再读取这两列。设置页随这次前端发布改为显示额度策略和密钥状态。2026-09-22 晚间用已登录的本机 Chrome，在旧设置页对「3D 中判断目标左右方位与坐标系手性」发了一条答前提示。回复完成，历史里 `provider=deepseek`、`model=deepseek-flash`、`model_tier=fast`、`pedagogy_action=GIVE_HINT`、`fallback_used=false`。同一请求 ID 重试不会再次调用模型。还没在生产里单独证实 Jev 调用成功，也还没测 OpenAI、高难档、评估、报告和实验教练。
 
 预算与超时：思考 token 计入 `max_tokens`，因此开启思考时每次输出预算为 8192 token，关闭时为 4096；服务端对单次模型调用最多等待 90 秒，浏览器等待 120 秒，数据库把超过 150 秒仍在运行的请求判定为中断（原为 90 秒，否则慢但正常的生成会被误判失败）。连接测试与真实生成使用相同的思考强度、预算和超时。流式聊天在模型思考期间会显示“思考中…”，思考内容本身不转发；评估和报告显示已等待秒数。若频繁超时或提示达到长度上限，先把思考强度降为“低”。参考：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)、[JSON Output](https://api-docs.deepseek.com/guides/json_mode)。输出截断、模型格式错误、上游密钥/余额/限流以及超时分别提示，不回显上游敏感响应。
 
 - 无按钮：检查当前账号是否在 `app_admins` 中，以及是否在模拟面试中。未配置 Supabase 的静态模式没有管理员助手。
 - 提示未配置 Key：检查 Edge Function 所属项目与 Secrets，注意变量名称大小写。
-- 请求失败：核对 Base URL 的 origin 是否在 allowlist 中、model 是否正确，以及是否支持流式 Chat Completions 和 `max_tokens`。
+- 请求失败：核对 `AI_ALLOWED_ORIGINS` 是否同时包含 DeepSeek 与 OpenAI 的 origin，以及服务商是否支持流式 Chat Completions 和 `max_tokens`。高难任务还需要 `OPENAI_API_KEY`。
 - 401：重新登录，查看函数日志区分平台 JWT 校验与函数返回的登录失效；不要直接关闭鉴权来处理。
 - 403：检查当前账号的管理员权限。
 - 429：每个管理员每分钟最多 10 次生成/连接测试，稍后再试。

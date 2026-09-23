@@ -5,6 +5,7 @@ import { useNotesStore } from '@/store/notesStore';
 import { useAIDraft } from '@/lib/aiDrafts';
 
 const EFFORT_LABELS = { none: '关闭', low: '低', high: '高（默认）', max: '最大' };
+const POLICY_LABELS = { aggressive: '优先消耗 DeepSeek', balanced: '均衡', conservative: '实时对话优先 OpenAI' };
 const quickPrompts = ['给我一个提示', '检查我的思路', '解释背后的机制', '联系Unity项目', '用C#和C++对照', '像面试官一样追问', '出一道变式，先不告诉我答案'];
 
 function copyLabel(copied, id) {
@@ -22,7 +23,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [text, setText] = useAIDraft(`${user.id}:${question.id}:chat`); const [includeNote, setIncludeNote] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState({ baseUrl: '', model: '', reasoningEffort: 'high', configured: false, allowedOrigins: [] });
+  const [settings, setSettings] = useState({ reasoningEffort: 'high', configured: false, allowedOrigins: [], creditPolicy: 'aggressive', keys: { deepseek: false, openai: false, jev: false }, models: { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' } });
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [noteDraft, setNoteDraft] = useState(null); const [noteBusy, setNoteBusy] = useState(false);
   const [lastRequest, setLastRequest] = useState(null);
@@ -75,8 +76,15 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     Promise.all([aiRequest({ action: 'settings' }), aiRequest({ action: 'history', questionId: question.id })])
       .then(([config, history]) => {
         if (!alive.current) return;
-        setSettings({ baseUrl: config.settings.base_url, model: config.settings.model, reasoningEffort: config.settings.reasoning_effort ?? 'high', configured: config.configured, allowedOrigins: config.allowedOrigins });
-        setSettingsOpen(!config.configured || !config.settings.model);
+        setSettings({
+          reasoningEffort: config.settings.reasoning_effort ?? 'high',
+          configured: config.configured,
+          allowedOrigins: config.allowedOrigins ?? [],
+          creditPolicy: config.creditPolicy ?? 'aggressive',
+          keys: config.keys ?? { deepseek: Boolean(config.configured), openai: false, jev: false },
+          models: config.models ?? { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' },
+        });
+        setSettingsOpen(!config.configured);
         setMessages(history.messages);
         if (phaseRef.current === 'hint' && history.messages.some(m => m.role === 'assistant' && m.body)) assistRef.current?.();
         if (history.versionChanged) setNotice('题目已更新：历史基于旧版本，新提问使用当前题目。');
@@ -141,7 +149,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const configure = async action => {
     setSettingsBusy(true); setError('');
     try {
-      await aiRequest({ action, baseUrl: settings.baseUrl, model: settings.model, reasoningEffort: settings.reasoningEffort });
+      await aiRequest({ action, reasoningEffort: settings.reasoningEffort });
       if (alive.current) setNotice(action === 'test' ? '连接成功（仅发送固定测试文本）' : '设置已保存');
     } catch (e) { if (alive.current) setError(e.message); }
     finally { if (alive.current) setSettingsBusy(false); }
@@ -175,10 +183,10 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       <div className="flex gap-2 my-3 flex-wrap"><button className="btn-neutral" onClick={() => setSettingsOpen(v => !v)}>API设置</button><button className="btn-neutral" disabled={busy || loading} onClick={() => refresh().catch(e => setError(e.message))}>刷新历史</button><button className="btn-neutral" disabled={busy || loading} onClick={clear}>清空对话</button></div>
       {settingsOpen && <section className="ai-settings" aria-label="API设置">
         <p className="type-caption">Key由Supabase服务端保管：{settings.configured ? '已配置' : '未配置AI_API_KEY'}。网页不接收Key。</p>
-        <label>Base URL<input className="input-apple" value={settings.baseUrl} placeholder="https://api.example.com/v1" onChange={e => setSettings(s => ({ ...s, baseUrl: e.target.value }))} /></label>
-        <label>Model<input className="input-apple" value={settings.model} placeholder="填写服务商的model名称" onChange={e => setSettings(s => ({ ...s, model: e.target.value }))} /></label>
+        <p className="type-caption">额度策略：{POLICY_LABELS[settings.creditPolicy] ?? settings.creditPolicy}。模型由服务端选择：容易 {settings.models.fast}，常规 {settings.models.default}，高难 {settings.models.reasoning}。</p>
+        <p className="type-caption">DeepSeek {settings.keys.deepseek ? '已配置' : '未配置'} · OpenAI {settings.keys.openai ? '已配置' : '未配置'} · Jev {settings.keys.jev ? '已配置' : '未配置'}</p>
         <label>思考强度<select className="input-apple" value={settings.reasoningEffort} onChange={e => setSettings(s => ({ ...s, reasoningEffort: e.target.value }))}>{Object.entries(EFFORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <p className="type-caption">仅对官方 DeepSeek API 生效，聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
+        <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}
@@ -208,7 +216,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       <div className="ai-prompts">{quickPrompts.map(p => <button key={p} className="filter-pill" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
       <form onSubmit={e => { e.preventDefault(); void send(); }}>
         <textarea ref={inputRef} aria-label="向学习教练提问" className="input-apple" value={text} maxLength={8000} onChange={e => setText(e.target.value)} onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); void send(); } }} placeholder="你的疑问，或需要一起分析的代码…（草稿自动保留；Ctrl/Cmd+Enter 发送）" rows={3} />
-        <div className="flex gap-2 mt-2 flex-wrap"><button className="btn-blue" disabled={busy || loading || !settings.configured || !settings.model || !text.trim()}>发送</button>{busy && <button type="button" className="btn-neutral" onClick={stop}>停止</button>}{lastRequest && !busy && <><button type="button" className="btn-neutral" onClick={() => send(true)}>核对此次请求</button><button type="button" className="btn-neutral" onClick={() => setText(lastRequest.message)}>重新提问</button></>}</div>
+        <div className="flex gap-2 mt-2 flex-wrap"><button className="btn-blue" disabled={busy || loading || !settings.configured || !text.trim()}>发送</button>{busy && <button type="button" className="btn-neutral" onClick={stop}>停止</button>}{lastRequest && !busy && <><button type="button" className="btn-neutral" onClick={() => send(true)}>核对此次请求</button><button type="button" className="btn-neutral" onClick={() => setText(lastRequest.message)}>重新提问</button></>}</div>
       </form>
     </footer>
   </dialog>;

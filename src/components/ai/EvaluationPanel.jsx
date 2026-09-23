@@ -54,7 +54,7 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
     aiRequest({ action: 'settings' })
       .then((config) => {
         if (!alive.current) return;
-        if (!config.configured || !config.settings.model) {
+        if (!config.configured) {
           setStatus('unavailable');
           callbacks.current.onUnavailable?.();
           return;

@@ -11,13 +11,16 @@ it('defaults the official DeepSeek API to high thinking and sends provider field
  expect(modelOptions(deepseek, { effort: 'max', json: true })).toEqual({ thinking: { type: 'enabled' }, reasoning_effort: 'max', response_format: { type: 'json_object' } });
  expect(modelOptions(deepseek, { effort: 'none' })).toEqual({ thinking: { type: 'disabled' } });
  expect(modelOptions(deepseek, { effort: 'bogus' })).toMatchObject({ reasoning_effort: 'high' });
- expect(modelOptions('https://api.openai.com/v1/chat/completions', { json: true })).toEqual({});
+ expect(modelOptions('https://api.openai.com/v1/chat/completions', { json: true })).toEqual({ reasoning_effort: 'high', response_format: { type: 'json_object' } });
+ expect(modelOptions('https://api.openai.com/v1/chat/completions', { effort: 'none' })).toEqual({ reasoning_effort: 'none' });
+ expect(modelOptions('https://api.openai.com/v1/chat/completions')).not.toHaveProperty('thinking');
  expect(modelOptions('https://api.deepseek.com.example.org/chat/completions', { json: true })).toEqual({});
 });
 it('gives thinking requests room for reasoning tokens', () => {
  expect(outputBudget(deepseek, 'high')).toBe(8192);
  expect(outputBudget(deepseek, 'none')).toBe(4096);
- expect(outputBudget('https://api.openai.com/v1/chat/completions', 'high')).toBe(4096);
+ expect(outputBudget('https://api.openai.com/v1/chat/completions', 'high')).toBe(8192);
+ expect(outputBudget('https://api.openai.com/v1/chat/completions', 'none')).toBe(4096);
 });
 
 it('restores a draft after closing and reopening without leaking to another owner',()=>{
