@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAIDraft, clearAIDrafts } from './aiDrafts';
 import { modelFailure } from '../../supabase/functions/ai-tutor/modelErrors.js';
-import { modelOptions, outputBudget } from '../../supabase/functions/ai-tutor/modelOptions.js';
+import { modelOptions, outputBudget, tokenLimit } from '../../supabase/functions/ai-tutor/modelOptions.js';
 import { callModel } from '../../supabase/functions/ai-tutor/modelClient.js';
 
 const deepseek = 'https://api.deepseek.com/chat/completions';
@@ -21,6 +21,8 @@ it('gives thinking requests room for reasoning tokens', () => {
  expect(outputBudget(deepseek, 'none')).toBe(4096);
  expect(outputBudget('https://api.openai.com/v1/chat/completions', 'high')).toBe(8192);
  expect(outputBudget('https://api.openai.com/v1/chat/completions', 'none')).toBe(4096);
+ expect(tokenLimit('https://api.openai.com/v1/chat/completions', 'high')).toEqual({ max_completion_tokens: 8192 });
+ expect(tokenLimit(deepseek, 'high')).toEqual({ max_tokens: 8192 });
 });
 
 it('restores a draft after closing and reopening without leaking to another owner',()=>{

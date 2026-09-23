@@ -1,5 +1,5 @@
 import { sseData } from './core.js';
-import { MODEL_TIMEOUT_MS, modelOptions, outputBudget } from './modelOptions.js';
+import { MODEL_TIMEOUT_MS, modelOptions, tokenLimit } from './modelOptions.js';
 
 /** Non-streaming Chat Completions call; errors carry only the upstream status, never its body. */
 // budgetScale > 1 is for replies that carry several items (e.g. a set of drafted questions).
@@ -8,7 +8,7 @@ export async function callModel({ url, apiKey, model, messages, effort, json = f
   const post = (jsonOutput) => fetchImpl(url, {
     method: 'POST', redirect: 'error', signal,
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, max_tokens: outputBudget(url, effort) * budgetScale, stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
+    body: JSON.stringify({ model, messages, ...tokenLimit(url, effort, budgetScale), stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
   });
   let response = await post(json);
   // A 400 is a rejected, unbilled request. If JSON Output was the unsupported part, the prompt still demands json.
@@ -45,7 +45,7 @@ function chatBody({ url, model, messages, effort, json, stream, budgetScale }) {
   return JSON.stringify({
     model,
     messages,
-    max_tokens: outputBudget(url, effort) * budgetScale,
+    ...tokenLimit(url, effort, budgetScale),
     stream,
     ...modelOptions(url, { effort, json }),
   });

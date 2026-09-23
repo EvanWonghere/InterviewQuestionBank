@@ -93,7 +93,7 @@ npx supabase functions deploy ai-tutor
 
 多模型路由（迁移 `20260922120000_ai_model_routing.sql`）：`ai_messages` 与 `lab_messages` 增加可空的 `provider`、`model_tier`、`pedagogy_action`、`fallback_used`。2026-09-22 已应用到 `vtbwqnigocrbpmbkbiiv`，并部署了带路由的 `ai-tutor`。设置接口仍返回已保存的 `base_url` 与 `model`，给尚未刷新的旧页面用；生成不再读取这两列。设置页随这次前端发布改为显示额度策略和密钥状态。2026-09-22 晚间用已登录的本机 Chrome，在旧设置页对「3D 中判断目标左右方位与坐标系手性」发了一条答前提示。回复完成，历史里 `provider=deepseek`、`model=deepseek-flash`、`model_tier=fast`、`pedagogy_action=GIVE_HINT`、`fallback_used=false`。同一请求 ID 重试不会再次调用模型。还没在生产里单独证实 Jev 调用成功，也还没测 OpenAI、高难档、评估、报告和实验教练。
 
-预算与超时：思考 token 计入 `max_tokens`，因此开启思考时每次输出预算为 8192 token，关闭时为 4096；服务端对单次模型调用最多等待 90 秒，浏览器等待 120 秒，数据库把超过 150 秒仍在运行的请求判定为中断（原为 90 秒，否则慢但正常的生成会被误判失败）。连接测试与真实生成使用相同的思考强度、预算和超时。流式聊天在模型思考期间会显示“思考中…”，思考内容本身不转发；评估和报告显示已等待秒数。若频繁超时或提示达到长度上限，先把思考强度降为“低”。参考：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)、[JSON Output](https://api-docs.deepseek.com/guides/json_mode)。输出截断、模型格式错误、上游密钥/余额/限流以及超时分别提示，不回显上游敏感响应。
+预算与超时：思考 token 计入输出上限，因此开启思考时每次输出预算为 8192 token，关闭时为 4096。DeepSeek 使用 `max_tokens`；OpenAI 使用 `max_completion_tokens`，因为 GPT-6 会以 400 拒绝 `max_tokens`。服务端对单次模型调用最多等待 90 秒，浏览器等待 120 秒，数据库把超过 150 秒仍在运行的请求判定为中断（原为 90 秒，否则慢但正常的生成会被误判失败）。连接测试与真实生成使用相同的思考强度、预算和超时。流式聊天在模型思考期间会显示“思考中…”，思考内容本身不转发；评估和报告显示已等待秒数。若频繁超时或提示达到长度上限，先把思考强度降为“低”。参考：[思考模式](https://api-docs.deepseek.com/guides/thinking_mode/)、[JSON Output](https://api-docs.deepseek.com/guides/json_mode)。输出截断、模型格式错误、上游密钥/余额/限流以及超时分别提示，不回显上游敏感响应。
 
 - 无按钮：检查当前账号是否在 `app_admins` 中，以及是否在模拟面试中。未配置 Supabase 的静态模式没有管理员助手。
 - 提示未配置 Key：检查 Edge Function 所属项目与 Secrets，注意变量名称大小写。

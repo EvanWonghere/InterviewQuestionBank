@@ -18,6 +18,12 @@ export function outputBudget(url, effort) {
   return thinking ? 8192 : 4096;
 }
 
+/** OpenAI reasoning models reject max_tokens. DeepSeek still uses that field. */
+export function tokenLimit(url, effort, budgetScale = 1) {
+  const budget = outputBudget(url, effort) * budgetScale;
+  return isOpenAI(url) ? { max_completion_tokens: budget } : { max_tokens: budget };
+}
+
 export function modelOptions(url, { effort = DEFAULT_REASONING_EFFORT, json = false } = {}) {
   const level = normalizeEffort(effort);
   const jsonFormat = json ? { response_format: { type: 'json_object' } } : {};
