@@ -29,7 +29,7 @@ npx supabase db push --dry-run
 
 可选覆盖：`DEEPSEEK_BASE_URL`、`OPENAI_BASE_URL`、`DEEPSEEK_MODEL`（默认 `deepseek-flash`）、`OPENAI_MODEL_DEFAULT`（默认 `gpt-6-luna`）、`OPENAI_MODEL_REASONING`（默认 `gpt-6-sol`）。
 
-额度策略：aggressive 把容易和中等的实时对话、以及评估、报告、出题交给 DeepSeek；balanced 把中等实时对话交给 Luna；conservative 把实时对话的容易和中等交给 Luna。判为高难，或 Jev 认为明显超出快速模型能力时，走 Sol，不会为了消耗额度改走 DeepSeek。OpenAI 在出字前遇到超时、429、5xx 或网络错误时，同一用户请求回退一次 DeepSeek。流式聊天的回退必须还留在同一次 90 秒预算内。Jev 失败时用阶段默认教学动作继续，不因此失败整次提问。答前和实验预测阶段默认不直接给结论。
+额度策略：aggressive 把容易和中等的实时对话、以及评估、报告、出题交给 DeepSeek；balanced 把中等实时对话交给 Luna；conservative 把实时对话的容易和中等交给 Luna。判为高难，或 Jev 认为明显超出快速模型能力时，走 Sol，不会为了消耗额度改走 DeepSeek。管理员在「API设置」里保存的选择写在 `ai_settings.credit_policy`，优先于密钥 `AI_CREDIT_POLICY`；没保存过则用密钥，密钥也没有时按 aggressive。OpenAI 在出字前遇到超时、429、5xx 或网络错误时，同一用户请求回退一次 DeepSeek。流式聊天的回退必须还留在同一次 90 秒预算内。Jev 失败时用阶段默认教学动作继续，不因此失败整次提问。答前和实验预测阶段默认不直接给结论。
 
 Key 不填写在网页、VITE 环境变量、聊天消息或 Git 仓库中。Supabase 托管函数自动提供 `SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`；当前函数使用这些内置变量。若项目停用了 legacy keys，需要先适配函数的服务端客户端配置。
 
@@ -44,7 +44,7 @@ npx supabase functions deploy ai-tutor
 ## 网页配置与使用
 
 1. 通过既有 GitHub 登录进入管理员账号，打开一题并点击“问学习助手”。模拟面试进行中不显示助手。
-2. 打开“API设置”。模型由服务端按额度策略选择，网页不再填写 Base URL 或 model。这里只保存思考强度，并显示 DeepSeek、OpenAI、Jev 密钥是否已在服务端配置。
+2. 打开“API设置”。网页不再填写 Base URL 或 model。这里保存思考强度和额度策略，并显示 DeepSeek、OpenAI、Jev 密钥是否已在服务端配置。额度策略没保存过时，沿用服务端密钥 `AI_CREDIT_POLICY`；保存后以网页上的选择为准。
 3. 点击“测试连接”。这会调用已配置的 DeepSeek；若还配置了 OpenAI，会再发一次固定测试文本。仍可能产生少量费用。
 4. 先用一题试问：答前提示、提交后追问、刷新历史、编辑后追加笔记。发送前可展开“本次会发送什么”；附带本题笔记默认关闭。
 

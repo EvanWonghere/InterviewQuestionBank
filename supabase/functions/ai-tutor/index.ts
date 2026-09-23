@@ -5,7 +5,7 @@ import { modelFailure } from './modelErrors.js';
 import { MODEL_TIMEOUT_MS, normalizeEffort, REASONING_EFFORTS } from './modelOptions.js';
 import { callModel as callModelWith, canProviderFallback, iterateChatEvents, openChatStream } from './modelClient.js';
 import { insertPedagogyNote, pedagogyNote } from './pedagogy.js';
-import { completeTutorText, planInteractiveTurn, planTaskTurn, publicRouting, routedCall } from './router.js';
+import { completeTutorText, CREDIT_POLICIES, effectivePolicy, planInteractiveTurn, planTaskTurn, publicRouting, routedCall } from './router.js';
 import { handleLab } from './labs.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
@@ -35,23 +35,27 @@ export async function handleRequest(req: Request, factory = createClient) {
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
   if (typeof action === 'string' && action.startsWith('lab-')) {
-   const settings = must(await db.from('ai_settings').select('reasoning_effort').eq('user_id',uid).maybeSingle());
+   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
+   const policy = settings?.credit_policy;
    return await handleLab(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
-    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort }) : undefined});
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort }) : undefined});
   }
   if (action === 'settings') {
-   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort').eq('user_id',uid).maybeSingle());
+   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    const routing = publicRouting(env);
    // Cached copies of the previous quiz page still require settings.model before they enable send and evaluation.
    // Routing no longer reads that column; the value only keeps those copies usable.
-   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing });
+   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing, creditPolicy: effectivePolicy(settings?.credit_policy, routing.creditPolicy) });
   }
   if (action === 'save-settings' || action === 'test') {
    if (input.reasoningEffort != null && !REASONING_EFFORTS.includes(input.reasoningEffort)) return json({error:'无效思考强度'},400);
+   if (input.creditPolicy != null && !CREDIT_POLICIES.includes(input.creditPolicy)) return json({error:'无效额度策略'},400);
    const effort=normalizeEffort(input.reasoningEffort);
    if(action === 'save-settings') {
-    must(await db.from('ai_settings').upsert({user_id:uid,reasoning_effort:effort})); return json({ok:true});
+    const patch: { user_id: string; reasoning_effort: string; credit_policy?: string } = { user_id: uid, reasoning_effort: effort };
+    if (CREDIT_POLICIES.includes(input.creditPolicy)) patch.credit_policy = input.creditPolicy;
+    must(await db.from('ai_settings').upsert(patch)); return json({ok:true});
    }
    if (!env('AI_API_KEY')) return json({error:'尚未设置服务端AI_API_KEY'},503);
    const probe = planTaskTurn({ env, action: 'draft-question' });
@@ -83,9 +87,9 @@ export async function handleRequest(req: Request, factory = createClient) {
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
   }
   if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report' || action === 'draft-question' || action === 'draft-weakness-questions') {
-   const settings=must(await db.from('ai_settings').select('reasoning_effort').eq('user_id',uid).maybeSingle());
+   const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    if(!env('AI_API_KEY')) return json({error:'尚未设置服务端 AI_API_KEY'},503);
-   const planned=planTaskTurn({ env, action });
+   const planned=planTaskTurn({ env, action, policy: settings?.credit_policy });
    const routed=routedCall({ target: planned.target, fallback: planned.fallback, effort: normalizeEffort(settings?.reasoning_effort) });
    routed.execution.tier=planned.route.tier;
    const ctx={uid,client,db,model:planned.target.model,json,must,callModel:routed.callModel};
@@ -100,7 +104,7 @@ export async function handleRequest(req: Request, factory = createClient) {
   }
   if(action !== 'chat') return json({error:'未知操作'},400);
   validateChat(input);
-  const settings=must(await db.from('ai_settings').select('reasoning_effort').eq('user_id',uid).maybeSingle());
+  const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
   if(!env('AI_API_KEY')) return json({error:'尚未设置服务端 AI_API_KEY'},503);
   const q=must(await db.from('questions').select('id,title,prompt_md,type,payload,updated_at').eq('id',input.questionId).single());
   if(!q)return json({error:'题目不存在'},404);
@@ -144,7 +148,7 @@ export async function handleRequest(req: Request, factory = createClient) {
    try {
     emit('meta',{truncated:context.truncated,phaseFiltered:context.phaseFiltered,version:q.updated_at});
     const recent=history.filter((message:{status?:string;phase?:string})=>message.status==='complete'&&(input.phase==='review'||message.phase==='hint')).slice(-4);
-    const plan=await planInteractiveTurn({env,phase:input.phase,message:input.message,subject:q.title,recent});
+    const plan=await planInteractiveTurn({env,policy:settings?.credit_policy,phase:input.phase,message:input.message,subject:q.title,recent});
     active=plan.target; tier=plan.route.tier; pedagogy=plan.decision.pedagogyAction;
     const messages=insertPedagogyNote([...context.messages,{role:'user',content:input.message}],pedagogyNote(plan.decision.pedagogyAction,input.phase));
     emit('meta',{model:plan.target.model,pedagogy:plan.decision.pedagogyAction,version:q.updated_at});

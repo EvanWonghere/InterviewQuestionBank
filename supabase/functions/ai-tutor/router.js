@@ -13,6 +13,11 @@ export function normalizePolicy(value) {
   return CREDIT_POLICIES.includes(value) ? value : 'aggressive';
 }
 
+/** A saved admin choice wins. Anything else uses the server secret, which is aggressive when unset. */
+export function effectivePolicy(saved, fallback) {
+  return CREDIT_POLICIES.includes(saved) ? saved : normalizePolicy(fallback);
+}
+
 export function providerCatalog(env) {
   const allowed = env('AI_ALLOWED_ORIGINS') || '';
   const deepseekBase = env('DEEPSEEK_BASE_URL') || DEFAULT_DEEPSEEK_BASE;
@@ -101,12 +106,12 @@ function assertKeys(catalog, target) {
   if (target.provider === 'openai' && !target.apiKey) throw new Error('missing_openai_key');
 }
 
-export async function planInteractiveTurn({ env, phase, message, subject, recent, fetchImpl = fetch }) {
+export async function planInteractiveTurn({ env, policy = undefined, phase, message, subject, recent, fetchImpl = fetch }) {
   const catalog = providerCatalog(env);
   if (!catalog.deepseek.apiKey) throw new Error('missing_deepseek_key');
   const decision = await decidePedagogy({ jev: catalog.jev, phase, message, subject, recent, fetchImpl });
   const route = selectRoute({
-    policy: catalog.policy,
+    policy: effectivePolicy(policy, catalog.policy),
     task: 'interactive',
     difficulty: decision.difficulty,
     needsStrongReasoning: decision.needsStrongReasoning,
@@ -116,16 +121,16 @@ export async function planInteractiveTurn({ env, phase, message, subject, recent
   return { decision, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export function planTaskTurn({ env, action }) {
+export function planTaskTurn({ env, action, policy = undefined }) {
   const catalog = providerCatalog(env);
-  const route = selectRoute({ policy: catalog.policy, task: taskForAction(action), difficulty: 'medium', needsStrongReasoning: false });
+  const route = selectRoute({ policy: effectivePolicy(policy, catalog.policy), task: taskForAction(action), difficulty: 'medium', needsStrongReasoning: false });
   const target = resolveTarget(route, catalog);
   assertKeys(catalog, target);
   return { catalog, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export async function completeTutorText({ env, phase, message, subject, recent, messages, effort, fetchImpl = fetch }) {
-  const plan = await planInteractiveTurn({ env, phase, message, subject, recent, fetchImpl });
+export async function completeTutorText({ env, policy = undefined, phase, message, subject, recent, messages, effort, fetchImpl = fetch }) {
+  const plan = await planInteractiveTurn({ env, policy, phase, message, subject, recent, fetchImpl });
   const noted = insertPedagogyNote(messages, pedagogyNote(plan.decision.pedagogyAction, phase));
   const execution = { model: plan.target.model, provider: plan.target.provider, tier: plan.route.tier, fallbackUsed: false };
   const body = await callRoutedModel({

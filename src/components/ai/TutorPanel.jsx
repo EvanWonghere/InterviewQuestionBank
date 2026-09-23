@@ -5,7 +5,11 @@ import { useNotesStore } from '@/store/notesStore';
 import { useAIDraft } from '@/lib/aiDrafts';
 
 const EFFORT_LABELS = { none: '关闭', low: '低', high: '高（默认）', max: '最大' };
-const POLICY_LABELS = { aggressive: '优先消耗 DeepSeek', balanced: '均衡', conservative: '实时对话优先 OpenAI' };
+const POLICY_OPTIONS = [
+  { value: 'aggressive', label: '优先消耗 DeepSeek', detail: '容易和中等的提问、评估、报告、出题使用 DeepSeek。判为高难或需要强推理时使用 Sol。' },
+  { value: 'balanced', label: '均衡', detail: '容易的提问使用 DeepSeek，中等的提问使用 Luna。评估、报告、出题仍使用 DeepSeek。高难或强推理使用 Sol。' },
+  { value: 'conservative', label: '实时对话优先 OpenAI', detail: '容易和中等的提问使用 Luna。评估、报告、出题仍使用 DeepSeek。高难或强推理使用 Sol。' },
+];
 const quickPrompts = ['给我一个提示', '检查我的思路', '解释背后的机制', '联系Unity项目', '用C#和C++对照', '像面试官一样追问', '出一道变式，先不告诉我答案'];
 
 function copyLabel(copied, id) {
@@ -149,7 +153,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const configure = async action => {
     setSettingsBusy(true); setError('');
     try {
-      await aiRequest({ action, reasoningEffort: settings.reasoningEffort });
+      await aiRequest({ action, reasoningEffort: settings.reasoningEffort, creditPolicy: settings.creditPolicy });
       if (alive.current) setNotice(action === 'test' ? '连接成功（仅发送固定测试文本）' : '设置已保存');
     } catch (e) { if (alive.current) setError(e.message); }
     finally { if (alive.current) setSettingsBusy(false); }
@@ -183,8 +187,9 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       <div className="flex gap-2 my-3 flex-wrap"><button className="btn-neutral" onClick={() => setSettingsOpen(v => !v)}>API设置</button><button className="btn-neutral" disabled={busy || loading} onClick={() => refresh().catch(e => setError(e.message))}>刷新历史</button><button className="btn-neutral" disabled={busy || loading} onClick={clear}>清空对话</button></div>
       {settingsOpen && <section className="ai-settings" aria-label="API设置">
         <p className="type-caption">Key由Supabase服务端保管：{settings.configured ? '已配置' : '未配置AI_API_KEY'}。网页不接收Key。</p>
-        <p className="type-caption">额度策略：{POLICY_LABELS[settings.creditPolicy] ?? settings.creditPolicy}。模型由服务端选择：容易 {settings.models.fast}，常规 {settings.models.default}，高难 {settings.models.reasoning}。</p>
         <p className="type-caption">DeepSeek {settings.keys.deepseek ? '已配置' : '未配置'} · OpenAI {settings.keys.openai ? '已配置' : '未配置'} · Jev {settings.keys.jev ? '已配置' : '未配置'}</p>
+        <label>额度策略<select className="input-apple" aria-label="额度策略" value={settings.creditPolicy} onChange={e => setSettings(s => ({ ...s, creditPolicy: e.target.value }))}>{POLICY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        <p className="type-caption">{POLICY_OPTIONS.find((option) => option.value === settings.creditPolicy)?.detail} 模型名称：容易 {settings.models.fast}，常规 {settings.models.default}，高难 {settings.models.reasoning}。保存后以这里的选择为准；还没保存时沿用服务端默认。</p>
         <label>思考强度<select className="input-apple" value={settings.reasoningEffort} onChange={e => setSettings(s => ({ ...s, reasoningEffort: e.target.value }))}>{Object.entries(EFFORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { callRoutedModel, canProviderFallback, iterateChatEvents } from '../../supabase/functions/ai-tutor/modelClient.js';
 import { clampDecision, decisionFromAnswers, defaultDecision, pedagogyNote, systemOneUrl } from '../../supabase/functions/ai-tutor/pedagogy.js';
-import { resolveTarget, selectRoute } from '../../supabase/functions/ai-tutor/router.js';
+import { effectivePolicy, resolveTarget, selectRoute } from '../../supabase/functions/ai-tutor/router.js';
 
 const catalog = {
   deepseek: { provider: 'deepseek', model: 'deepseek-flash', apiKey: 'd', url: 'https://api.deepseek.com/v1/chat/completions' },
@@ -15,6 +15,11 @@ describe('credit routing', () => {
     expect(selectRoute({ policy: 'aggressive', task: 'interactive', difficulty: 'easy', needsStrongReasoning: true }).slot).toBe('sol');
     expect(selectRoute({ policy: 'aggressive', task: 'batch', difficulty: 'hard' }).slot).toBe('sol');
     expect(resolveTarget(selectRoute({ policy: 'aggressive', task: 'interactive', difficulty: 'medium' }), catalog).model).toBe('deepseek-flash');
+  });
+  it('lets a saved policy override the server default and ignores an unknown value', () => {
+    expect(effectivePolicy('balanced', 'aggressive')).toBe('balanced');
+    expect(effectivePolicy(null, 'conservative')).toBe('conservative');
+    expect(effectivePolicy('nope', '')).toBe('aggressive');
   });
   it('moves medium interactive turns to Luna only outside aggressive mode', () => {
     expect(selectRoute({ policy: 'balanced', task: 'interactive', difficulty: 'easy' }).slot).toBe('deepseek');
