@@ -1,20 +1,36 @@
 import { sseData } from './core.js';
 import { MODEL_TIMEOUT_MS, modelOptions, tokenLimit } from './modelOptions.js';
 
+export const requestDeadline = () => Date.now() + MODEL_TIMEOUT_MS;
+function remainingSignal(deadline) {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) throw new DOMException('Request deadline exceeded', 'TimeoutError');
+  return AbortSignal.timeout(Math.ceil(remaining));
+}
+
 /** Non-streaming Chat Completions call; errors carry only the upstream status, never its body. */
 // budgetScale > 1 is for replies that carry several items (e.g. a set of drafted questions).
-export async function callModel({ url, apiKey, model, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch }) {
-  const signal = AbortSignal.timeout(MODEL_TIMEOUT_MS);
-  const post = (jsonOutput) => fetchImpl(url, {
-    method: 'POST', redirect: 'error', signal,
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, ...tokenLimit(url, effort, budgetScale), stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
-  });
+export async function callModel({ url, apiKey, model, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, deadline = requestDeadline() }) {
+  const signal = remainingSignal(deadline);
+  const post = (jsonOutput) => {
+    signal.throwIfAborted();
+    if (Date.now() >= deadline) throw new DOMException('Request deadline exceeded', 'TimeoutError');
+    return fetchImpl(url, {
+      method: 'POST', redirect: 'error', signal,
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, ...tokenLimit(url, effort, budgetScale), stream: false, ...modelOptions(url, { effort, json: jsonOutput }) }),
+    });
+  };
   let response = await post(json);
   // A 400 is a rejected, unbilled request. If JSON Output was the unsupported part, the prompt still demands json.
   if (json && response.status === 400 && modelOptions(url, { effort, json }).response_format) response = await post(false);
   if (!response.ok) throw new Error(`upstream_http_${response.status}`);
-  const result = await response.json().catch(() => null);
+  const result = await response.json().catch(() => {
+    signal.throwIfAborted();
+    return null;
+  });
+  signal.throwIfAborted();
+  if (Date.now() >= deadline) throw new DOMException('Request deadline exceeded', 'TimeoutError');
   const choice = result?.choices?.[0];
   if (choice?.finish_reason === 'length') throw new Error('upstream_length');
   if (choice?.finish_reason === 'insufficient_system_resource') throw new Error('upstream_busy');
@@ -98,12 +114,12 @@ export async function* iterateChatEvents(body) {
  * One OpenAI failure before any text falls back to DeepSeek. A second failure is returned as-is.
  * onFallback runs only after the primary call has failed and before the fallback call.
  */
-export async function callRoutedModel({ target, fallback, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, onFallback }) {
+export async function callRoutedModel({ target, fallback, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, onFallback, deadline = requestDeadline() }) {
   try {
-    return await callModel({ url: target.url, apiKey: target.apiKey, model: target.model, messages, effort, json, budgetScale, fetchImpl });
+    return await callModel({ url: target.url, apiKey: target.apiKey, model: target.model, messages, effort, json, budgetScale, fetchImpl, deadline });
   } catch (error) {
-    if (!fallback?.apiKey || target.provider !== 'openai' || !isFallbackable(error)) throw error;
+    if (Date.now() >= deadline || !fallback?.apiKey || target.provider !== 'openai' || !isFallbackable(error)) throw error;
     if (onFallback) onFallback();
-    return await callModel({ url: fallback.url, apiKey: fallback.apiKey, model: fallback.model, messages, effort, json, budgetScale, fetchImpl });
+    return await callModel({ url: fallback.url, apiKey: fallback.apiKey, model: fallback.model, messages, effort, json, budgetScale, fetchImpl, deadline });
   }
 }

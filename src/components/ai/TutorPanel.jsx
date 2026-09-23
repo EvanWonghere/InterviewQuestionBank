@@ -10,7 +10,17 @@ const POLICY_OPTIONS = [
   { value: 'balanced', label: '均衡', detail: '容易的提问使用 DeepSeek，中等的提问使用 Luna。评估、报告、出题仍使用 DeepSeek。高难或强推理使用 Sol。' },
   { value: 'conservative', label: '实时对话优先 OpenAI', detail: '容易和中等的提问使用 Luna。评估、报告、出题仍使用 DeepSeek。高难或强推理使用 Sol。' },
 ];
+const PROBE_NAMES = { deepseek: 'DeepSeek', luna: 'Luna', sol: 'Sol', jev: 'Jev' };
 const quickPrompts = ['给我一个提示', '检查我的思路', '解释背后的机制', '联系Unity项目', '用C#和C++对照', '像面试官一样追问', '出一道变式，先不告诉我答案'];
+
+function describeProbes(probes) {
+  return probes.map((probe) => {
+    const name = PROBE_NAMES[probe.id] ?? probe.id;
+    if (probe.status === 'ok') return `${name} ${probe.model} 可用`;
+    if (probe.status === 'untested') return `${name} 未测试${probe.reason ? `（${probe.reason}）` : ''}`;
+    return `${name} ${probe.model} 失败：${probe.error}`;
+  }).join('；');
+}
 
 function copyLabel(copied, id) {
   return copied === id ? '已复制' : '复制';
@@ -153,9 +163,13 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const configure = async action => {
     setSettingsBusy(true); setError('');
     try {
-      await aiRequest({ action, reasoningEffort: settings.reasoningEffort, creditPolicy: settings.creditPolicy });
-      if (alive.current) setNotice(action === 'test' ? '连接成功（仅发送固定测试文本）' : '设置已保存');
-    } catch (e) { if (alive.current) setError(e.message); }
+      const result = await aiRequest({ action, reasoningEffort: settings.reasoningEffort, creditPolicy: settings.creditPolicy });
+      if (alive.current && action === 'test') {
+        const detail = Array.isArray(result.probes) ? describeProbes(result.probes) : '';
+        if (result.ok === false) setError(detail || '连接测试未通过');
+        else setNotice(`连接成功（仅发送固定测试文本）${detail ? `。${detail}` : ''}`);
+      } else if (alive.current) setNotice('设置已保存');
+    } catch (e) { if (alive.current) setError(Array.isArray(e.probes) ? describeProbes(e.probes) : e.message); }
     finally { if (alive.current) setSettingsBusy(false); }
   };
   const clear = async () => {
@@ -193,6 +207,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         <label>思考强度<select className="input-apple" value={settings.reasoningEffort} onChange={e => setSettings(s => ({ ...s, reasoningEffort: e.target.value }))}>{Object.entries(EFFORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
+        <p className="type-caption">连接测试分别调用 DeepSeek、Luna 和 Sol，并逐项显示结果。Jev 显示为未测试。仅发送固定测试文本，可能产生三次少量调用费用。</p>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}
       <details className="my-3"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；本题最近一次 AI 评估的结论（分轮次标注，教练不能据此改分）；' : '不发送参考解析，也不发送 AI 评估结论；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>

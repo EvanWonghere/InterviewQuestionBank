@@ -31,6 +31,7 @@ export async function aiRequest(input, { signal } = {}) {
     const error = new Error(detail.error || detail.message || fallback[response.status] || `服务请求失败（HTTP ${response.status}），请稍后核对结果。`);
     error.status = response.status;
     error.settled = detail.settled === true;
+    if (Array.isArray(detail.probes)) error.probes = detail.probes;
     throw error;
   }
   if (input.action !== 'chat') return response.json();

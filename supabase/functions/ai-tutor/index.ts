@@ -3,9 +3,9 @@ import { validateChat, buildContext, HISTORY_TURNS } from './core.js';
 import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeaknessQuestions, handleWeaknessReport, latestEvaluationSummary } from './evaluate.ts';
 import { modelFailure } from './modelErrors.js';
 import { MODEL_TIMEOUT_MS, normalizeEffort, REASONING_EFFORTS } from './modelOptions.js';
-import { callModel as callModelWith, canProviderFallback, iterateChatEvents, openChatStream } from './modelClient.js';
+import { canProviderFallback, iterateChatEvents, openChatStream, requestDeadline } from './modelClient.js';
 import { insertPedagogyNote, pedagogyNote } from './pedagogy.js';
-import { completeTutorText, CREDIT_POLICIES, effectivePolicy, planInteractiveTurn, planTaskTurn, publicRouting, routedCall } from './router.js';
+import { completeTutorText, CREDIT_POLICIES, describeConnectionProbes, effectivePolicy, planInteractiveTurn, planTaskTurn, publicRouting, routedCall, testModelConnections } from './router.js';
 import { handleLab } from './labs.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
@@ -34,12 +34,13 @@ export async function handleRequest(req: Request, factory = createClient) {
   const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
+  const deadline = requestDeadline();
   if (typeof action === 'string' && action.startsWith('lab-')) {
    const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
    const policy = settings?.credit_policy;
    return await handleLab(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
-    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort }) : undefined});
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
   }
   if (action === 'settings') {
    const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
@@ -62,9 +63,11 @@ export async function handleRequest(req: Request, factory = createClient) {
    must(await db.rpc('ai_take_rate',{p_user:uid}));
    // Same thinking mode, budget and timeout as real generation, so a passing test predicts real behaviour.
    try {
-    await callModelWith({ url: probe.catalog.deepseek.url, apiKey: probe.catalog.deepseek.apiKey, model: probe.catalog.deepseek.model, messages: [{role:'user',content:'Reply with OK.'}], effort });
-    if (probe.catalog.luna.apiKey) await callModelWith({ url: probe.catalog.luna.url, apiKey: probe.catalog.luna.apiKey, model: probe.catalog.luna.model, messages: [{role:'user',content:'Reply with OK.'}], effort });
-    return json({ok:true});
+    const report = await testModelConnections({ catalog: probe.catalog, effort, deadline });
+    const testedModels = report.probes.filter((probe) => probe.status === 'ok').map((probe) => probe.model);
+    const body = { ok: report.ok, probes: report.probes, testedModels };
+    if (!report.ok) return json({ ...body, error: describeConnectionProbes(report.probes) }, report.status);
+    return json(body);
    }
    catch(error) {
     const failure=modelFailure(error); return json(failure,failure.status);
@@ -90,7 +93,7 @@ export async function handleRequest(req: Request, factory = createClient) {
    const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    if(!env('AI_API_KEY')) return json({error:'尚未设置服务端 AI_API_KEY'},503);
    const planned=planTaskTurn({ env, action, policy: settings?.credit_policy });
-   const routed=routedCall({ target: planned.target, fallback: planned.fallback, effort: normalizeEffort(settings?.reasoning_effort) });
+   const routed=routedCall({ target: planned.target, fallback: planned.fallback, effort: normalizeEffort(settings?.reasoning_effort), deadline });
    routed.execution.tier=planned.route.tier;
    const ctx={uid,client,db,model:planned.target.model,json,must,callModel:routed.callModel};
    const table=action==='evaluate' ? 'ai_evaluations' : action==='interview-report' || action==='weakness-report' ? 'ai_reports' : null;

@@ -1,7 +1,7 @@
 // Provider-specific request fields. Other OpenAI-compatible providers must not receive DeepSeek fields.
 export const REASONING_EFFORTS = ['none', 'low', 'high', 'max'];
 export const DEFAULT_REASONING_EFFORT = 'high';
-// Server wait for one model call (streaming or not). Stale-run cutoffs in SQL must stay above this.
+// Shared generation budget, including routing and provider fallback. Below client 120s and SQL 150s cutoffs.
 export const MODEL_TIMEOUT_MS = 90000;
 
 const hostOf = (url) => { try { return new URL(url).hostname; } catch { return ''; } };

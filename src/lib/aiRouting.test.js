@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { callRoutedModel, canProviderFallback, iterateChatEvents } from '../../supabase/functions/ai-tutor/modelClient.js';
 import { clampDecision, decisionFromAnswers, defaultDecision, pedagogyNote, systemOneUrl } from '../../supabase/functions/ai-tutor/pedagogy.js';
-import { effectivePolicy, resolveTarget, selectRoute } from '../../supabase/functions/ai-tutor/router.js';
+import { effectivePolicy, planTaskTurn, testModelConnections, resolveTarget, selectRoute } from '../../supabase/functions/ai-tutor/router.js';
 
 const catalog = {
   deepseek: { provider: 'deepseek', model: 'deepseek-flash', apiKey: 'd', url: 'https://api.deepseek.com/v1/chat/completions' },
@@ -10,6 +10,19 @@ const catalog = {
 };
 
 describe('credit routing', () => {
+  const policies = ['aggressive', 'balanced', 'conservative'];
+  const actions = ['evaluate', 'interview-report', 'weakness-report', 'draft-question', 'draft-weakness-questions'];
+  it.each(policies.flatMap(policy => actions.map(action => [policy, action])))('%s / %s uses DeepSeek as described in settings', (policy, action) => {
+    const env = key => ({ AI_API_KEY: 'synthetic', OPENAI_API_KEY: 'synthetic', AI_ALLOWED_ORIGINS: 'https://api.deepseek.com,https://api.openai.com' })[key] || '';
+    expect(planTaskTurn({ env, policy, action }).target.provider).toBe('deepseek');
+  });
+  it.each(policies)('%s still prioritizes strong reasoning when explicitly classified', policy => {
+    for (const task of ['interactive', 'evaluation', 'summary', 'batch']) {
+      expect(selectRoute({ policy, task, difficulty: 'hard' }).slot).toBe('sol');
+      expect(selectRoute({ policy, task, needsStrongReasoning: true }).slot).toBe('sol');
+    }
+  });
+
   it('keeps hard turns off DeepSeek even when spending DeepSeek credits first', () => {
     expect(selectRoute({ policy: 'aggressive', task: 'interactive', difficulty: 'hard' })).toEqual({ tier: 'reasoning', slot: 'sol' });
     expect(selectRoute({ policy: 'aggressive', task: 'interactive', difficulty: 'easy', needsStrongReasoning: true }).slot).toBe('sol');
@@ -25,7 +38,7 @@ describe('credit routing', () => {
     expect(selectRoute({ policy: 'balanced', task: 'interactive', difficulty: 'easy' }).slot).toBe('deepseek');
     expect(selectRoute({ policy: 'balanced', task: 'interactive', difficulty: 'medium' }).slot).toBe('luna');
     expect(selectRoute({ policy: 'conservative', task: 'interactive', difficulty: 'easy' }).slot).toBe('luna');
-    expect(selectRoute({ policy: 'conservative', task: 'evaluation', difficulty: 'medium' }).slot).toBe('luna');
+    expect(selectRoute({ policy: 'conservative', task: 'evaluation', difficulty: 'medium' }).slot).toBe('deepseek');
     expect(selectRoute({ policy: 'conservative', task: 'batch', difficulty: 'medium' }).slot).toBe('deepseek');
     expect(selectRoute({ policy: 'aggressive', task: 'summary', difficulty: 'medium' }).slot).toBe('deepseek');
   });
@@ -93,5 +106,46 @@ describe('provider fallback', () => {
     for await (const event of iterateChatEvents(body)) events.push(event);
     expect(events).toEqual([{ text: '可见', thinking: true, finishReason: null }]);
     expect(JSON.stringify(events)).not.toContain('secret');
+  });
+});
+
+describe('connection probe covers all generation routes', () => {
+  it('calls DeepSeek, Luna and Sol directly and marks Jev untested', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
+    const report = await testModelConnections({ catalog, effort: 'high', fetchImpl });
+    expect(report.ok).toBe(true);
+    expect(report.probes.map((probe) => [probe.id, probe.status])).toEqual([
+      ['deepseek', 'ok'], ['luna', 'ok'], ['sol', 'ok'], ['jev', 'untested'],
+    ]);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl.mock.calls.map(([, request]) => JSON.parse(request.body).reasoning_effort)).toEqual(['high', 'high', 'high']);
+    expect(fetchImpl.mock.calls.map(([, request]) => JSON.parse(request.body).model)).toEqual(['deepseek-flash', 'gpt-6-luna', 'gpt-6-sol']);
+  });
+  it('keeps the other results when only Sol fails and does not fall back', async () => {
+    const fetchImpl = vi.fn(async (_, request) => JSON.parse(request.body).model === 'gpt-6-sol'
+      ? new Response('{}', { status: 403 })
+      : new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
+    const report = await testModelConnections({ catalog, effort: 'high', fetchImpl });
+    expect(report.ok).toBe(false);
+    expect(report.status).toBe(502);
+    expect(report.probes.find((probe) => probe.id === 'sol')).toMatchObject({ status: 'failed' });
+    expect(report.probes.find((probe) => probe.id === 'luna').status).toBe('ok');
+    expect(report.probes.find((probe) => probe.id === 'jev').status).toBe('untested');
+    expect(fetchImpl.mock.calls.map(([, request]) => JSON.parse(request.body).model)).toEqual(['deepseek-flash', 'gpt-6-luna', 'gpt-6-sol']);
+  });
+  it('reports Luna and Sol as untested when the OpenAI key is missing', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] })));
+    const withoutOpenAI = {
+      ...catalog,
+      luna: { ...catalog.luna, apiKey: '' },
+      sol: { ...catalog.sol, apiKey: '' },
+    };
+    const report = await testModelConnections({ catalog: withoutOpenAI, effort: 'high', fetchImpl });
+    expect(report.ok).toBe(false);
+    expect(report.status).toBe(503);
+    expect(report.probes.map((probe) => [probe.id, probe.status])).toEqual([
+      ['deepseek', 'ok'], ['luna', 'untested'], ['sol', 'untested'], ['jev', 'untested'],
+    ]);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

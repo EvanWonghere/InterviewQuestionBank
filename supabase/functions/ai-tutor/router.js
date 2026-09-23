@@ -1,5 +1,6 @@
 import { endpoint } from './core.js';
-import { callRoutedModel } from './modelClient.js';
+import { callModel, callRoutedModel, requestDeadline } from './modelClient.js';
+import { modelFailure } from './modelErrors.js';
 import { decidePedagogy, insertPedagogyNote, pedagogyNote } from './pedagogy.js';
 
 export const CREDIT_POLICIES = ['aggressive', 'balanced', 'conservative'];
@@ -69,12 +70,12 @@ export function publicRouting(env) {
 
 /**
  * Hard reasoning never stays on DeepSeek just to spend credits.
- * Batch and summary tasks stay on DeepSeek unless the turn is already judged hard.
+ * Evaluation, batch and summary tasks stay on DeepSeek unless the turn is already judged hard.
  */
 export function selectRoute({ policy = 'aggressive', task, difficulty = 'medium', needsStrongReasoning = false }) {
   const mode = normalizePolicy(policy);
   if (difficulty === 'hard' || needsStrongReasoning) return { tier: 'reasoning', slot: 'sol' };
-  if (task === 'batch' || task === 'summary') return { tier: 'fast', slot: 'deepseek' };
+  if (task === 'evaluation' || task === 'batch' || task === 'summary') return { tier: 'fast', slot: 'deepseek' };
   if (mode === 'conservative') return { tier: 'default', slot: 'luna' };
   if (mode === 'balanced') return difficulty === 'easy' ? { tier: 'fast', slot: 'deepseek' } : { tier: 'default', slot: 'luna' };
   return { tier: 'fast', slot: 'deepseek' };
@@ -129,7 +130,7 @@ export function planTaskTurn({ env, action, policy = undefined }) {
   return { catalog, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export async function completeTutorText({ env, policy = undefined, phase, message, subject, recent, messages, effort, fetchImpl = fetch }) {
+export async function completeTutorText({ env, policy = undefined, phase, message, subject, recent, messages, effort, fetchImpl = fetch, deadline = requestDeadline() }) {
   const plan = await planInteractiveTurn({ env, policy, phase, message, subject, recent, fetchImpl });
   const noted = insertPedagogyNote(messages, pedagogyNote(plan.decision.pedagogyAction, phase));
   const execution = { model: plan.target.model, provider: plan.target.provider, tier: plan.route.tier, fallbackUsed: false };
@@ -139,6 +140,7 @@ export async function completeTutorText({ env, policy = undefined, phase, messag
     messages: noted,
     effort,
     fetchImpl,
+    deadline,
     onFallback() {
       execution.model = plan.fallback.model;
       execution.provider = plan.fallback.provider;
@@ -148,7 +150,7 @@ export async function completeTutorText({ env, policy = undefined, phase, messag
   return { body, decision: plan.decision, execution };
 }
 
-export function routedCall({ target, fallback, effort }) {
+export function routedCall({ target, fallback, effort, deadline = requestDeadline() }) {
   /** @type {{ model: string, provider: string, tier: string | null, fallbackUsed: boolean }} */
   const execution = { model: target.model, provider: target.provider, tier: null, fallbackUsed: false };
   const callModelForTask = (messages, options = {}) => callRoutedModel({
@@ -156,6 +158,7 @@ export function routedCall({ target, fallback, effort }) {
     fallback,
     messages,
     effort,
+    deadline,
     json: true,
     budgetScale: options.budgetScale ?? 1,
     onFallback() {
@@ -165,4 +168,49 @@ export function routedCall({ target, fallback, effort }) {
     },
   });
   return { execution, callModel: callModelForTask };
+}
+
+const PROBE_NAMES = { deepseek: 'DeepSeek', luna: 'Luna', sol: 'Sol', jev: 'Jev' };
+
+export function describeConnectionProbes(probes) {
+  return probes.map((probe) => {
+    const name = PROBE_NAMES[probe.id] ?? probe.id;
+    if (probe.status === 'ok') return `${name} ${probe.model} 可用`;
+    if (probe.status === 'untested') return `${name} 未测试${probe.reason ? `（${probe.reason}）` : ''}`;
+    return `${name} ${probe.model} 失败：${probe.error}`;
+  }).join('；');
+}
+
+async function probeTarget(target, effort, deadline, fetchImpl) {
+  try {
+    await callModel({ ...target, messages: [{ role: 'user', content: 'Reply with OK.' }], effort, deadline, fetchImpl });
+    return { id: target.slot, model: target.model, status: 'ok' };
+  } catch (error) {
+    return { id: target.slot, model: target.model, status: 'failed', error: modelFailure(error, target.provider).error };
+  }
+}
+
+/**
+ * Probe each generation model on its own. A broken Sol must not be hidden by Luna or by fallback.
+ * Jev is reported as untested. A missing OpenAI key leaves Luna and Sol untested instead of skipping the report.
+ */
+export async function testModelConnections({ catalog, effort, deadline = requestDeadline(), fetchImpl = fetch }) {
+  if (!catalog.deepseek.apiKey) throw new Error('missing_deepseek_key');
+  const missingOpenAI = '未配置 OPENAI_API_KEY';
+  const jobs = [
+    catalog.deepseek.apiKey
+      ? probeTarget({ ...catalog.deepseek, slot: 'deepseek' }, effort, deadline, fetchImpl)
+      : Promise.resolve({ id: 'deepseek', model: catalog.deepseek.model, status: 'untested', reason: '未配置 AI_API_KEY' }),
+    catalog.luna.apiKey
+      ? probeTarget({ ...catalog.luna, slot: 'luna' }, effort, deadline, fetchImpl)
+      : Promise.resolve({ id: 'luna', model: catalog.luna.model, status: 'untested', reason: missingOpenAI }),
+    catalog.sol.apiKey
+      ? probeTarget({ ...catalog.sol, slot: 'sol' }, effort, deadline, fetchImpl)
+      : Promise.resolve({ id: 'sol', model: catalog.sol.model, status: 'untested', reason: missingOpenAI }),
+    Promise.resolve({ id: 'jev', model: 'jev-latest', status: 'untested', reason: '连接测试不调用 Jev' }),
+  ];
+  const probes = await Promise.all(jobs);
+  const ok = probes.every((probe) => probe.id === 'jev' || probe.status === 'ok');
+  const status = probes.some((probe) => probe.status === 'failed') ? 502 : ok ? 200 : 503;
+  return { ok, status, probes };
 }
