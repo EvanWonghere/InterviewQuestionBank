@@ -59,5 +59,5 @@ Pushes to `main` run lint, unit tests and the Vite build, then copy `dist/` to t
 ## Cloud and non-macOS environments
 
 - `playwright.config.js` uses Playwright's bundled Chromium unless `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` is set; run `npx playwright install chromium` first.
-- `playwright.ai.config.js` hard-codes the macOS Google Chrome path, so `npm run test:ai-e2e` only runs on the owner's Mac. Say so instead of reporting it as passed.
+- `playwright.ai.config.js` uses `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, else the macOS Google Chrome when present, else the bundled Chromium, so `npm run test:ai-e2e` also runs after `npx playwright install chromium`. Say which browser the run used.
 - `test:ai-edge` needs Deno. Supabase CLI actions need a linked project and credentials that cloud sessions do not have.
