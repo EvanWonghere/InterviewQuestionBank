@@ -95,10 +95,12 @@ function beginFailure(error:unknown,json:Context['json']){
 export async function handleMusic(input:any,ctx:Context){
  const {uid,db,json}=ctx;
  try{
+  // History and replayed context are scoped to the current catalog version, so an edited lesson
+  // never continues an explanation written against its previous content.
   if(input.action==='music-history'){
    const subject=validateSubject(input,{requireVersion:false});
    must(await db.from('music_messages').update({status:'failed',body:'请求未在期限内完成；可手动发起新请求。'}).eq('user_id',uid).eq('status','running').lt('created_at',new Date(Date.now()-150000).toISOString()));
-   const rows=must(await db.from('music_messages').select('request_id,role,body,status,subject_version,context_hash,model,created_at').eq('user_id',uid).eq('kind',subject.kind).eq('subject_id',subject.subjectId).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(100));
+   const rows=must(await db.from('music_messages').select('request_id,role,body,status,subject_version,context_hash,model,created_at').eq('user_id',uid).eq('kind',subject.kind).eq('subject_id',subject.subjectId).eq('subject_version',subject.subjectVersion).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(100));
    return json({messages:(rows??[]).reverse()});
   }
   if(input.action==='music-clear'){
@@ -112,7 +114,7 @@ export async function handleMusic(input:any,ctx:Context){
   const subject=validateSubject(input);
   const context=musicContext(subject.kind,input.context);
   const hash=await contextHash({kind:subject.kind,subjectId:subject.subjectId,subjectVersion:subject.subjectVersion,message:input.message,context});
-  const rows=must(await db.from('music_messages').select('request_id,role,body,status').eq('user_id',uid).eq('kind',subject.kind).eq('subject_id',subject.subjectId).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(40));
+  const rows=must(await db.from('music_messages').select('request_id,role,body,status').eq('user_id',uid).eq('kind',subject.kind).eq('subject_id',subject.subjectId).eq('subject_version',subject.subjectVersion).order('created_at',{ascending:false}).order('role',{ascending:true}).limit(40));
   const history=musicHistory((rows??[]).reverse());
   const messages=musicMessages(subject.kind,subject.lesson,context,input.message,history.messages);
   if(!ctx.completeTutorText&&(!ctx.callModel||!ctx.model))return json({error:'请先配置服务端 AI_API_KEY',settled:true},503);
