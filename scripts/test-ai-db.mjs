@@ -185,6 +185,15 @@ assert.equal((await db.query(`select status from music_messages where request_id
 assert.equal((await db.query(`select music_clear($1,'lesson','pitch') as n`,[a])).rows[0].n,2);
 assert.equal((await db.query(`select count(*)::int as n from music_messages where subject_id='pitch'`)).rows[0].n,2);
 assert.equal((await db.query(`select count(*)::int as n from music_messages where subject_id='draft'`)).rows[0].n,2);
+// Arrangement proposals: stored payload, size limit, and the same dedup on retry.
+await db.exec(`update music_messages set status='complete' where status='running';`);
+const arr=await music(40,{kind:'arrangement',subject:'arr-test',version:hash('d')});
+assert.equal(arr.duplicate,false);
+await db.query(`update music_messages set status='complete',body='summary',payload=$1 where request_id=$2 and role='assistant'`,[JSON.stringify({ops:[{type:'setMeta',tempo:90}]}),req(540)]);
+const again40=await music(40,{kind:'arrangement',subject:'arr-test',version:hash('d')});
+assert.equal(again40.duplicate,true);assert.equal(again40.message.payload.ops[0].tempo,90);
+await assert.rejects(()=>db.query(`update music_messages set payload=$1 where request_id=$2 and role='assistant'`,[JSON.stringify({big:'x'.repeat(70000)}),req(540)]),/check constraint/);
+await db.query(`delete from music_messages where subject_id='arr-test'`);
 // RLS: owner admin reads, other users and anon do not, nobody writes directly.
 await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
 assert.equal((await db.query('select * from music_messages')).rows.length,4);
