@@ -93,8 +93,9 @@ export function beginFailure(error:unknown,json:Context['json']){
  const text=String(error);
  if(text.includes('generation_busy'))return json({error:'还有进行中的音乐助手请求，请稍后核对历史',settled:true},409);
  if(text.includes('rate_limit'))return json({error:'请求过于频繁，一分钟最多10次',settled:true},429);
+ if(text.includes('daily_limit'))return json({error:'今天的 AI 次数已用完，北京时间零点恢复',settled:true},429);
  if(text.includes('request_context_conflict'))return json({error:'这个请求 ID 已用于不同的内容；原记录已保留，请发起新请求',settled:true,conflict:true},409);
- if(text.includes('admin_required'))return json({error:'仅管理员可用',settled:true},403);
+ if(text.includes('admin_required'))return json({error:'当前账号没有音乐 AI 的使用权限',settled:true},403);
  return json({error:'请求状态暂未确认，请用相同请求 ID 核对历史',settled:false},409);
 }
 
@@ -141,8 +142,8 @@ export async function handleMusic(input:any,ctx:Context){
     body=result.body;execution=result.execution;decision=result.decision;
    }else body=await ctx.callModel!(messages);
    if(ctx.authorize&&!await ctx.authorize()){
-    must(await db.from('music_messages').update({body:'管理员权限已撤销，未返回模型结果',status:'failed'}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running'));
-    return json({error:'管理员权限已撤销',settled:true},403);
+    must(await db.from('music_messages').update({body:'使用权限已撤销，未返回模型结果',status:'failed'}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running'));
+    return json({error:'使用权限已撤销',settled:true},403);
    }
    const saved=must(await db.from('music_messages').update({body,status:'complete'}).eq('user_id',uid).eq('request_id',input.requestId).eq('role','assistant').eq('status','running').select('body'));
    if(!saved?.length)return json({error:'请求状态已改变，请核对历史',settled:false},409);

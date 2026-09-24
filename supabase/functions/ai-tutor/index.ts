@@ -22,6 +22,15 @@ async function saveRouting(db: { from: (table: string) => any }, table: string, 
   console.error('routing metadata not saved', error instanceof Error ? error.message : 'unknown');
  }
 }
+/** What ai_access() says the caller may use; anything unexpected means no access. */
+function readAccess(result: { data: unknown; error: unknown }) {
+ const data = result.error ? null : result.data as { admin?: unknown; scopes?: unknown } | null;
+ if (!data || typeof data !== 'object') return { admin: false, scopes: [] as string[] };
+ return { admin: data.admin === true, scopes: Array.isArray(data.scopes) ? data.scopes.filter((s): s is string => typeof s === 'string') : [] };
+}
+// Actions a non-administrator member may call, by scope. Everything else stays administrator-only.
+const MEMBER_SCOPE = (action: unknown) => typeof action === 'string' && action.startsWith('music-') ? 'music' : null;
+
 export async function handleRequest(req: Request, factory = createClient) {
  if (req.method === 'OPTIONS') return new Response(null, { headers });
  if (req.method !== 'POST') return json({ error: 'POST required' },405);
@@ -31,12 +40,13 @@ export async function handleRequest(req: Request, factory = createClient) {
   const client = factory(env('SUPABASE_URL'),env('SUPABASE_ANON_KEY'),{ global:{headers:{Authorization:`Bearer ${token}`}}, auth:{persistSession:false} });
   const auth = await client.auth.getUser(token);
   if (auth.error || !auth.data.user) return json({error:'登录已失效'},401);
-  const admin = await client.rpc('is_app_admin');
-  if (admin.error || admin.data !== true) return json({error:'仅管理员可用'},403);
-  const uid = auth.data.user.id;
-  const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
+  const access = readAccess(await client.rpc('ai_access'));
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
+  const scope = MEMBER_SCOPE(action);
+  if (!access.admin && !(scope && access.scopes.includes(scope))) return json({error:'仅管理员可用'},403);
+  const uid = auth.data.user.id;
+  const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
   const deadline = requestDeadline();
   if (typeof action === 'string' && action.startsWith('lab-')) {
    const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
@@ -48,20 +58,22 @@ export async function handleRequest(req: Request, factory = createClient) {
   if (typeof action === 'string' && action.startsWith('music-')) {
    const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
-   const policy = settings?.credit_policy;
-   const authorize = async () => { const permission = await client.rpc('is_app_admin'); return !permission.error && permission.data === true; };
+   // Members use the cheapest routing, and hard turns stop at Luna; administrators keep their settings.
+   const policy = access.admin ? settings?.credit_policy : 'aggressive';
+   const maxSlot = access.admin ? undefined : 'luna';
+   const authorize = async () => { const now = readAccess(await client.rpc('ai_access')); return now.admin || now.scopes.includes('music'); };
    if (action === 'music-arrange' || action === 'music-strudel') {
     // Structured proposals and snippets use the task route (JSON output), like question drafting.
     const callTask = env('AI_API_KEY') ? () => {
-     const planned = planTaskTurn({ env, action, policy });
+     const planned = planTaskTurn({ env, action, policy, maxSlot });
      const routed = routedCall({ target: planned.target, fallback: planned.fallback, effort, deadline });
      routed.execution.tier = planned.route.tier;
      return routed;
     } : undefined;
     return await (action === 'music-arrange' ? handleArrange : handleStrudel)(input, { uid, db, json, authorize, callTask });
    }
-   return await handleMusic(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
-    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
+   return await handleMusic(input,{uid,db,json,model:'pending',authorize,
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, maxSlot, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
   }
   if (action === 'settings') {
    const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
@@ -203,6 +215,7 @@ export async function handleRequest(req: Request, factory = createClient) {
   const text=error instanceof Error?error.message:'';
   if(text.includes('note_conflict'))return json({error:'笔记已更改或尚未同步；请保留编辑内容，刷新笔记后再追加'},409);
   if(text.includes('rate_limit'))return json({error:'请求过于频繁，一分钟最多10次'},429);
+  if(text.includes('daily_limit'))return json({error:'今天的 AI 次数已用完，北京时间零点恢复'},429);
   if(text.includes('generation_busy'))return json({error:'本题还有生成中的请求，请停止或稍后刷新'},409);
   if(text==='missing_openai_key'||text==='missing_deepseek_key'||text.startsWith('API必须使用服务端允许的HTTPS域名')){const failure=modelFailure(error);return json(failure,failure.status);}
   if(text.includes('followup_invalid'))return json({error:'追问已回答、已达轮次上限或不属于本题，请刷新后重试'},400);

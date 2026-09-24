@@ -72,9 +72,10 @@ export function publicRouting(env) {
  * Hard reasoning never stays on DeepSeek just to spend credits.
  * Evaluation, batch and summary tasks stay on DeepSeek unless the turn is already judged hard.
  */
-export function selectRoute({ policy = 'aggressive', task, difficulty = 'medium', needsStrongReasoning = false }) {
+export function selectRoute({ policy = 'aggressive', task, difficulty = 'medium', needsStrongReasoning = false, maxSlot = /** @type {string | undefined} */ (undefined) }) {
   const mode = normalizePolicy(policy);
-  if (difficulty === 'hard' || needsStrongReasoning) return { tier: 'reasoning', slot: 'sol' };
+  // Members (maxSlot 'luna') never reach the reasoning model; hard turns stay on Luna.
+  if (difficulty === 'hard' || needsStrongReasoning) return maxSlot === 'luna' ? { tier: 'default', slot: 'luna' } : { tier: 'reasoning', slot: 'sol' };
   if (task === 'evaluation' || task === 'batch' || task === 'summary') return { tier: 'fast', slot: 'deepseek' };
   if (mode === 'conservative') return { tier: 'default', slot: 'luna' };
   if (mode === 'balanced') return difficulty === 'easy' ? { tier: 'fast', slot: 'deepseek' } : { tier: 'default', slot: 'luna' };
@@ -109,7 +110,7 @@ function assertKeys(catalog, target) {
   if (target.provider === 'openai' && !target.apiKey) throw new Error('missing_openai_key');
 }
 
-export async function planInteractiveTurn({ env, policy = undefined, phase, message, subject, recent, fetchImpl = fetch }) {
+export async function planInteractiveTurn({ env, policy = undefined, maxSlot = /** @type {string | undefined} */ (undefined), phase, message, subject, recent, fetchImpl = fetch }) {
   const catalog = providerCatalog(env);
   if (!catalog.deepseek.apiKey) throw new Error('missing_deepseek_key');
   const decision = await decidePedagogy({ jev: catalog.jev, phase, message, subject, recent, fetchImpl });
@@ -118,22 +119,23 @@ export async function planInteractiveTurn({ env, policy = undefined, phase, mess
     task: 'interactive',
     difficulty: decision.difficulty,
     needsStrongReasoning: decision.needsStrongReasoning,
+    maxSlot,
   });
   const target = resolveTarget(route, catalog);
   assertKeys(catalog, target);
   return { decision, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export function planTaskTurn({ env, action, policy = undefined }) {
+export function planTaskTurn({ env, action, policy = undefined, maxSlot = /** @type {string | undefined} */ (undefined) }) {
   const catalog = providerCatalog(env);
-  const route = selectRoute({ policy: effectivePolicy(policy, catalog.policy), task: taskForAction(action), difficulty: 'medium', needsStrongReasoning: false });
+  const route = selectRoute({ policy: effectivePolicy(policy, catalog.policy), task: taskForAction(action), difficulty: 'medium', needsStrongReasoning: false, maxSlot });
   const target = resolveTarget(route, catalog);
   assertKeys(catalog, target);
   return { catalog, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export async function completeTutorText({ env, policy = undefined, phase, message, subject, recent, messages, effort, fetchImpl = fetch, deadline = requestDeadline() }) {
-  const plan = await planInteractiveTurn({ env, policy, phase, message, subject, recent, fetchImpl });
+export async function completeTutorText({ env, policy = undefined, maxSlot = /** @type {string | undefined} */ (undefined), phase, message, subject, recent, messages, effort, fetchImpl = fetch, deadline = requestDeadline() }) {
+  const plan = await planInteractiveTurn({ env, policy, maxSlot, phase, message, subject, recent, fetchImpl });
   const noted = insertPedagogyNote(messages, pedagogyNote(plan.decision.pedagogyAction, phase));
   const execution = { model: plan.target.model, provider: plan.target.provider, tier: plan.route.tier, fallbackUsed: false };
   const body = await callRoutedModel({
