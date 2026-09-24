@@ -2,7 +2,7 @@
 // operations for the arrangement document; they are validated and dry-run here with the same
 // modules the page uses (copied into ./arrangement by the blog's export script) and are only
 // applied when the administrator accepts them on the page.
-import { validateDocument, OPS, ROLES, ROOTS, VOICINGS, LIMITS, METERS, MAJOR_KEYS, MINOR_KEYS, INSTRUMENT_IDS } from './arrangement/arrangement-schema.mjs';
+import { validateDocument, OPS, ROLES, ROOTS, VOICINGS, LIMITS, METERS, MAJOR_KEYS, MINOR_KEYS, INSTRUMENT_IDS, INSTRUMENT_NAMES } from './arrangement/arrangement-schema.mjs';
 import { applyOps, docHash } from './arrangement/arrangement.mjs';
 import { STYLES } from './arrangement/arrange-styles.mjs';
 import { CHORD_TYPES } from './arrangement/harmony.mjs';
@@ -43,7 +43,7 @@ export function arrangeSpec() {
     '字段说明：section/track 用文档里已有的 id；from、to、at、beats 以四分音符为一拍、须是 0.25 的倍数，位置从段落开头算起；setChords 用新和弦替换 [from, to) 范围，新和弦须位于该范围内且互不重叠；chords 中每项为 {at, beats, root, type, bass?, inversion?, voicing?}；setClipNotes 的 events 中每项为 {at, beats, pitch(21–108 的 MIDI 音高), spelling?(如 "E♭4"), vel?}，会整体替换该片段；transpose 的 semitones 为 ±1–12；addSection 的 after 是放在其后的段落 id，copyFrom 可复制和弦与片段。',
     `根音只能用：${ROOTS.join(' ')}`,
     `和弦性质 type 只能用：${CHORD_TYPES.map((t: any) => `${t.id}(${t.symbol || '大三'})`).join(' ')}`,
-    `配置 voicing：${Object.keys(VOICINGS).join('|')}；声部类型 role：${Object.keys(ROLES).join('|')}；音色 instrument：${INSTRUMENT_IDS.join('|')}；拍号：${METERS.join('|')}`,
+    `配置 voicing：${Object.keys(VOICINGS).join('|')}；声部类型 role：${Object.keys(ROLES).join('|')}；音色 instrument（每个声部按自己的音色播放；鼓组声部的音色不起作用）：${INSTRUMENT_IDS.map((id: string) => `${id}(${(INSTRUMENT_NAMES as Record<string, string>)[id]})`).join(' ')}；拍号：${METERS.join('|')}`,
     `大调可用调：${MAJOR_KEYS.join(' ')}；小调可用调：${MINOR_KEYS.join(' ')}`,
     `伴奏型 style（setClipStyle）：\n${styles}`,
     `限制：最多 ${LIMITS.ops} 项操作；每段最多 ${LIMITS.barsPerSection} 小节；全曲最多 ${LIMITS.bars} 小节；最多 ${LIMITS.tracks} 个声部；每个片段最多 ${LIMITS.notesPerClip} 个音符。`
