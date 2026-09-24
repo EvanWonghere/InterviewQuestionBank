@@ -93,6 +93,8 @@ npx supabase functions deploy ai-tutor
 - `homework` 走 `hint` 阶段路由（先提示、不代做），`lesson` 与 `composition` 走 `review`。
 - 迁移 `20260925000000_music_ai.sql`：`music_messages`（仅本人且仍是管理员可读，浏览器不能写）、`music_begin`、`music_clear`。同一 `requestId` 重发时，已完成返回原回复且不调模型，运行中返回 `settled: false`，已失败返回 `settled: true`；内容哈希不同返回 `request_context_conflict`。部分唯一索引保证每人同时只有一个进行中的音乐请求。与题库共用每分钟 10 次限额，但不互相阻塞。表中预留了后续编曲提案用的 `arrangement` 类型和 `payload` 列。
 - vibe 编曲：`music-arrange` 由 `musicArrange.ts` 处理，走任务路由（与出题相同的 `batch` 档，JSON 输出）。请求带整份编曲（≤24 KB）、范围、页面规则检查结果与描述；服务端用 `arrangement/` 中与页面相同的模块校验文档，要求模型只返回 `{summary, ops}`，并对 ops 试应用。不合格时把校验错误回给模型修正一次，仍不合格则记为失败、返回 422，不返回半成品。成功时 `music_messages` 的 assistant 行保存说明（body）与操作（payload），`subject_version` 是编曲内容的 SHA-256；同一 `requestId` 重发直接返回保存的提案。服务端不修改编曲，由页面预览并经管理员接受后应用。`music-history` 对 `arrangement` 不按版本过滤，并返回 payload。
+- AI 写 Strudel：`music-strudel` 由 `musicStrudel.ts` 处理，同样走 `batch` 任务路由。请求带当前即兴手稿（≤12000 字符）、`workId` 与描述；模型只返回 `{summary, code}`，`code` ≤6000 字符，并按博客沙箱离线可用的音色书写。服务端拒绝含网络、存储、页面对象、计时器、`samples()`、`eval`/`Function`、`import` 或网址的代码，修正一次仍不合格记为失败并返回 422。这只是纵深防御：代码在博客页面上只以文本显示，只有管理员点击试听时才在不透明来源的 `<iframe sandbox="allow-scripts">` 里运行，追加或替换手稿也由管理员决定。成功时 assistant 行保存说明（body）与代码（`payload.code`），`subject_version` 是手稿的 SHA-256；同一 `requestId` 重发返回保存的片段。`music-history`/`music-clear` 接受 `kind: 'strudel'`，历史不按版本过滤。
+- 迁移 `20260926000000_music_strudel.sql` 只把 `music_messages.kind` 的检查约束扩展为包含 `strudel`，不改表结构、函数或 RLS。须先于带 `music-strudel` 的函数部署；未应用时 `music_begin` 的插入被约束拒绝，该请求失败，不影响其他动作。
 - 发布顺序：先 `db push` 该迁移，再部署函数，再把 `https://yufenghuang.tech/study/music/` 加入 Auth 重定向白名单，最后在博客打开 `params.musicAI.enabled`。回退时先关博客开关；函数回退到上一版后 `music-*` 返回“未知操作”，不影响题库和实验室。
 
 ## 排错与验收边界

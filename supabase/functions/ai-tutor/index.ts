@@ -9,6 +9,7 @@ import { completeTutorText, CREDIT_POLICIES, describeConnectionProbes, effective
 import { handleLab } from './labs.ts';
 import { handleMusic } from './music.ts';
 import { handleArrange } from './musicArrange.ts';
+import { handleStrudel } from './musicStrudel.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -49,14 +50,15 @@ export async function handleRequest(req: Request, factory = createClient) {
    const effort = normalizeEffort(settings?.reasoning_effort);
    const policy = settings?.credit_policy;
    const authorize = async () => { const permission = await client.rpc('is_app_admin'); return !permission.error && permission.data === true; };
-   if (action === 'music-arrange') {
-    // Structured proposals use the task route (JSON output), like question drafting.
-    return await handleArrange(input, { uid, db, json, authorize, callTask: env('AI_API_KEY') ? () => {
+   if (action === 'music-arrange' || action === 'music-strudel') {
+    // Structured proposals and snippets use the task route (JSON output), like question drafting.
+    const callTask = env('AI_API_KEY') ? () => {
      const planned = planTaskTurn({ env, action, policy });
      const routed = routedCall({ target: planned.target, fallback: planned.fallback, effort, deadline });
      routed.execution.tier = planned.route.tier;
      return routed;
-    } : undefined });
+    } : undefined;
+    return await (action === 'music-arrange' ? handleArrange : handleStrudel)(input, { uid, db, json, authorize, callTask });
    }
    return await handleMusic(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
     completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
