@@ -258,4 +258,44 @@ await db.exec(`reset role;delete from app_admins where user_id='${a}';set role a
 assert.equal((await db.query('select * from music_works')).rows.length,0);
 await assert.rejects(()=>put('after'),/row-level security|policy/);
 await db.exec('reset role;');
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');
+// AI members: music-only access with a daily limit; administrators unchanged.
+await db.exec(await readFile(new URL('../supabase/migrations/20260928000000_ai_members.sql',import.meta.url),'utf8'));
+await db.exec(`insert into app_admins values('${a}') on conflict do nothing;update ai_settings set window_start=now()-interval '2 minutes',request_count=0;update music_messages set status='complete' where status='running';`);
+const access=async user=>{await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`);const r=(await db.query('select ai_access() as r')).rows[0].r;await db.exec('reset role;');return r;};
+const done=()=>db.exec(`update music_messages set status='complete' where status='running';`);
+assert.deepEqual(await access(b),{admin:false,scopes:[]});
+await assert.rejects(()=>music(60,{user:b}),/admin_required/,'not a member yet');
+await assert.rejects(()=>db.query(`select ai_begin($1,$2,'version',$3,'why','hint','model')`,[b,q,req(700)]),/admin_required/,'the quiz path stays closed at the SQL level');
+await assert.rejects(()=>db.query(`insert into ai_members(user_id,scopes) values($1,array['quiz'])`,[b]),/check constraint/);
+await db.query(`insert into ai_members(user_id,daily_limit,note) values($1,3,'friend')`,[b]);
+for(let i=61;i<=63;i++){assert.equal((await music(i,{user:b,subject:'pitch'})).duplicate,false);await done();}
+await assert.rejects(()=>music(64,{user:b}),/daily_limit/);
+assert.equal((await db.query(`select count(*)::int as n from music_messages where request_id=$1`,[req(564)])).rows[0].n,0,'a refused request writes nothing');
+assert.deepEqual(await access(b),{admin:false,scopes:['music'],dailyLimit:3,usedToday:3,expiresAt:null});
+// Yesterday's usage does not count today.
+await db.exec(`update ai_member_usage set day=day-1;`);assert.equal((await music(64,{user:b})).duplicate,false);await done();
+// RLS: members read their own music history and membership only; they cannot write it or probe others.
+await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${b}',false);`);
+assert.ok((await db.query('select user_id from music_messages')).rows.every(r=>r.user_id===b));
+assert.equal((await db.query('select * from music_messages')).rows.length,8);
+assert.equal((await db.query('select * from ai_members')).rows.length,1);
+await assert.rejects(()=>db.query(`update ai_members set daily_limit=500`),/permission denied/);
+await assert.rejects(()=>db.query(`insert into ai_member_usage(user_id,day) values($1,current_date+1)`,[b]),/permission denied/);
+await assert.rejects(()=>db.query(`select private.ai_allowed($1,'music')`,[a]),/permission denied/);
+assert.equal((await db.query('select * from music_works')).rows.length,0,'the cloud library stays administrator-only');
+await db.exec(`select set_config('request.jwt.claim.sub','${a}',false);`);
+assert.equal((await db.query('select * from ai_members')).rows.length,0,'an administrator sees no one else’s membership through RLS');
+await db.exec('reset role;');
+// Expired membership: no access, nothing counted.
+await db.query(`update ai_members set expires_at=now()-interval '1 minute' where user_id=$1`,[b]);
+await assert.rejects(()=>music(65,{user:b}),/admin_required/);
+assert.deepEqual(await access(b),{admin:false,scopes:[]});
+await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${b}',false);`);
+assert.equal((await db.query('select * from music_messages')).rows.length,0,'history hides with the membership');
+await db.exec('reset role;');
+// Administrators have no daily limit.
+assert.deepEqual(await access(a),{admin:true,scopes:['quiz','labs','music']});
+await db.exec(`update ai_settings set window_start=now()-interval '2 minutes',request_count=0;`);
+for(let i=70;i<=75;i++){await music(i,{user:a,subject:'pitch'});await done();}
+assert.equal((await db.query(`select count(*)::int as n from ai_member_usage where user_id=$1`,[a])).rows[0].n,0);
+await db.close();console.log('PASS: SQL migration, AI members (music scope, daily limit, expiry, own-row RLS), idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');

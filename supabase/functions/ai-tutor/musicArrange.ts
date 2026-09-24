@@ -110,7 +110,7 @@ export async function handleArrange(input: any, ctx: Context) {
       const retry = [...messages, { role: 'assistant', content: first.slice(0, 20000) }, { role: 'user', content: `上一个回复没有通过校验：${error.message}。请只返回修正后的完整 JSON 对象。` }];
       proposal = parseProposal(await task.callModel(retry, { budgetScale: 2 }), doc);
     }
-    if (ctx.authorize && !await ctx.authorize()) { await fail('管理员权限已撤销，未返回模型结果'); return json({ error: '管理员权限已撤销', settled: true }, 403); }
+    if (ctx.authorize && !await ctx.authorize()) { await fail('使用权限已撤销，未返回模型结果'); return json({ error: '使用权限已撤销', settled: true }, 403); }
     const saved = must(await db.from('music_messages').update({ body: proposal.summary, payload: { ops: proposal.ops }, status: 'complete' }).eq('user_id', uid).eq('request_id', input.requestId).eq('role', 'assistant').eq('status', 'running').select('body'));
     if (!saved?.length) return json({ error: '请求状态已改变，请核对历史', settled: false }, 409);
     const { execution } = task;

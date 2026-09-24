@@ -122,3 +122,13 @@ npx supabase functions deploy ai-tutor
 当前本地证据包括单元/组件测试、合成 SQL/RLS 检查和模拟 API 的浏览器流程。它们不等于真实 Supabase 部署或真实服务商兼容性验收；部署后仍需以上述一题流程实测。
 
 参考：[Supabase 部署函数](https://supabase.com/docs/guides/functions/deploy)、[函数认证](https://supabase.com/docs/guides/functions/auth)、[环境变量与 Secrets](https://supabase.com/docs/guides/functions/secrets)。
+
+## AI 成员（给朋友体验）
+
+迁移 `20260928000000_ai_members.sql` 增加 `ai_members` 与 `ai_member_usage`。成员不是管理员：只能使用成员范围内的 AI，目前只有音乐练习室（`music` 范围，即 `music-*` 动作）。题目、答案、图片、分类、标签和音乐作品云同步仍只属于管理员。
+
+- 额度：每人每天 `daily_limit` 次模型调用（默认 30，按北京时间零点换日），在 `ai_take_rate` 里与每分钟 10 次一起检查；用完返回“今天的 AI 次数已用完”。
+- 模型：成员固定使用 aggressive 路由，高难请求最高到 Luna（`maxSlot: 'luna'`），不会调用 Sol；管理员不受影响。
+- 页面通过 `ai_access()` 判断：返回 `admin`、`scopes`，成员还有 `dailyLimit`、`usedToday`、`expiresAt`。
+- 添加：对方先用 GitHub 登录一次，然后在 SQL 编辑器执行 `insert into public.ai_members(user_id, daily_limit, note) values ('<auth.users.id>', 30, '备注');`
+- 调整或收回：`update public.ai_members set daily_limit = 60 where user_id = '…';`，设 `expires_at = now()` 立即停用，或 `delete` 整行（用量记录一起删除）。成员自己的 `music_messages` 在停用后对其不可见，但不会删除。
