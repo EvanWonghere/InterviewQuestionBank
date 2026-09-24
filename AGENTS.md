@@ -30,7 +30,7 @@ npm run test:ai-e2e        # AI tutor browser tests against synthetic Supabase
 - Markdown images use `asset://<question_assets UUID>` references. `QuestionAsset` resolves them to short-lived signed Storage URLs.
 - SQL migrations and RLS policies live under `supabase/migrations/`; never expose a service-role key to Vite or the browser.
 - The administrator AI tutor is the `supabase/functions/ai-tutor` Edge Function. Model keys exist only as Edge Function secrets. See `docs/AI_TUTOR.md`.
-- The blog's music practice room (`/study/music/`) uses the same function through `music-*` actions handled by `music.ts` (chat, history, clear), `musicArrange.ts` (`music-arrange` proposals) and `musicStrudel.ts` (`music-strudel` snippets), with its own `music_messages` table. It explains, assigns homework, comments on scores, proposes arrangement edits and writes Strudel code that the page runs only in a sandboxed iframe; it never grades or marks mastery. See `docs/AI_TUTOR.md`.
+- The blog's music practice room (`/study/music/`) uses the same function through `music-*` actions handled by `music.ts` (chat, history, clear), `musicArrange.ts` (`music-arrange` proposals) and `musicStrudel.ts` (`music-strudel` snippets), with its own `music_messages` table. It explains, assigns homework, comments on scores, proposes arrangement edits and writes Strudel code that the page runs only in a sandboxed iframe; it never grades or marks mastery. The same page also keeps the administrator's saved works and arrangements in the `music_works` table, read and written directly under owner/admin RLS with server-assigned revisions (no function involved). See `docs/AI_TUTOR.md`.
 - `DESIGN.md` is the visual design reference for UI work.
 
 ## Data and security

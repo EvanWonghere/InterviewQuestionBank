@@ -218,4 +218,44 @@ await db.exec('reset role;');
 await db.exec(`delete from app_admins where user_id='${a}';set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
 assert.equal((await db.query('select * from music_messages')).rows.length,0);
 await db.exec('reset role;');
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind');
+// Music works: owner/admin RLS, server-assigned revisions (compare-and-set), limits, tombstones.
+await db.exec(await readFile(new URL('../supabase/migrations/20260927000000_music_works.sql',import.meta.url),'utf8'));
+await db.exec(`insert into app_admins values('${a}') on conflict do nothing;set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
+const h64=c=>c.repeat(64);
+const put=(id,{kind='score',body={source:'X:1'},h=h64('a'),title='t'}={})=>db.query(`insert into music_works(kind,id,title,body,content_hash) values($1,$2,$3,$4,$5) returning user_id,revision`,[kind,id,title,JSON.stringify(body),h]).then(r=>r.rows[0]);
+const w1=await put('w1');assert.equal(w1.user_id,a);assert.equal(w1.revision,1);
+// A write based on the current revision succeeds and bumps it; a stale one changes nothing.
+const cas=(id,base,title)=>db.query(`update music_works set title=$1,content_hash=$2 where kind='score' and id=$3 and revision=$4 returning revision`,[title,h64('b'),id,base]).then(r=>r.rows);
+assert.equal((await cas('w1',1,'second'))[0].revision,2);
+assert.deepEqual(await cas('w1',1,'stale'),[]);
+assert.equal((await db.query(`select title from music_works where id='w1'`)).rows[0].title,'second');
+await db.query(`update music_works set revision=99 where id='w1'`);
+assert.equal((await db.query(`select revision from music_works where id='w1'`)).rows[0].revision,3,'the browser cannot pick a revision');
+await assert.rejects(()=>db.query(`update music_works set id='w9' where id='w1'`),/music_works_key_immutable/);
+await assert.rejects(()=>db.query(`insert into music_works(user_id,kind,id,title,body,content_hash) values($1,'score','x','t','{}',$2)`,[b,h64('a')]),/row-level security|policy/);
+await assert.rejects(()=>put('bad id!'),/check constraint/);
+await assert.rejects(()=>put('w2',{kind:'lesson'}),/check constraint/);
+await assert.rejects(()=>put('w3',{body:{source:'x'.repeat(400001)}}),/check constraint/);
+await assert.rejects(()=>db.query(`delete from music_works where id='w1'`),/permission denied/);
+// Deleting leaves a tombstone; body and deleted must agree.
+await db.query(`update music_works set deleted=true,body=null where id='w1'`);
+await assert.rejects(()=>db.query(`update music_works set deleted=false where id='w1'`),/check constraint/);
+assert.deepEqual((await db.query(`select deleted,body,revision from music_works where id='w1'`)).rows[0],{deleted:true,body:null,revision:4});
+// 50 live works per kind; tombstones and other kinds do not count; 8 MB of bodies in total.
+for(let i=0;i<50;i++)await put(`l${i}`,{kind:'live',body:{source:'n'}});
+await assert.rejects(()=>put('l50',{kind:'live'}),/music_works_limit/);
+await put('a1',{kind:'arrangement',body:{title:'x'}});
+await db.query(`update music_works set deleted=true,body=null where id='l0'`);await put('l50',{kind:'live'});
+let stored=0;for(let i=0;i<30;i++){try{await put(`big${i}`,{kind:'arrangement',body:{pad:'x'.repeat(390000)}});stored++;}catch(e){assert.match(e.message,/music_works_quota/);break;}}
+assert.equal(stored,21,'the 22nd 390 KB body would pass 8 MB');
+assert.ok((await db.query(`select sum(octet_length(body::text))::int as n from music_works`)).rows[0].n<=8388608);
+// Other users, anon and revoked administrators see nothing.
+await db.exec(`select set_config('request.jwt.claim.sub','${b}',false);`);
+assert.equal((await db.query('select * from music_works')).rows.length,0);
+await db.exec('reset role;set role anon;');
+await assert.rejects(()=>db.query('select * from music_works'),/permission denied/);
+await db.exec(`reset role;delete from app_admins where user_id='${a}';set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
+assert.equal((await db.query('select * from music_works')).rows.length,0);
+await assert.rejects(()=>put('after'),/row-level security|policy/);
+await db.exec('reset role;');
+await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');
