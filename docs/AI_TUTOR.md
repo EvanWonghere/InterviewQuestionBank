@@ -89,7 +89,7 @@ npx supabase functions deploy ai-tutor
 
 - 动作：`music-chat`（`kind` 为 `lesson` 讲解、`homework` 作业、`composition` 作曲点评）、`music-history`、`music-clear`。非流式 JSON 响应。
 - 判分、进度和复习仍只在浏览器里由确定性代码计算。本函数只写 `music_messages`，系统提示禁止宣布掌握、改成绩或勾选作业；进度快照、作业勾选、日志和 ABC 源码都作为不可信数据放在用户消息里。
-- 课程内容来自生成文件 `musicCatalog.json`（博客仓库 `node tools/export-music-catalog.mjs <本仓库路径>`），不含小测题与答案。前端发送每课的 `subjectVersion`，与目录不一致时返回 409，提示等待目录同步。
+- 课程内容来自生成文件 `musicCatalog.json`（博客仓库 `node tools/export-music-catalog.mjs <本仓库路径>`），不含小测题与答案。前端发送每课的 `subjectVersion`，与目录不一致时返回 409，提示等待目录同步。历史列表和回放给模型的上下文只取当前目录版本的对话。
 - `homework` 走 `hint` 阶段路由（先提示、不代做），`lesson` 与 `composition` 走 `review`。
 - 迁移 `20260925000000_music_ai.sql`：`music_messages`（仅本人且仍是管理员可读，浏览器不能写）、`music_begin`、`music_clear`。同一 `requestId` 重发时，已完成返回原回复且不调模型，运行中返回 `settled: false`，已失败返回 `settled: true`；内容哈希不同返回 `request_context_conflict`。部分唯一索引保证每人同时只有一个进行中的音乐请求。与题库共用每分钟 10 次限额，但不互相阻塞。表中预留了后续编曲提案用的 `arrangement` 类型和 `payload` 列。
 - 发布顺序：先 `db push` 该迁移，再部署函数，再把 `https://yufenghuang.tech/study/music/` 加入 Auth 重定向白名单，最后在博客打开 `params.musicAI.enabled`。回退时先关博客开关；函数回退到上一版后 `music-*` 返回“未知操作”，不影响题库和实验室。

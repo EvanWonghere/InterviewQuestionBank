@@ -5,12 +5,12 @@ const assert=(x:unknown,message='assertion failed')=>{if(!x)throw Error(message)
 const lesson=catalog.lessons[0];
 const input={action:'music-chat',requestId:'20000000-0000-0000-0000-000000000001',kind:'lesson',subjectId:lesson.id,subjectVersion:lesson.version,message:'为什么 E 和 F 之间没有黑键？',context:{stats:{quizDone:1,quizTotal:3,attempts:4,correct:2}}};
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status});
-type Seen={tables:string[];rpcs:{name:string;args:any}[];updates:any[]};
+type Seen={tables:string[];rpcs:{name:string;args:any}[];updates:any[];filters:{table:string;column:string;value:unknown}[]};
 function db({duplicate=false,status='complete',beginError='',history=[] as any[]}={}){
- const seen:Seen={tables:[],rpcs:[],updates:[]};
+ const seen:Seen={tables:[],rpcs:[],updates:[],filters:[]};
  const chain=(table:string)=>{
   let updating=false;
-  const c:any={select(){return c;},eq(){return c;},lt(){return c;},order(){return c;},
+  const c:any={select(){return c;},eq(column:string,value:unknown){seen.filters.push({table,column,value});return c;},lt(){return c;},order(){return c;},
    update(patch:any){updating=true;seen.updates.push({table,patch});return c;},
    limit:async()=>({data:history,error:null}),
    then(resolve:any){resolve({data:updating?[{body:'saved'}]:[],error:null});}};
@@ -112,4 +112,13 @@ Deno.test('composition requests pass the score as untrusted data and a router su
  let meta:any,msgs:any[]=[];const database=db();
  const r=await handleMusic({...input,kind:'composition',subjectId:'draft',subjectVersion:COMPOSITION_VERSION,context:{abc:'X:1\nT:夜曲\nK:C\nCDEF|',title:'夜曲',check:'ok'}},{uid:'a',db:database,json,completeTutorText:async(m:any[],x:any)=>{meta=x;msgs=m;return {body:'点评'};}});
  assert(r.status===200);assert(meta.phase==='review');assert(meta.subject.includes('夜曲'));assert(msgs.at(-1).content.includes('CDEF'));
+});
+Deno.test('history and replayed context are scoped to the current lesson version',async()=>{
+ for(const action of ['music-chat','music-history']){
+  const database=db();await handleMusic({...input,action},{uid:'a',db:database,json,completeTutorText:tutor()});
+  const versions=database.seen.filters.filter(f=>f.column==='subject_version').map(f=>f.value);
+  assert(versions.length>=1&&versions.every(v=>v===lesson.version),`${action} must filter by subject_version`);
+ }
+ const database=db();await handleMusic({...input,action:'music-history',subjectVersion:undefined},{uid:'a',db:database,json});
+ assert(database.seen.filters.some(f=>f.column==='subject_version'&&f.value===lesson.version),'history without a client version still uses the catalog version');
 });
