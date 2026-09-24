@@ -92,6 +92,7 @@ npx supabase functions deploy ai-tutor
 - 课程内容来自生成文件 `musicCatalog.json`（博客仓库 `node tools/export-music-catalog.mjs <本仓库路径>`），不含小测题与答案。前端发送每课的 `subjectVersion`，与目录不一致时返回 409，提示等待目录同步。历史列表和回放给模型的上下文只取当前目录版本的对话。
 - `homework` 走 `hint` 阶段路由（先提示、不代做），`lesson` 与 `composition` 走 `review`。
 - 迁移 `20260925000000_music_ai.sql`：`music_messages`（仅本人且仍是管理员可读，浏览器不能写）、`music_begin`、`music_clear`。同一 `requestId` 重发时，已完成返回原回复且不调模型，运行中返回 `settled: false`，已失败返回 `settled: true`；内容哈希不同返回 `request_context_conflict`。部分唯一索引保证每人同时只有一个进行中的音乐请求。与题库共用每分钟 10 次限额，但不互相阻塞。表中预留了后续编曲提案用的 `arrangement` 类型和 `payload` 列。
+- vibe 编曲：`music-arrange` 由 `musicArrange.ts` 处理，走任务路由（与出题相同的 `batch` 档，JSON 输出）。请求带整份编曲（≤24 KB）、范围、页面规则检查结果与描述；服务端用 `arrangement/` 中与页面相同的模块校验文档，要求模型只返回 `{summary, ops}`，并对 ops 试应用。不合格时把校验错误回给模型修正一次，仍不合格则记为失败、返回 422，不返回半成品。成功时 `music_messages` 的 assistant 行保存说明（body）与操作（payload），`subject_version` 是编曲内容的 SHA-256；同一 `requestId` 重发直接返回保存的提案。服务端不修改编曲，由页面预览并经管理员接受后应用。`music-history` 对 `arrangement` 不按版本过滤，并返回 payload。
 - 发布顺序：先 `db push` 该迁移，再部署函数，再把 `https://yufenghuang.tech/study/music/` 加入 Auth 重定向白名单，最后在博客打开 `params.musicAI.enabled`。回退时先关博客开关；函数回退到上一版后 `music-*` 返回“未知操作”，不影响题库和实验室。
 
 ## 排错与验收边界
