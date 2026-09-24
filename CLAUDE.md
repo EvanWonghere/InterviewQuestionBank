@@ -1,38 +1,17 @@
 # CLAUDE.md
 
-This repository contains the Interview Question Bank deployed at the Hugo blog's `/quiz/` subpath. It is a React 19 + Vite + Tailwind SPA with a Supabase-backed administrator workflow and a read-only static fallback.
+@AGENTS.md
 
-## Commands
+## Claude-specific notes
 
-```bash
-npm run dev                # Vite development server
-npm run build              # Production build in dist/
-npm run lint               # ESLint
-npm test                   # Vitest + React Testing Library
-npm run test:e2e           # Playwright against a /quiz/ production preview
-npm run preview:quiz       # Build and serve the real subpath on port 4173
-npm run migrate:questions  # Idempotently seed categories and legacy questions
-```
+### Artifacts
 
-## Architecture
+Repository overview page (private Artifact): https://claude.ai/artifact/EEFiogW17CTypMuiRp95bZ. When commands, architecture, deployment or the ConceptLab contract in `AGENTS.md` change, republish it to the same URL so the two stay in sync.
 
-- `HashRouter` is intentional because the build is copied into Hugo `static/quiz`.
-- `AuthContext` owns GitHub OAuth state and the `app_admins` lookup.
-- `QuestionsContext` reads published questions from Supabase when configured and otherwise loads `public/questions.json`.
-- `questionRepository.js` is the question boundary. Public list results never contain solution data; objective grading goes through the `grade_question` RPC.
-- `progressRepository.js` and `reviewStore.js` persist attempts, notes and SM-2 state. Anonymous practice remains local; administrator records sync to Supabase.
-- `questionSchema.js` contains the runtime-validated discriminated question model. Keep all six types valid: `single_choice`, `multiple_choice`, `fill_blank`, `short_answer`, `algorithm`, and `engineering`.
-- Markdown images use `asset://<question_assets UUID>` references. `QuestionAsset` resolves them to short-lived signed Storage URLs.
-- SQL migrations and RLS policies live under `supabase/migrations/`; never expose a service-role key to Vite or the browser.
+Publish these as private Artifacts instead of leaving them only in the terminal:
 
-## Data and security
+- Task and acceptance reports, including which checks ran, which were skipped and why.
+- Design proposals, migration plans and review summaries that the owner needs to decide on.
+- AI routing or evaluation reports.
 
-Supabase is the source of truth after migration. The bundled 178-question JSON file is both the import source and offline/public fallback. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are browser variables. `SUPABASE_SERVICE_ROLE_KEY` is accepted only by the local migration script.
-
-New questions default to `draft` and `private`. Publishing must pass `questionSchema` validation. Correct answers are stored in `question_solutions`, protected by RLS, and must not be joined into public list queries.
-
-The old GitHub Gist reader remains only for the one-time migration wizard. Do not reintroduce Gist writes or token-based synchronization.
-
-## Deployment
-
-Pushes to `main` run lint, unit tests and the Vite build, then copy `dist/` to the blog repository's `static/quiz/`. Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CONCEPT_LAB_URL`, `BLOG_REPO`, and `API_TOKEN_GITHUB` as GitHub Actions secrets/variables. GitHub OAuth must redirect to the public `/quiz/` URL; the callback code restores the HashRouter destination. ConceptLab login uses the same project and needs `https://yufenghuang.tech/labs/` on the Auth redirect allow list.
+Repository `docs/` stays the durable record of evidence and decisions. An Artifact summarizes it for reading; it does not replace a required update to `docs/`. Never put secrets, service-role or model keys, Supabase project refs, personal learning records or unpublished answers into an Artifact.
