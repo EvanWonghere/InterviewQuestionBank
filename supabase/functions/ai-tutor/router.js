@@ -95,7 +95,8 @@ export function taskForAction(action) {
     case 'weakness-report': return 'summary';
     case 'draft-question':
     case 'draft-weakness-questions':
-    case 'music-arrange': return 'batch';
+    case 'music-arrange':
+    case 'music-strudel': return 'batch';
     default: {
       const unreachable = action;
       throw new Error(`unknown_task_${unreachable}`);

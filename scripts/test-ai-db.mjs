@@ -194,6 +194,15 @@ const again40=await music(40,{kind:'arrangement',subject:'arr-test',version:hash
 assert.equal(again40.duplicate,true);assert.equal(again40.message.payload.ops[0].tempo,90);
 await assert.rejects(()=>db.query(`update music_messages set payload=$1 where request_id=$2 and role='assistant'`,[JSON.stringify({big:'x'.repeat(70000)}),req(540)]),/check constraint/);
 await db.query(`delete from music_messages where subject_id='arr-test'`);
+// Strudel snippets (second migration): the new kind is accepted, unknown kinds still are not.
+await assert.rejects(()=>music(41,{kind:'strudel',subject:'draft',version:hash('s')}),/check constraint/);
+await db.exec(await readFile(new URL('../supabase/migrations/20260926000000_music_strudel.sql',import.meta.url),'utf8'));
+const snippet=await music(41,{kind:'strudel',subject:'draft',version:hash('s')});
+assert.equal(snippet.duplicate,false);
+await db.query(`update music_messages set status='complete',body='summary',payload=$1 where request_id=$2 and role='assistant'`,[JSON.stringify({code:'note("c4")'}),req(541)]);
+assert.equal((await music(41,{kind:'strudel',subject:'draft',version:hash('s')})).message.payload.code,'note("c4")');
+await assert.rejects(()=>music(42,{kind:'quiz'}),/check constraint/);
+await db.query(`delete from music_messages where subject_id='draft' and kind='strudel'`);
 // RLS: owner admin reads, other users and anon do not, nobody writes directly.
 await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
 assert.equal((await db.query('select * from music_messages')).rows.length,4);
@@ -209,4 +218,4 @@ await db.exec('reset role;');
 await db.exec(`delete from app_admins where user_id='${a}';set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
 assert.equal((await db.query('select * from music_messages')).rows.length,0);
 await db.exec('reset role;');
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear');
+await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind');

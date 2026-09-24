@@ -17,10 +17,11 @@ export const ROUTER_PHASE:Record<string,string>={lesson:'review',homework:'hint'
 export class MusicError extends Error{constructor(message:string,public status=400,public settled=true){super(message);}}
 
 export function validateSubject(input:any,{requireVersion=true}={}){
- // Arrangement proposals are requested through music-arrange; history and clear accept them too.
- if(input?.kind==='arrangement'&&!requireVersion){
-  if(typeof input.subjectId!=='string'||!SUBJECT.test(input.subjectId))throw new MusicError('无效的编曲');
-  return {kind:'arrangement',subjectId:input.subjectId,subjectVersion:null as string|null,lesson:null};
+ // Arrangement proposals (music-arrange) and Strudel snippets (music-strudel) have their own
+ // actions; history and clear accept them too.
+ if((input?.kind==='arrangement'||input?.kind==='strudel')&&!requireVersion){
+  if(typeof input.subjectId!=='string'||!SUBJECT.test(input.subjectId))throw new MusicError(input.kind==='strudel'?'无效的手稿':'无效的编曲');
+  return {kind:input.kind as string,subjectId:input.subjectId,subjectVersion:null as string|null,lesson:null};
  }
  if(!MUSIC_KINDS.includes(input?.kind))throw new MusicError('无效的音乐助手用途');
  if(typeof input.subjectId!=='string'||!SUBJECT.test(input.subjectId))throw new MusicError('无效的课程或作品');
