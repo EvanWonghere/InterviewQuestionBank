@@ -7,6 +7,7 @@ import { canProviderFallback, iterateChatEvents, openChatStream, requestDeadline
 import { insertPedagogyNote, pedagogyNote } from './pedagogy.js';
 import { completeTutorText, CREDIT_POLICIES, describeConnectionProbes, effectivePolicy, planInteractiveTurn, planTaskTurn, publicRouting, routedCall, testModelConnections } from './router.js';
 import { handleLab } from './labs.ts';
+import { handleMusic } from './music.ts';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -40,6 +41,13 @@ export async function handleRequest(req: Request, factory = createClient) {
    const effort = normalizeEffort(settings?.reasoning_effort);
    const policy = settings?.credit_policy;
    return await handleLab(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
+  }
+  if (typeof action === 'string' && action.startsWith('music-')) {
+   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+   const effort = normalizeEffort(settings?.reasoning_effort);
+   const policy = settings?.credit_policy;
+   return await handleMusic(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
     completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
   }
   if (action === 'settings') {

@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "preview:quiz": "npm run build && rm -rf dist-preview && mkdir -p dist-preview/quiz && cp -r dist/. dist-preview/quiz && serve dist-preview -l 4173",
     "test:ai-db": "node scripts/test-ai-db.mjs",
-    "test:ai-edge": "deno test --allow-env --allow-net --allow-read --allow-sys supabase/functions/ai-tutor/handler_test.js",
+    "test:ai-edge": "deno test --allow-env --allow-net --allow-read --allow-sys supabase/functions/ai-tutor/handler_test.js supabase/functions/ai-tutor/labs_test.ts supabase/functions/ai-tutor/music_test.ts",
     "test:ai-e2e": "playwright test --config playwright.ai.config.js"
   },
   "dependencies": {
