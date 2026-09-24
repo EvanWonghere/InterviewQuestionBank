@@ -3,6 +3,8 @@ import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import { aiRequest, streamChat } from '@/data/aiRepository';
 import { useNotesStore } from '@/store/notesStore';
 import { useAIDraft } from '@/lib/aiDrafts';
+import PixelPet from '@/components/pet/PixelPet';
+import { usePetStore } from '@/store/petStore';
 
 const EFFORT_LABELS = { none: '关闭', low: '低', high: '高（默认）', max: '最大' };
 const POLICY_OPTIONS = [
@@ -20,6 +22,22 @@ function describeProbes(probes) {
     if (probe.status === 'untested') return `${name} 未测试${probe.reason ? `（${probe.reason}）` : ''}`;
     return `${name} ${probe.model} 失败：${probe.error}`;
   }).join('；');
+}
+
+const ICONS = {
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-2-1.2L14.5 3h-4l-.4 2.6a7.3 7.3 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7.3 7.3 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7.3 7.3 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z',
+  refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
+  trash: 'M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13',
+  close: 'M6 6l12 12M18 6 6 18',
+  send: 'M12 19V5m-6 6 6-6 6 6',
+};
+function Icon({ name }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[name]} /></svg>;
+}
+
+function messageMood(m) {
+  if (m.status === 'running') return m.body ? 'talking' : 'thinking';
+  return m.status === 'complete' ? 'idle' : 'sad';
 }
 
 function copyLabel(copied, id) {
@@ -43,6 +61,16 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [lastRequest, setLastRequest] = useState(null);
   const [copiedId, setCopiedId] = useState('');
   const [showJump, setShowJump] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+  const petHidden = usePetStore((state) => state.hidden);
+  const running = messages.find((m) => m.status === 'running');
+  const mood = running ? messageMood(running) : error ? 'sad' : celebrate ? 'happy' : 'idle';
+  useEffect(() => { usePetStore.getState().setMood(mood); }, [mood]);
+  useEffect(() => {
+    if (!celebrate) return undefined;
+    const timer = window.setTimeout(() => setCelebrate(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [celebrate]);
   const markAssisted = () => { if (phaseRef.current === 'hint') assistRef.current?.(); };
   const refresh = async () => {
     const data = await aiRequest({ action: 'history', questionId: question.id });
@@ -86,6 +114,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     const previous = document.activeElement;
     if (window.matchMedia('(max-width: 899px)').matches) el.showModal(); else el.show();
     document.body.classList.add('ai-panel-open');
+    usePetStore.getState().setPanelOpen(true);
     inputRef.current?.focus();
     Promise.all([aiRequest({ action: 'settings' }), aiRequest({ action: 'history', questionId: question.id })])
       .then(([config, history]) => {
@@ -109,6 +138,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       const op = operation.current;
       if (op) { void aiRequest({ action: 'cancel', requestId: op.id }).catch(() => {}); op.controller.abort(); }
       document.body.classList.remove('ai-panel-open');
+      usePetStore.getState().setPanelOpen(false);
       el.close(); previous?.focus?.();
     };
   // Instance is keyed by user/question in TutorEntry; do not reset on each submission edit.
@@ -146,7 +176,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         }
         if (event.message) throw new Error(event.message);
       }});
-      if (persisted && alive.current) { if (completed) setText(''); await refresh(); }
+      if (persisted && alive.current) { if (completed) { setText(''); setCelebrate(true); } await refresh(); }
     } catch (e) {
       if (alive.current) {
         setError(e.name === 'AbortError' ? '已停止；当前内容可能尚未全部保存，可复制或刷新历史核对。' : e.message);
@@ -191,52 +221,81 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     if (m.status !== 'complete') return '未完成回复';
     return 'AI生成 · 请结合资料核对';
   };
+  const phaseLabel = phase === 'hint' ? '答前提示' : '答后巩固';
   return <dialog ref={dialog} className="ai-tutor-panel" aria-labelledby="ai-title" onCancel={e => { e.preventDefault(); onClose(); }} onKeyDown={e => { if(e.key==='Escape'){e.preventDefault();onClose();} }}>
     <header className="ai-tutor-header">
-      <div><p className="type-eyebrow">学习教练 · {phase === 'hint' ? '答前提示' : '答后巩固'}</p><h2 id="ai-title" className="type-card-title">{question.legacyId || question.id} · {question.title}</h2></div>
-      <button className="btn-neutral" onClick={onClose} aria-label="关闭学习助手">关闭</button>
+      <div className="ai-tutor-identity">
+        <span className={`ai-tutor-avatar pet-mood-${mood}`}><PixelPet mood={mood} size={40} /></span>
+        <div className="min-w-0">
+          <p className="ai-tutor-kicker">小芽 · 学习教练 <span className={`ai-phase-chip is-${phase}`}>{phaseLabel}</span></p>
+          <h2 id="ai-title" className="ai-tutor-title">{question.legacyId || question.id} · {question.title}</h2>
+        </div>
+      </div>
+      <div className="ai-tutor-tools">
+        <button type="button" className="ai-icon-btn" aria-label="API设置" title="API设置" aria-pressed={settingsOpen} onClick={() => setSettingsOpen(v => !v)}><Icon name="settings" /></button>
+        <button type="button" className="ai-icon-btn" aria-label="刷新历史" title="刷新历史" disabled={busy || loading} onClick={() => refresh().catch(e => setError(e.message))}><Icon name="refresh" /></button>
+        <button type="button" className="ai-icon-btn" aria-label="清空对话" title="清空对话" disabled={busy || loading} onClick={clear}><Icon name="trash" /></button>
+        <button type="button" className="ai-icon-btn" onClick={onClose} aria-label="关闭学习助手" title="关闭（Esc）"><Icon name="close" /></button>
+      </div>
     </header>
     <div className="ai-tutor-scroll" ref={scrollRef} onScroll={onScroll}>
-      <p className="type-caption">先理解，再用反例和变式巩固。AI建议不会自动修改成绩或掌握状态。</p>
-      <div className="flex gap-2 my-3 flex-wrap"><button className="btn-neutral" onClick={() => setSettingsOpen(v => !v)}>API设置</button><button className="btn-neutral" disabled={busy || loading} onClick={() => refresh().catch(e => setError(e.message))}>刷新历史</button><button className="btn-neutral" disabled={busy || loading} onClick={clear}>清空对话</button></div>
       {settingsOpen && <section className="ai-settings" aria-label="API设置">
+        <h3 className="ai-settings-title">API 设置</h3>
         <p className="type-caption">Key由Supabase服务端保管：{settings.configured ? '已配置' : '未配置AI_API_KEY'}。网页不接收Key。</p>
-        <p className="type-caption">DeepSeek {settings.keys.deepseek ? '已配置' : '未配置'} · OpenAI {settings.keys.openai ? '已配置' : '未配置'} · Jev {settings.keys.jev ? '已配置' : '未配置'}</p>
+        <p className="ai-key-row">{[['DeepSeek', settings.keys.deepseek], ['OpenAI', settings.keys.openai], ['Jev', settings.keys.jev]].map(([name, ok]) => <span key={name} className={`ai-key-chip ${ok ? 'is-ok' : ''}`}>{name} {ok ? '已配置' : '未配置'}</span>)}</p>
         <label>额度策略<select className="input-apple" aria-label="额度策略" value={settings.creditPolicy} onChange={e => setSettings(s => ({ ...s, creditPolicy: e.target.value }))}>{POLICY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <p className="type-caption">{POLICY_OPTIONS.find((option) => option.value === settings.creditPolicy)?.detail} 模型名称：容易 {settings.models.fast}，常规 {settings.models.default}，高难 {settings.models.reasoning}。保存后以这里的选择为准；还没保存时沿用服务端默认。</p>
         <label>思考强度<select className="input-apple" value={settings.reasoningEffort} onChange={e => setSettings(s => ({ ...s, reasoningEffort: e.target.value }))}>{Object.entries(EFFORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <p className="type-caption">连接测试分别调用 DeepSeek、Luna 和 Sol，并逐项显示结果。Jev 显示为未测试。仅发送固定测试文本，可能产生三次少量调用费用。</p>
+        <label className="ai-check"><input type="checkbox" checked={!petHidden} onChange={e => usePetStore.getState().setHidden(!e.target.checked)} /> 在题目页显示桌宠小芽</label>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}
-      <details className="my-3"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；本题最近一次 AI 评估的结论（分轮次标注，教练不能据此改分）；' : '不发送参考解析，也不发送 AI 评估结论；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>
+      <details className="ai-disclosure"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；本题最近一次 AI 评估的结论（分轮次标注，教练不能据此改分）；' : '不发送参考解析，也不发送 AI 评估结论；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label className="ai-check"><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>
       {notice && <p role="status" className="ai-notice">{notice}</p>}
-      {loading && <p role="status">正在读取本题对话…</p>}
-      <div role="log" aria-label="本题AI对话">
-        {!loading && messages.length === 0 && <div className="ai-empty"><h3>从一个具体疑问开始</h3><p>可以问“为什么我的思路不成立”，或让教练用项目场景说明。</p></div>}
+      {loading && <p role="status" className="ai-loading"><span className="ai-dots" aria-hidden="true"><i /><i /><i /></span>正在读取本题对话…</p>}
+      <div role="log" aria-label="本题AI对话" className="ai-log">
+        {!loading && messages.length === 0 && <div className="ai-empty">
+          <PixelPet mood={mood} size={72} />
+          <h3>从一个具体疑问开始</h3>
+          <p>可以问“为什么我的思路不成立”，或让教练用项目场景说明。先理解，再用反例和变式巩固；AI 建议不会自动修改成绩或掌握状态。</p>
+          <div className="ai-starters">{quickPrompts.slice(0, 4).map(p => <button key={p} type="button" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
+        </div>}
         {messages.map(m => <article className={`ai-message ai-${m.role}`} key={m.id}>
-          <p className="type-eyebrow">{m.role === 'user' ? '我' : '学习教练'}{m.model ? ` · ${m.model}` : ''}</p>
-          <ChatMarkdown content={m.body} streaming={m.status === 'running'} />
-          {m.role === 'assistant' && <>
-            <p className="type-micro" aria-live="polite">{statusLine(m)}</p>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {m.body ? <button className="btn-neutral" onClick={() => copyMessage(m.id, m.body)}>{copyLabel(copiedId, m.id)}</button> : null}
-              {m.body ? <button className="btn-neutral" onClick={() => setNoteDraft(m.body)}>加入本题笔记</button> : null}
-              {lastRequest && m.status !== 'complete' && m.status !== 'running' ? <button className="btn-neutral" onClick={() => send(true)}>核对此次请求</button> : null}
-            </div>
-          </>}
+          {m.role === 'assistant' && <span className="ai-message-avatar"><PixelPet mood={messageMood(m)} size={28} still={m.status !== 'running'} /></span>}
+          <div className="ai-message-body">
+            <p className="ai-message-meta">{m.role === 'user' ? '我' : '学习教练'}{m.model ? ` · ${m.model}` : ''}</p>
+            {m.status === 'running' && !m.body
+              ? <p className="ai-typing"><span className="ai-dots" aria-hidden="true"><i /><i /><i /></span>{m.thinking ? '小芽在思考' : '小芽在组织语言'}</p>
+              : <ChatMarkdown content={m.body} streaming={m.status === 'running'} />}
+            {m.role === 'assistant' && <>
+              <p className={`ai-message-status ${m.status !== 'complete' && m.status !== 'running' ? 'is-failed' : ''}`} aria-live="polite">{statusLine(m)}</p>
+              <div className="ai-message-actions">
+                {m.body ? <button type="button" onClick={() => copyMessage(m.id, m.body)}>{copyLabel(copiedId, m.id)}</button> : null}
+                {m.body ? <button type="button" onClick={() => setNoteDraft(m.body)}>加入本题笔记</button> : null}
+                {lastRequest && m.status !== 'complete' && m.status !== 'running' ? <button type="button" onClick={() => send(true)}>核对此次请求</button> : null}
+              </div>
+            </>}
+          </div>
         </article>)}
       </div>
-      {noteDraft !== null && <section className="ai-settings" ref={noteRef}><h3>编辑后追加到笔记</h3><textarea aria-label="待追加笔记" className="input-apple min-h-40" value={noteDraft} onChange={e => setNoteDraft(e.target.value)} /><div className="flex gap-2"><button className="btn-blue" disabled={noteBusy || !noteDraft.trim()} onClick={appendNote}>确认追加</button><button className="btn-neutral" disabled={noteBusy} onClick={() => setNoteDraft(null)}>取消</button></div></section>}
+      {noteDraft !== null && <section className="ai-settings" ref={noteRef}><h3 className="ai-settings-title">编辑后追加到笔记</h3><textarea aria-label="待追加笔记" className="input-apple min-h-40" value={noteDraft} onChange={e => setNoteDraft(e.target.value)} /><div className="flex gap-2"><button className="btn-blue" disabled={noteBusy || !noteDraft.trim()} onClick={appendNote}>确认追加</button><button className="btn-neutral" disabled={noteBusy} onClick={() => setNoteDraft(null)}>取消</button></div></section>}
     </div>
     {showJump && <button type="button" className="ai-jump-bottom" onClick={jumpToBottom}>回到底部</button>}
     <footer className="ai-tutor-compose">
       {error && <p role="alert" className="ai-error">{error}</p>}
-      <div className="ai-prompts">{quickPrompts.map(p => <button key={p} className="filter-pill" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
-      <form onSubmit={e => { e.preventDefault(); void send(); }}>
-        <textarea ref={inputRef} aria-label="向学习教练提问" className="input-apple" value={text} maxLength={8000} onChange={e => setText(e.target.value)} onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); void send(); } }} placeholder="你的疑问，或需要一起分析的代码…（草稿自动保留；Ctrl/Cmd+Enter 发送）" rows={3} />
-        <div className="flex gap-2 mt-2 flex-wrap"><button className="btn-blue" disabled={busy || loading || !settings.configured || !text.trim()}>发送</button>{busy && <button type="button" className="btn-neutral" onClick={stop}>停止</button>}{lastRequest && !busy && <><button type="button" className="btn-neutral" onClick={() => send(true)}>核对此次请求</button><button type="button" className="btn-neutral" onClick={() => setText(lastRequest.message)}>重新提问</button></>}</div>
+      <div className="ai-prompts">{quickPrompts.map(p => <button key={p} type="button" className="ai-prompt-chip" onClick={() => { setText(p); inputRef.current?.focus(); }}>{p}</button>)}</div>
+      <form className="ai-composer" onSubmit={e => { e.preventDefault(); void send(); }}>
+        <textarea ref={inputRef} aria-label="向学习教练提问" className="ai-composer-input" value={text} maxLength={8000} onChange={e => setText(e.target.value)} onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); void send(); } }} placeholder="你的疑问，或需要一起分析的代码…" rows={3} />
+        <div className="ai-composer-bar">
+          <span className="ai-composer-hint">草稿自动保留 · ⌘/Ctrl + Enter 发送</span>
+          <div className="ai-composer-actions">
+            {lastRequest && !busy && <><button type="button" className="ai-text-btn" onClick={() => send(true)}>核对此次请求</button><button type="button" className="ai-text-btn" onClick={() => setText(lastRequest.message)}>重新提问</button></>}
+            {busy && <button type="button" className="ai-text-btn" onClick={stop}>停止</button>}
+            <button className="ai-send-btn" aria-label="发送" title="发送" disabled={busy || loading || !settings.configured || !text.trim()}><Icon name="send" /></button>
+          </div>
+        </div>
       </form>
     </footer>
   </dialog>;

@@ -219,7 +219,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
         </div>
       )}
       {assisted && <p className="type-caption mt-3">本次作答使用过AI辅助；对错与自评仍由原流程记录。</p>}
-      <TutorEntry enabled={assistantEnabled} question={question} phase={result ? 'review' : 'hint'} submission={submission} onAssistance={() => { if (!submitted.current) { assistance.current = true; setAssisted(true); } }} />
+      <TutorEntry primary enabled={assistantEnabled} question={question} phase={result ? 'review' : 'hint'} submission={submission} onAssistance={() => { if (!submitted.current) { assistance.current = true; setAssisted(true); } }} />
       {error && <p className="type-caption mt-3" style={{ color: 'var(--error-fg)' }}>{error}</p>}
     </section>
   );

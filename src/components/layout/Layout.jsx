@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import StudyPet from '@/components/pet/StudyPet';
 import { useQuestions } from '@/context/QuestionsContext';
 
 export default function Layout() {
@@ -81,6 +82,7 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+      <StudyPet />
     </div>
   );
 }

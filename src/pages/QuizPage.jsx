@@ -211,7 +211,7 @@ export default function QuizPage() {
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
       {/* Question list / filter sidebar */}
-      <aside className="surface-card w-full shrink-0 p-4 lg:w-72 lg:self-start lg:sticky lg:top-6">
+      <aside className="quiz-list-aside surface-card w-full shrink-0 p-4 lg:w-72 lg:self-start lg:sticky lg:top-6">
         <div className="mb-3 px-1">
           <p className="type-eyebrow" style={{ color: 'var(--text-quaternary)' }}>
             {searchQuery.trim() ? `搜索结果 · ${questionsFilteredBySearch.length}` : '题目列表'}
