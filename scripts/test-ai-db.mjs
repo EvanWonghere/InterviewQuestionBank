@@ -153,4 +153,51 @@ await db.query(`delete from ai_evaluations where id=$1`,[origin]);
 assert.equal((await db.query(`select origin_evaluation_id from questions where id=$1`,[q2])).rows[0].origin_evaluation_id,null);
 assert.equal((await db.query(`select count(*)::int as n from questions where origin_evaluation_id is null`)).rows[0].n,3);
 assert.equal((await db.query(`select origin_kind from questions where id=$1`,[q2])).rows[0].origin_kind,'follow_up'); // kind survives evaluation deletion
-await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance');
+// Music practice room AI: separate table, owner/admin RLS, dedup, conflict, single flight, shared 10/min.
+await db.exec(await readFile(new URL('../supabase/migrations/20260925000000_music_ai.sql',import.meta.url),'utf8'));
+await db.exec(`insert into app_admins values('${a}') on conflict do nothing;update ai_settings set request_count=0;update ai_messages set status='complete' where status='running';`);
+const hash=c=>c.repeat(64);
+const music=(n,{kind='lesson',subject='pitch',version='v1',h=hash('a'),user=a}={})=>db.query(`select music_begin($1,$2,$3,$4,$5,$6,'why','m') as r`,[user,req(500+n),kind,subject,version,h]).then(r=>r.rows[0].r);
+const m1=await music(1);
+assert.equal(m1.duplicate,false);
+const again=await music(1);assert.equal(again.duplicate,true);assert.equal(again.message.status,'running');
+await assert.rejects(()=>music(1,{h:hash('b')}),/request_context_conflict/);
+await assert.rejects(()=>music(1,{subject:'staff'}),/request_context_conflict/);
+await assert.rejects(()=>music(2),/generation_busy/);
+await assert.rejects(()=>db.query(`insert into music_messages(user_id,request_id,kind,subject_id,subject_version,context_hash,role,status,model) values($1,$2,'lesson','pitch','v',$3,'assistant','running','m')`,[a,req(599),hash('c')]),/duplicate key|unique/);
+await assert.rejects(()=>music(3,{user:b}),/admin_required/);
+// A chat on the quiz side does not block music, but they share the per-minute limit.
+const quizChat=await db.query(`select ai_begin($1,$2,'v',$3,'why','hint','m') as r`,[a,q,req(598)]).then(r=>r.rows[0].r);
+assert.equal(quizChat.duplicate,false);
+await db.exec(`update music_messages set status='complete',body='answer' where status='running';`);
+assert.equal((await music(1)).message.body,'answer');
+await assert.rejects(()=>music(3,{kind:'quiz'}),/check constraint/);
+await assert.rejects(()=>music(3,{subject:'../x'}),/check constraint/);
+await db.exec(`update ai_settings set request_count=10,window_start=now();`);
+await assert.rejects(()=>music(4),/rate_limit/);
+await db.exec(`update ai_settings set request_count=0;`);
+// 150-second stale cutoff.
+await music(5,{kind:'composition',subject:'draft',version:'score-v1'});
+await db.exec(`update music_messages set created_at=now()-interval '160 seconds' where status='running';`);
+assert.equal((await music(6)).duplicate,false);
+assert.equal((await db.query(`select status from music_messages where request_id=$1 and role='assistant'`,[req(505)])).rows[0].status,'failed');
+// Clear removes finished requests of one subject only and never a running one.
+assert.equal((await db.query(`select music_clear($1,'lesson','pitch') as n`,[a])).rows[0].n,2);
+assert.equal((await db.query(`select count(*)::int as n from music_messages where subject_id='pitch'`)).rows[0].n,2);
+assert.equal((await db.query(`select count(*)::int as n from music_messages where subject_id='draft'`)).rows[0].n,2);
+// RLS: owner admin reads, other users and anon do not, nobody writes directly.
+await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
+assert.equal((await db.query('select * from music_messages')).rows.length,4);
+await assert.rejects(()=>db.query(`update music_messages set body='x'`),/permission denied/);
+await assert.rejects(()=>db.query(`delete from music_messages`),/permission denied/);
+await assert.rejects(()=>music(7),/permission denied/);
+await assert.rejects(()=>db.query(`select music_clear($1,'lesson','pitch')`,[a]),/permission denied/);
+await db.exec(`select set_config('request.jwt.claim.sub','${b}',false);`);
+assert.equal((await db.query('select * from music_messages')).rows.length,0);
+await db.exec('reset role;set role anon;');
+await assert.rejects(()=>db.query('select * from music_messages'),/permission denied/);
+await db.exec('reset role;');
+await db.exec(`delete from app_admins where user_id='${a}';set role authenticated;select set_config('request.jwt.claim.sub','${a}',false);`);
+assert.equal((await db.query('select * from music_messages')).rows.length,0);
+await db.exec('reset role;');
+await db.close();console.log('PASS: SQL migration, idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear');

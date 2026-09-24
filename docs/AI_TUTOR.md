@@ -83,6 +83,17 @@ npx supabase functions deploy ai-tutor
 - 模拟面试进行中不打断：面试结束后在“薄弱知识点 → 待入库的追问”中处理低分追问。
 - **针对薄弱点出题**：“薄弱知识点”页每个 AI 薄弱点卡片可“针对性出题”，一次 1–3 道，可让 AI 搭配题型或逐道指定。服务端 `draft-weakness-questions` 会根据你自己的评估记录重新聚合该薄弱点（前端传入的标签只用于查找），把相关题目和参考答案作为背景，并附上已有同类题目的标题，要求避免重复。每道题单独预览、编辑，只保存勾选的题；来源记为 `origin_kind = 'weakness'` 和 `origin_weakness_tag`，卡片上会显示“已为此薄弱点出过 N 道”。多题回复的输出预算加倍，但仍受 90 秒超时限制。
 
+## 音乐练习室助手（`music-*`）
+
+博客 `/study/music/` 的管理员 AI 与题库共用本函数。`index.ts` 把 `music-` 前缀的 action 交给 `music.ts`，方式与 `lab-` 交给 `labs.ts` 相同；登录与 `is_app_admin` 校验在分流之前完成。
+
+- 动作：`music-chat`（`kind` 为 `lesson` 讲解、`homework` 作业、`composition` 作曲点评）、`music-history`、`music-clear`。非流式 JSON 响应。
+- 判分、进度和复习仍只在浏览器里由确定性代码计算。本函数只写 `music_messages`，系统提示禁止宣布掌握、改成绩或勾选作业；进度快照、作业勾选、日志和 ABC 源码都作为不可信数据放在用户消息里。
+- 课程内容来自生成文件 `musicCatalog.json`（博客仓库 `node tools/export-music-catalog.mjs <本仓库路径>`），不含小测题与答案。前端发送每课的 `subjectVersion`，与目录不一致时返回 409，提示等待目录同步。
+- `homework` 走 `hint` 阶段路由（先提示、不代做），`lesson` 与 `composition` 走 `review`。
+- 迁移 `20260925000000_music_ai.sql`：`music_messages`（仅本人且仍是管理员可读，浏览器不能写）、`music_begin`、`music_clear`。同一 `requestId` 重发时，已完成返回原回复且不调模型，运行中返回 `settled: false`，已失败返回 `settled: true`；内容哈希不同返回 `request_context_conflict`。部分唯一索引保证每人同时只有一个进行中的音乐请求。与题库共用每分钟 10 次限额，但不互相阻塞。表中预留了后续编曲提案用的 `arrangement` 类型和 `payload` 列。
+- 发布顺序：先 `db push` 该迁移，再部署函数，再把 `https://yufenghuang.tech/study/music/` 加入 Auth 重定向白名单，最后在博客打开 `params.musicAI.enabled`。回退时先关博客开关；函数回退到上一版后 `music-*` 返回“未知操作”，不影响题库和实验室。
+
 ## 排错与验收边界
 
 可靠性更新（2026-09-17）：同一账号的后台登录通知和 token 刷新只复核权限，不卸载正在使用的聊天、评估和追问；确认退出、换号或失去权限仍会关闭助手。未发送的聊天草稿按账号与题目缓存在当前标签页，关闭助手再打开可恢复；失败时保留输入，退出或换号清理。标签页被系统丢弃、设备休眠或实际断网仍可能中断请求，聊天可从云端历史核对已保存部分。

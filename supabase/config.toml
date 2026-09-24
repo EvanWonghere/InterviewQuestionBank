@@ -19,7 +19,7 @@ api_url = "http://127.0.0.1"
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:5173/quiz/"
-additional_redirect_urls = ["http://127.0.0.1:4173/quiz/"]
+additional_redirect_urls = ["http://127.0.0.1:4173/quiz/", "http://localhost:1313/study/music/"]
 jwt_expiry = 3600
 enable_signup = true
 
