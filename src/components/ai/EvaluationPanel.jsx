@@ -8,6 +8,7 @@ import { ownFollowUpScore } from '../../../supabase/functions/ai-tutor/questionD
 import { MAX_ROUNDS, partitionWeaknesses } from '../../../supabase/functions/ai-tutor/evaluation.js';
 import { useAuth } from '@/context/AuthContext';
 import { useAIDraft } from '@/lib/aiDrafts';
+import { usePetStore } from '@/store/petStore';
 
 const SEVERITY = { high: ['严重', 'chip-difficulty-hard'], mid: ['中等', 'chip-difficulty-medium'], low: ['轻微', 'chip-difficulty-easy'] };
 
@@ -76,6 +77,8 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
   const latest = rounds.at(-1);
   const followUp = latest?.result?.followUp;
   const canFollowUp = Boolean(followUp) && !ended && latest.round < MAX_ROUNDS[mode];
+  // The tutor exists outside interviews; it knows this follow-up as 「追问 N」 from the evaluation recap.
+  const canAskTutor = usePetStore((state) => Boolean(state.opener)) && !interview;
   const finished = Boolean(latest) && !busy && !canFollowUp;
 
   const answerFollowUp = (event) => {
@@ -130,6 +133,11 @@ export default function EvaluationPanel({ question, submission, mode = 'practice
           <div className="mt-2 flex flex-wrap gap-2">
             <button className="btn-blue" disabled={!draft.trim()}>回答追问</button>
             <button type="button" className="btn-neutral" onClick={finish}>{interview ? '跳过追问，查看参考答案' : '结束追问'}</button>
+            {canAskTutor && (
+              <button type="button" className="btn-ghost" onClick={() => usePetStore.getState().askTutor(`关于追问 ${latest.round}：先给我一个思路提示，别直接给答案。`)}>
+                问小芽要个提示
+              </button>
+            )}
           </div>
         </form>
       )}

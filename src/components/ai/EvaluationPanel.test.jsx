@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import EvaluationPanel from './EvaluationPanel';
+import { usePetStore } from '@/store/petStore';
 
 const state = vi.hoisted(() => ({ settings: null, evaluate: vi.fn() }));
 vi.mock('@/data/aiRepository', () => ({
@@ -47,6 +48,22 @@ describe('EvaluationPanel', () => {
     expect(screen.queryByLabelText('回答追问')).toBeNull();
     // Answered follow-ups offer the question-bank action in practice mode.
     expect(screen.getByTestId('add-to-bank')).toHaveTextContent('bank:e2');
+  });
+
+  it('asks 小芽 about the open follow-up by its label, when the tutor is available', async () => {
+    const opener = vi.fn();
+    usePetStore.setState({ opener, pendingPrompt: null });
+    state.evaluate.mockResolvedValueOnce(evaluation(1, { question: '换成 int 数组呢？', targets: 'UB' }));
+    render(<EvaluationPanel question={question} submission={{ answerMd: '初答' }} />);
+    fireEvent.click(await screen.findByRole('button', { name: '问小芽要个提示' }));
+    expect(usePetStore.getState().pendingPrompt).toBe('关于追问 1：先给我一个思路提示，别直接给答案。');
+    expect(opener).toHaveBeenCalled();
+    cleanup();
+    usePetStore.setState({ opener: null, pendingPrompt: null });
+    state.evaluate.mockResolvedValueOnce(evaluation(1, { question: '换成 int 数组呢？', targets: 'UB' }));
+    render(<EvaluationPanel question={question} submission={{ answerMd: '初答' }} />);
+    await screen.findByLabelText('回答追问');
+    expect(screen.queryByRole('button', { name: '问小芽要个提示' }), 'no tutor on this page').toBeNull();
   });
 
   it('hides follow-ups at the interview round limit and hands control back', async () => {

@@ -13,12 +13,17 @@ let canvas = null;
 let particles = [];
 let frame = 0;
 
-function ensureCanvas() {
-  if (canvas?.isConnected) return canvas;
-  canvas = document.createElement('canvas');
-  canvas.className = 'game-fx-canvas';
-  canvas.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(canvas);
+// An open <dialog> (the tutor panel) sits above the page, and a modal one is in the browser's top
+// layer, so effects for an element inside it must be drawn inside it too.
+const hostFor = (element) => element?.closest?.('dialog[open]') ?? document.body;
+
+function ensureCanvas(host = document.body) {
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.className = 'game-fx-canvas';
+    canvas.setAttribute('aria-hidden', 'true');
+  }
+  if (canvas.parentNode !== host) host.appendChild(canvas);
   return canvas;
 }
 
@@ -70,9 +75,9 @@ function tick() {
  * kind: 'spark' (small star sparks), 'confetti' (falling paper), 'miss' (a few grey dots),
  * 'coin' (a few gold coins popping up, for an AI answer's cost).
  */
-export function burst(x, y, { kind = 'spark', count } = {}) {
+export function burst(x, y, { kind = 'spark', count, host } = {}) {
   if (!effectsEnabled()) return;
-  ensureCanvas();
+  ensureCanvas(host);
   resize();
   const palette = kind === 'coin'
     ? [cssVar('--game-star', '#e8a200'), '#ffd76a', '#fff1b8']
@@ -105,7 +110,7 @@ export function burst(x, y, { kind = 'spark', count } = {}) {
 export function burstFrom(element, options) {
   if (!element) return;
   const rect = element.getBoundingClientRect();
-  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, options);
+  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, { ...options, host: hostFor(element) });
 }
 
 /** Text that rises and fades from an element, e.g. "+20 XP". */
@@ -118,7 +123,7 @@ export function floatText(element, text, tone = 'xp') {
   node.setAttribute('aria-hidden', 'true');
   node.style.left = `${rect.left + rect.width / 2}px`;
   node.style.top = `${rect.top}px`;
-  document.body.appendChild(node);
+  hostFor(element).appendChild(node);
   node.addEventListener('animationend', () => node.remove(), { once: true });
   setTimeout(() => node.remove(), 2000);
 }

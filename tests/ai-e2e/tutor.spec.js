@@ -92,8 +92,12 @@ async function setup(page,{admin=true,loggedIn=true,configured=true}={}) {
     if(state.fail)return reply({error:'请求过于频繁，一分钟最多10次'},429);
     if(state.slow){await new Promise(r=>setTimeout(r,1500));return reply({error:'stopped'},409);}
     const text='先看对象生命周期：**谁订阅，谁负责退订**。\n\n```csharp\nsource.Changed -= OnChanged;\n```\n\n变式：如果对象只是禁用，应该何时恢复订阅？';
-    state.messages[input.questionId]=[...(state.messages[input.questionId]??[]),{id:crypto.randomUUID(),role:'user',body:input.message,status:'complete',phase:input.phase},{id:crypto.randomUUID(),role:'assistant',body:text,status:'complete',phase:input.phase,model:'synthetic-tutor'}];
-    return route.fulfill({contentType:'text/event-stream',body:`data: ${JSON.stringify({model:'synthetic-tutor'})}\n\ndata: ${JSON.stringify({text})}\n\ndata: ${JSON.stringify({status:'complete'})}\n\n`});
+    // With state.delay the server "generates" for a while: history shows the reply running, then saved.
+    const saved={id:crypto.randomUUID(),role:'assistant',body:state.delay?'':text,status:state.delay?'running':'complete',phase:input.phase,model:'synthetic-tutor',request_id:input.requestId};
+    state.messages[input.questionId]=[...(state.messages[input.questionId]??[]),{id:crypto.randomUUID(),role:'user',body:input.message,status:'complete',phase:input.phase,request_id:input.requestId},saved];
+    if(state.delay){await new Promise(r=>setTimeout(r,state.delay));saved.body=text;saved.status='complete';}
+    const usage=state.usage?`data: ${JSON.stringify({usage:state.usage})}\n\n`:'';
+    return route.fulfill({contentType:'text/event-stream',body:`data: ${JSON.stringify({model:'synthetic-tutor'})}\n\ndata: ${JSON.stringify({text})}\n\n${usage}data: ${JSON.stringify({status:'complete'})}\n\n`});
    }
    return reply({ok:true});
   }
@@ -347,3 +351,36 @@ test('saving a follow-up draft in the full list keeps the open question and remi
  await expect(page.getByRole('heading',{name:'服务器权威与状态同步'})).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+test('reply cost pops in the open panel, closing keeps the reply, and a follow-up can be asked',async({page})=>{
+ const s=await setup(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('./#/quiz?q=q-901');
+ s.usage={input:1200,cached:900,output:300,reasoning:120,calls:1,cost:0.0021};
+ await page.getByRole('button',{name:'问学习助手'}).click();
+ await page.getByRole('textbox',{name:'向学习教练提问'}).fill('请检查我的思路');
+ await page.getByRole('button',{name:'发送',exact:true}).click();
+ // The coin text is drawn inside the panel (a dialog), not under it.
+ await expect(page.locator('dialog .game-float-text.is-coin')).toHaveText('-¥0.0021');
+ await expect(page.getByRole('log')).toContainText('¥0.0021 · 缓存命中 75%');
+ // Closing while a reply is generating neither cancels it nor loses it.
+ s.delay=2500;
+ await page.getByRole('textbox',{name:'向学习教练提问'}).fill('再给一个项目例子');
+ await page.getByRole('button',{name:'发送',exact:true}).click();
+ await expect.poll(()=>s.chats.length).toBe(2);
+ await page.getByRole('button',{name:'关闭学习助手'}).click();
+ await page.getByRole('button',{name:'问学习助手'}).click();
+ await expect(page.getByRole('log')).toContainText('生成中');
+ await expect(page.getByRole('button',{name:'发送',exact:true})).toBeDisabled();
+ await expect.poll(async()=>(await page.getByRole('log').textContent()).split('谁订阅，谁负责退订').length-1,{timeout:10000}).toBe(2);
+ expect(s.calls).not.toContain('cancel');
+ await page.getByRole('button',{name:'关闭学习助手'}).click();
+ // An evaluation's open follow-up goes to 小芽 by its label.
+ s.delay=0;
+ await page.getByPlaceholder('用自己的话作答…').fill('对象销毁时退订');
+ await page.getByRole('button',{name:'提交并查看参考答案'}).click();
+ await page.getByRole('button',{name:'AI 评估我的回答'}).click();
+ await page.getByRole('button',{name:'问小芽要个提示'}).click();
+ await expect(page.getByRole('textbox',{name:'向学习教练提问'})).toHaveValue('关于追问 1：先给我一个思路提示，别直接给答案。');
+ expect(errors).toEqual([]);
+});
+

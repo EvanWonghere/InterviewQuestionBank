@@ -176,6 +176,17 @@ describe('reports', () => {
     expect(JSON.stringify(recap)).not.toContain('旧链');
   });
 
+  it('tells the coach which follow-up is still waiting for an answer', async () => {
+    const { latestEvaluationSummary } = await import('../../supabase/functions/ai-tutor/evaluate.ts');
+    const waiting = { followUp: { question: '换成 int 数组行为会不同吗？', targets: 'UB 与内置类型' }, weaknesses: [] };
+    const recapOf = (rows) => latestEvaluationSummary(fakeDb({ ai_evaluations: () => ({ data: rows, error: null }) }), 'u', id(9), must);
+    const open = await recapOf([{ id: id(2), root_id: null, round: 1, created_at: '2026-09-04', score: 60, result: waiting }]);
+    expect(open.pendingFollowUp).toEqual({ label: '追问 1', question: '换成 int 数组行为会不同吗？', targets: 'UB 与内置类型' });
+    // The last round allowed has no follow-up left to answer.
+    const done = await recapOf([{ id: id(4), root_id: id(2), round: 4, created_at: '2026-09-05', score: 80, result: waiting }]);
+    expect(done.pendingFollowUp).toBeUndefined();
+  });
+
   it('refuses reports without data before charging a request', async () => {
     const db = fakeDb({ ai_evaluations: () => ({ data: [], error: null }) });
     const res = await handleWeaknessReport({ action: 'weakness-report', requestId: id(6) }, { uid: 'u', db, model: 'm', json, must, callModel: vi.fn() });

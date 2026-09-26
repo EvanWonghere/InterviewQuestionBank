@@ -175,14 +175,24 @@ export async function handleRequest(req: Request, factory = createClient) {
   const effort=normalizeEffort(settings?.reasoning_effort);
   const begin=must(await db.rpc('ai_begin',{p_user:uid,p_question:q.id,p_version:q.updated_at,p_request:input.requestId,p_body:input.message,p_phase:input.phase,p_model:'pending'}));
   if(begin.duplicate) return json({error:'此请求已接收，请重新加载历史确认结果；不会重复调用',duplicate:true},409);
-  const abort=new AbortController(); let disconnected=false;
-  req.signal.addEventListener('abort',()=>{disconnected=true;abort.abort();},{once:true});
+  // `disconnected` means the user stopped the reply (cancel action, seen by the poll). Losing the
+  // connection (closing the panel or the tab) only stops the events: the reply keeps generating
+  // and is saved, and the page picks it up from history.
+  const abort=new AbortController(); let disconnected=false; let clientGone=false;
+  req.signal.addEventListener('abort',()=>{clientGone=true;},{once:true});
   const timer=setTimeout(()=>abort.abort(),MODEL_TIMEOUT_MS);
   const encoder=new TextEncoder();
-  const stream=new ReadableStream({async start(controller) {
+  const stream=new ReadableStream({start(controller) {
+   const work=generate(controller);
+   // Keep the function alive after the client goes away, until the reply is saved.
+   (globalThis as any).EdgeRuntime?.waitUntil?.(work);
+   return work;
+  },cancel(){clientGone=true;}});
+  async function generate(controller: ReadableStreamDefaultController) {
+   const question=q!; // checked above; narrowing does not reach into this function
    let body=''; let status='failed'; let failure=''; let lastSave=0; let polling=false; let lastThinking=0;
    let active:{model:string;provider:string}|null=null; let tier:string|null=null; let pedagogy:string|null=null; let fallbackUsed=false;
-   const emit=(event:string,data:unknown)=>{try{controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));}catch{disconnected=true;abort.abort();}};
+   const emit=(event:string,data:unknown)=>{if(clientGone)return;try{controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));}catch{clientGone=true;}};
    const persist=async()=>must(await db.from('ai_messages').update({body}).eq('id',begin.message.id));
    const poll=setInterval(async()=>{if(polling)return;polling=true;try{const m=must(await db.from('ai_messages').select('status').eq('id',begin.message.id).single());if(!m || m.status!=='running'){disconnected=true;abort.abort();}}catch{abort.abort();}finally{polling=false;}},1000);
    const startedAt=Date.now();
@@ -204,12 +214,12 @@ export async function handleRequest(req: Request, factory = createClient) {
     if(!body) throw new Error('响应中断或为空，请手动重试');
    };
    try {
-    emit('meta',{truncated:context.truncated,phaseFiltered:context.phaseFiltered,version:q.updated_at});
+    emit('meta',{truncated:context.truncated,phaseFiltered:context.phaseFiltered,version:question.updated_at});
     const recent=history.filter((message:{status?:string;phase?:string})=>message.status==='complete'&&(input.phase==='review'||message.phase==='hint')).slice(-4);
-    const plan=await planInteractiveTurn({env,policy:settings?.credit_policy,phase:input.phase,message:input.message,subject:q.title,recent});
+    const plan=await planInteractiveTurn({env,policy:settings?.credit_policy,phase:input.phase,message:input.message,subject:question.title,recent});
     active=plan.target; tier=plan.route.tier; pedagogy=plan.decision.pedagogyAction;
     const messages=insertPedagogyNote([...context.messages,{role:'user',content:input.message}],pedagogyNote(plan.decision.pedagogyAction,input.phase));
-    emit('meta',{model:plan.target.model,pedagogy:plan.decision.pedagogyAction,version:q.updated_at});
+    emit('meta',{model:plan.target.model,pedagogy:plan.decision.pedagogyAction,version:question.updated_at});
     try { await pull(plan.target,messages); }
     catch(error){
      const fallback=plan.fallback;
@@ -234,7 +244,7 @@ export async function handleRequest(req: Request, factory = createClient) {
     } catch {emit('error',{message:'回复保存失败，当前内容仅为临时副本；请复制后检查历史'});}
     try{controller.close();}catch{/* client closed */}
    }
-  },cancel(){disconnected=true;abort.abort();}});
+  }
   return new Response(stream,{headers:{...headers,'Content-Type':'text/event-stream'}});
  } catch(error) {
   const text=error instanceof Error?error.message:'';

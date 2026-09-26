@@ -90,6 +90,11 @@ export async function latestEvaluationSummary(db: any, uid: string, questionId: 
       weaknesses: thisAnswerWeaknesses(r.result, { isFollowUp: r.round > 1 }),
     })),
     unresolved: partitionWeaknesses(last?.result?.weaknesses, { isFollowUp: (last?.round ?? 1) > 1 }).unresolved,
+    // The follow-up the evaluator just asked and the user has not answered yet; the page shows it as
+    // 「追问 N」 with N = the last round, so the tutor can tell it from the reference answer's 高频追问.
+    ...(last?.result?.followUp?.question && (last.round ?? 1) < MAX_ROUNDS.practice
+      ? { pendingFollowUp: { label: `追问 ${last.round}`, question: last.result.followUp.question, targets: last.result.followUp.targets ?? '' } }
+      : {}),
   };
 }
 

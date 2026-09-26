@@ -31,6 +31,7 @@ export const usePetStore = create(
       tutorBlocked: null,
       speech: null,
       spendEvent: null,
+      pendingPrompt: null,
       setHidden: (hidden) => set({ hidden }),
       setPosition: (side, height, across = side === 'left' ? 0 : 1) => set({
         side, height: Math.max(0, Math.min(1, height)), across: Math.max(0, Math.min(1, across)),
@@ -59,6 +60,16 @@ export const usePetStore = create(
       clearSpeech: () => set({ speech: null }),
       // An AI answer's usage ({ input, cached, output, reasoning, cost }); `key` restarts the effect.
       spend: (usage) => set((state) => ({ spendEvent: { key: (state.spendEvent?.key ?? 0) + 1, usage } })),
+      // Opens the tutor with `text` in its input (e.g. asking about an evaluation's follow-up).
+      askTutor: (text) => {
+        set({ pendingPrompt: text });
+        get().opener?.();
+      },
+      takePendingPrompt: () => {
+        const text = get().pendingPrompt;
+        if (text) set({ pendingPrompt: null });
+        return text;
+      },
     }),
     {
       name: PET_STORAGE_KEY,

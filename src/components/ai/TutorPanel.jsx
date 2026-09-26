@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import { aiRequest, streamChat } from '@/data/aiRepository';
 import UsagePanel, { cleanPricing } from './UsagePanel';
@@ -72,14 +72,36 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const running = messages.find((m) => m.status === 'running');
   const mood = running ? messageMood(running) : error ? 'sad' : celebrate ? 'happy' : 'idle';
   useEffect(() => { usePetStore.getState().setMood(mood); }, [mood]);
-  // While the panel is open the floating pet is hidden, so the cost pops from the header's 小芽.
-  useSpendFloat(avatarRef, { onQuiet: (spent) => setNotice(`本次回答花费 ${spent.slice(1)}`) });
+  // While the panel is open the floating pet is hidden, so the cost pops from the 小芽 of the newest
+  // reply (visible, mid-panel), or the header's when there is none.
+  const logRef = useRef(null);
+  const spendTarget = useMemo(() => ({
+    get current() {
+      const avatars = logRef.current?.querySelectorAll('.ai-assistant .ai-message-avatar');
+      return avatars?.length ? avatars[avatars.length - 1] : avatarRef.current;
+    },
+  }), []);
+  useSpendFloat(spendTarget, { onQuiet: (spent) => setNotice(`本次回答花费 ${spent.slice(1)}`) });
   useEffect(() => {
     if (!celebrate) return undefined;
     const timer = window.setTimeout(() => setCelebrate(false), 2600);
     return () => window.clearTimeout(timer);
   }, [celebrate]);
   const markAssisted = () => { if (phaseRef.current === 'hint') assistRef.current?.(); };
+  // A reply started before the panel was closed may still be generating: follow it in history.
+  const pendingRemote = !busy && messages.some((m) => m.role === 'assistant' && m.status === 'running');
+  useEffect(() => {
+    if (!pendingRemote) return undefined;
+    const timer = window.setInterval(() => { refreshRef.current?.().catch(() => {}); }, 2000);
+    return () => window.clearInterval(timer);
+  }, [pendingRemote]);
+  // A question asked from elsewhere on the page (e.g. an evaluation's follow-up) lands in the input.
+  const pendingPrompt = usePetStore((state) => state.pendingPrompt);
+  useEffect(() => {
+    if (!pendingPrompt) return;
+    const prompt = usePetStore.getState().takePendingPrompt();
+    if (prompt) { setText(prompt); inputRef.current?.focus(); }
+  }, [pendingPrompt, setText]);
   const refresh = async () => {
     const data = await aiRequest({ action: 'history', questionId: question.id });
     if (!alive.current) return;
@@ -87,6 +109,8 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
     if (data.messages.some(m => m.role === 'assistant' && m.body)) markAssisted();
     if (data.versionChanged) setNotice('题目已更新：历史内容基于旧版本，新提问使用当前题目。');
   };
+  const refreshRef = useRef(refresh);
+  useEffect(() => { refreshRef.current = refresh; });
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
@@ -145,8 +169,8 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       .finally(() => { if (alive.current) setLoading(false); });
     return () => {
       alive.current = false;
-      const op = operation.current;
-      if (op) { void aiRequest({ action: 'cancel', requestId: op.id }).catch(() => {}); op.controller.abort(); }
+      // Closing the panel does not stop a reply: the stream keeps reading in the background (so its
+      // cost still pops from 小芽) and the server saves it either way. Only 停止 cancels.
       document.body.classList.remove('ai-panel-open');
       usePetStore.getState().setPanelOpen(false);
       el.close(); previous?.focus?.();
@@ -268,7 +292,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
       <details className="ai-disclosure"><summary>本次会发送什么</summary><p>本题题干、选项、当前作答；{phase === 'review' ? '参考解析与评分点；本题最近一次 AI 评估的结论（分轮次标注，教练不能据此改分）；' : '不发送参考解析，也不发送 AI 评估结论；'}符合当前阶段的最近20条对话（另有长度限制）。不发送其他题目或整个学习档案。</p><pre className="ai-context">{JSON.stringify(submission ?? {}, null, 2)}</pre><label className="ai-check"><input type="checkbox" checked={includeNote} onChange={e => setIncludeNote(e.target.checked)} /> 附带本题云端笔记</label></details>
       {notice && <p role="status" className="ai-notice">{notice}</p>}
       {loading && <p role="status" className="ai-loading"><span className="ai-dots" aria-hidden="true"><i /><i /><i /></span>正在读取本题对话…</p>}
-      <div role="log" aria-label="本题AI对话" className="ai-log">
+      <div ref={logRef} role="log" aria-label="本题AI对话" className="ai-log">
         {!loading && messages.length === 0 && <div className="ai-empty">
           <PixelPet mood={mood} size={72} />
           <h3>从一个具体疑问开始</h3>
@@ -306,7 +330,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
           <div className="ai-composer-actions">
             {lastRequest && !busy && <><button type="button" className="ai-text-btn" onClick={() => send(true)}>核对此次请求</button><button type="button" className="ai-text-btn" onClick={() => setText(lastRequest.message)}>重新提问</button></>}
             {busy && <button type="button" className="ai-text-btn" onClick={stop}>停止</button>}
-            <button className="ai-send-btn" aria-label="发送" title="发送" disabled={busy || loading || !settings.configured || !text.trim()}><Icon name="send" /></button>
+            <button className="ai-send-btn" aria-label="发送" title="发送" disabled={busy || pendingRemote || loading || !settings.configured || !text.trim()}><Icon name="send" /></button>
           </div>
         </div>
       </form>
