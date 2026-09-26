@@ -10,6 +10,8 @@ import ManageQuestionsPage from '@/pages/ManageQuestionsPage';
 import QuestionEditorPage from '@/pages/QuestionEditorPage';
 import ReviewPage from '@/pages/ReviewPage';
 import MigrationPage from '@/pages/MigrationPage';
+import MapPage from '@/pages/MapPage';
+import StagePage from '@/pages/StagePage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
 
@@ -31,6 +33,8 @@ export default function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<DashboardPage />} />
               <Route path="random-practice" element={<RandomPracticePage />} />
+              <Route path="map" element={<MapPage />} />
+              <Route path="stage/:categoryId/:index" element={<StagePage />} />
               <Route path="quiz" element={<QuizPage />} />
               <Route path="quiz/:categoryId" element={<QuizPage />} />
               <Route path="list/:status" element={<QuizPage />} />

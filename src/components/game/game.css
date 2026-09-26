@@ -1,0 +1,33 @@
+/* Stage game layer: shared tokens. Imported by the map and stage pages. See docs/GAMIFICATION.md. */
+:root {
+  --game-star: #e8a200;
+  --game-star-off: rgba(0, 0, 0, 0.14);
+  --game-star-soft: #fff4d6;
+  --game-heart: #e5294f;
+  --game-combo: #f26a00;
+  --game-mint: #9fe3c6;
+  --game-mint-deep: #2f8f6b;
+  --game-font-pixel: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --game-star: #ffc933;
+    --game-star-off: rgba(255, 255, 255, 0.18);
+    --game-star-soft: rgba(255, 201, 51, 0.14);
+    --game-heart: #ff5577;
+    --game-combo: #ff9a3d;
+    --game-mint-deep: #7fdcb6;
+  }
+}
+:root[data-theme="dark"] {
+  --game-star: #ffc933;
+  --game-star-off: rgba(255, 255, 255, 0.18);
+  --game-star-soft: rgba(255, 201, 51, 0.14);
+  --game-heart: #ff5577;
+  --game-combo: #ff9a3d;
+  --game-mint-deep: #7fdcb6;
+}
+
+.game-stars { display: inline-flex; gap: 2px; align-items: center; vertical-align: middle; }
+.game-star { display: block; flex: none; }
+.game-pixel { font-family: var(--game-font-pixel); letter-spacing: 0.04em; }

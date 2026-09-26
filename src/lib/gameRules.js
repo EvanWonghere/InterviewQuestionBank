@@ -1,0 +1,197 @@
+// Pure rules for the stage/map game layer. Everything here is derived from the
+// question list, SM-2 review states and recent attempts; the only extra input is
+// the local game store (stage records, best-star high-water marks, combo bonus).
+// See docs/GAMIFICATION.md.
+
+import { dayKey } from '@/lib/practiceCalendar';
+
+export const STAGE_MAX_SIZE = 6;
+export const HEARTS_PER_STAGE = 3;
+export const BASE_XP = { easy: 10, medium: 20, hard: 35 };
+export const MISS_XP = 5;
+export const COMBO_STEP = 0.1;
+export const COMBO_CAP = 0.5;
+
+export const LEVELS = [
+  { name: '实习生', xp: 0 },
+  { name: '初级客户端', xp: 300 },
+  { name: '中级客户端', xp: 900 },
+  { name: '高级客户端', xp: 2000 },
+  { name: '资深客户端', xp: 3800 },
+  { name: '技术专家', xp: 6500 },
+  { name: '主程', xp: 10000 },
+];
+
+// XP a question is worth at each star count; 3 stars adds 1.5× the base on top of 2 stars.
+const STAR_XP_FACTOR = [0, 0.6, 1, 2.5];
+const DIFFICULTY_RANK = { easy: 0, medium: 1, hard: 2 };
+
+const baseXp = (question) => BASE_XP[question?.difficulty] ?? BASE_XP.medium;
+
+/** Questions that take part in stages: published ones only, so drafts never shift stage boundaries. */
+export function stageQuestions(questions, categoryId) {
+  return questions
+    .filter((q) => q.categoryId === categoryId && (q.status ?? 'published') === 'published')
+    .sort((a, b) => (DIFFICULTY_RANK[a.difficulty] ?? 1) - (DIFFICULTY_RANK[b.difficulty] ?? 1)
+      || (a.order ?? 0) - (b.order ?? 0)
+      || String(a.id).localeCompare(String(b.id)));
+}
+
+/**
+ * Split a category into ceil(n / 6) stages of balanced size (4–6 questions for n ≥ 4).
+ * @returns {Array<{ key: string, categoryId: string, index: number, questions: object[] }>} index is 1-based
+ */
+export function buildStages(questions, categoryId) {
+  const list = stageQuestions(questions, categoryId);
+  if (!list.length) return [];
+  const count = Math.ceil(list.length / STAGE_MAX_SIZE);
+  const small = Math.floor(list.length / count);
+  const bigger = list.length % count; // the first `bigger` stages take one extra question
+  const stages = [];
+  let start = 0;
+  for (let i = 0; i < count; i += 1) {
+    const size = small + (i < bigger ? 1 : 0);
+    stages.push({ key: stageKey(categoryId, i + 1), categoryId, index: i + 1, questions: list.slice(start, start + size) });
+    start += size;
+  }
+  return stages;
+}
+
+export const stageKey = (categoryId, index) => `${categoryId}:${index}`;
+
+/** Readable URL segment for a category: the cloud slug, or the static id (which is already a slug). */
+export const categorySlug = (category) => category.slug ?? category.id;
+export const findCategory = (categories, param) => categories.find((c) => c.slug === param || c.id === param) ?? null;
+export const stageHref = (category, index) => `/stage/${categorySlug(category)}/${index}`;
+
+/** Star count for one answer inside a stage run. */
+export function answerStars({ quality, assisted = false }) {
+  if (!(quality >= 3)) return 0;
+  if (quality === 3 || assisted) return 1;
+  return 2;
+}
+
+/** Review state / attempts may be keyed by the cloud id or the legacy id. */
+function stateFor(reviewStates, question) {
+  return reviewStates?.[question.id] ?? (question.legacyId ? reviewStates?.[question.legacyId] : undefined);
+}
+
+const isAttemptOf = (question) => (a) => a.question_id === question.id || (question.legacyId && a.question_id === question.legacyId);
+
+function latestAttemptFor(attempts, question) {
+  // attempts are newest first
+  return attempts?.find(isAttemptOf(question));
+}
+
+/**
+ * The third star needs the current passing streak to span two calendar days, so answering twice
+ * in one sitting does not count as a review. Attempts only keep the latest 500; when the visible
+ * streak is shorter than SM-2's `repetitions`, the rest fell out of the window and the state is trusted.
+ */
+function streakSpansDays(question, state, attempts) {
+  const streak = [];
+  for (const attempt of attempts ?? []) {
+    if (!isAttemptOf(question)(attempt)) continue;
+    if (!(attempt.quality >= 3)) break;
+    streak.push(attempt);
+  }
+  if (streak.length < state.repetitions) return true;
+  return new Set(streak.map((a) => dayKey(a.answered_at))).size >= 2;
+}
+
+/**
+ * Current stars of a question, derived from its SM-2 state:
+ * 0 never passed or last rated 重来; 1 last rated 困难 or last attempt used AI help;
+ * 2 last rated ≥ 良好; 3 additionally passed at least twice in a row (repetitions ≥ 2) on different days.
+ */
+export function currentStars(question, reviewStates, attempts) {
+  const state = stateFor(reviewStates, question);
+  if (!state || !(state.lastQuality >= 3)) return 0;
+  if (state.lastQuality === 3) return 1;
+  if (latestAttemptFor(attempts, question)?.assistance_used) return 1;
+  return state.repetitions >= 2 && streakSpansDays(question, state, attempts) ? 3 : 2;
+}
+
+/** XP a question contributes: from its best-ever stars (so a later lapse never takes XP away) plus 5 per lapse. */
+export function questionXp(question, bestStars, lapseCount = 0) {
+  return Math.round(baseXp(question) * STAR_XP_FACTOR[bestStars ?? 0]) + MISS_XP * lapseCount;
+}
+
+/** Best-ever stars per question id: the stored high-water mark merged with the current derivation. */
+export function mergeBestStars(questions, reviewStates, attempts, stored = {}) {
+  const best = { ...stored };
+  for (const q of questions) {
+    const now = currentStars(q, reviewStates, attempts);
+    if (now > (best[q.id] ?? 0)) best[q.id] = now;
+  }
+  return best;
+}
+
+/** Total XP: per-question best stars + 5 XP per recorded lapse + locally stored combo bonus. */
+export function totalXp(questions, reviewStates, bestStars, bonusXp = 0) {
+  let xp = bonusXp;
+  for (const q of questions) {
+    xp += questionXp(q, bestStars[q.id], stateFor(reviewStates, q)?.lapseCount ?? 0);
+  }
+  return xp;
+}
+
+export function levelFor(xp) {
+  let index = 0;
+  LEVELS.forEach((level, i) => { if (xp >= level.xp) index = i; });
+  const current = LEVELS[index];
+  const next = LEVELS[index + 1] ?? null;
+  const progress = next ? (xp - current.xp) / (next.xp - current.xp) : 1;
+  return { index, name: current.name, xp, floor: current.xp, next, progress: Math.max(0, Math.min(1, progress)) };
+}
+
+/** XP an answer in a run earns right now (shown as the floating "+N XP"), including the combo bonus. */
+export function answerXp(question, stars, combo) {
+  if (stars === 0) return { xp: MISS_XP, bonus: 0 };
+  const xp = Math.round(baseXp(question) * STAR_XP_FACTOR[stars]);
+  const bonus = stars === 2 ? Math.round(xp * comboMultiplier(combo)) : 0;
+  return { xp, bonus };
+}
+
+export function comboMultiplier(combo) {
+  return combo > 1 ? Math.min(COMBO_CAP, (combo - 1) * COMBO_STEP) : 0;
+}
+
+/** Combo after an answer: 2 stars +1, assisted 1 star unchanged, anything else resets. */
+export function nextCombo(combo, { stars, assisted }) {
+  if (stars === 2) return combo + 1;
+  if (stars === 1 && assisted) return combo;
+  return 0;
+}
+
+/**
+ * Stage stars: 1 cleared, 2 cleared without losing a heart, 3 every question at 3 stars.
+ * A stage never run counts as cleared (with 1 star) once every question is currently ≥ 2 stars,
+ * so existing practice history unlocks the map.
+ */
+export function stageStatus(stage, { record, reviewStates, attempts }) {
+  const stars = stage.questions.map((q) => currentStars(q, reviewStates, attempts));
+  const allTwo = stars.every((s) => s >= 2);
+  const cleared = Boolean(record?.cleared) || allTwo;
+  let stageStars = 0;
+  if (cleared) stageStars = record?.flawless ? 2 : 1;
+  if (cleared && stars.every((s) => s === 3)) stageStars = 3;
+  return { cleared, stars: stageStars, questionStars: stars };
+}
+
+/** Chapter view: every stage with status and whether it is playable (first, or previous cleared). */
+export function chapterProgress(questions, categoryId, { records = {}, reviewStates, attempts }) {
+  const stages = buildStages(questions, categoryId).map((stage) => ({
+    ...stage,
+    ...stageStatus(stage, { record: records[stage.key], reviewStates, attempts }),
+  }));
+  stages.forEach((stage, i) => { stage.unlocked = i === 0 || stages[i - 1].cleared; });
+  const current = stages.find((s) => s.unlocked && !s.cleared) ?? null;
+  return {
+    stages,
+    currentIndex: current?.index ?? null,
+    stars: stages.reduce((sum, s) => sum + s.stars, 0),
+    maxStars: stages.length * 3,
+    bossReady: stages.length > 0 && stages.every((s) => s.stars >= 2),
+  };
+}

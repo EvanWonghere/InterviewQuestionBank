@@ -1,0 +1,132 @@
+/* Stage map page. See docs/GAMIFICATION.md. */
+
+.map-region-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+@media (max-width: 480px) {
+  .map-region-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-region-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-region-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
+  }
+}
+.is-quiet .map-region-card:hover {
+  transform: none;
+}
+
+.map-level-card {
+  border: 1px solid var(--border-subtle);
+}
+
+.map-quiet-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.map-quiet-toggle input {
+  accent-color: var(--apple-blue);
+}
+
+.map-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 10px; /* row gap leaves room for the stars under cleared nodes */
+  padding-bottom: 8px;
+}
+
+.map-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+}
+
+.map-node-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 11px;
+  border: 2px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+}
+
+.map-node-stars {
+  position: absolute;
+  bottom: -12px;
+}
+
+.map-node.is-cleared .map-node-circle {
+  background: var(--game-mint);
+  border-color: var(--game-mint-deep);
+  color: #1d3b30; /* dark text on the light mint fill in both themes */
+}
+
+.map-node.is-current .map-node-circle {
+  border-color: var(--apple-blue);
+  color: var(--apple-blue);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-node.is-current .map-node-circle {
+    animation: map-pulse 1.8s ease-in-out infinite;
+  }
+}
+.is-quiet .map-node.is-current .map-node-circle {
+  animation: none;
+}
+
+.map-node.is-unlocked .map-node-circle {
+  border-color: var(--apple-blue);
+}
+
+.map-node.is-locked {
+  cursor: not-allowed;
+}
+.map-node.is-locked .map-node-circle {
+  opacity: 0.4;
+}
+
+.map-node-boss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--text-primary);
+  color: var(--surface-card);
+  font-size: 10px;
+  font-family: var(--game-font-pixel);
+  letter-spacing: 0.03em;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.map-node-boss.is-boss-ready {
+  border: 2px solid var(--game-star);
+  opacity: 1;
+}
+
+@keyframes map-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(10, 132, 255, 0.12); }
+}

@@ -72,6 +72,15 @@ describe('AnswerPanel AI evaluation', () => {
     expect(state.recordAttempt.mock.calls[0][0]).toMatchObject({ quality: 4, aiEvaluationId: 'eval-1', aiScore: 64, errorReasons: ['boundary_case'] });
   });
 
+  it('reports the rating details to onRated for the stage game', async () => {
+    const onRated = vi.fn();
+    await submit({ onRated });
+    entryProps().onEvaluated(aiEvaluation);
+    fireEvent.click(await screen.findByRole('button', { name: /^良好/ }));
+    await waitFor(() => expect(onRated).toHaveBeenCalled());
+    expect(onRated).toHaveBeenCalledWith('mastered', { quality: 4, correct: null, assisted: false, aiScore: 64 });
+  });
+
   it('does not file a follow-up round slip as an error reason for the original answer', async () => {
     await submit({});
     entryProps().onEvaluated({ id: 'eval-1', round: 1, score: 40, result: { weaknesses: [{ tag: '边界', point: '原题漏了空输入', errorReason: 'boundary_case' }] } });

@@ -113,7 +113,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
       const legacyStatus = rating.quality < 3 ? 'wrong' : rating.quality === 3 ? 'review' : 'mastered';
       setProgress(question.id, legacyStatus);
       setSaved(true);
-      onRated?.(legacyStatus);
+      onRated?.(legacyStatus, { quality: rating.quality, correct: result?.correct, assisted: assistance.current, aiScore: aiEvaluation?.score ?? null });
     } catch (err) {
       setError(err.message);
     } finally {
