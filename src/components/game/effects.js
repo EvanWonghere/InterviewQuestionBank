@@ -67,29 +67,32 @@ function tick() {
 
 /**
  * Particle burst at viewport coordinates.
- * kind: 'spark' (small star sparks), 'confetti' (falling paper), 'miss' (a few grey dots).
+ * kind: 'spark' (small star sparks), 'confetti' (falling paper), 'miss' (a few grey dots),
+ * 'coin' (a few gold coins popping up, for an AI answer's cost).
  */
 export function burst(x, y, { kind = 'spark', count } = {}) {
   if (!effectsEnabled()) return;
   ensureCanvas();
   resize();
-  const palette = kind === 'miss'
+  const palette = kind === 'coin'
+    ? [cssVar('--game-star', '#e8a200'), '#ffd76a', '#fff1b8']
+    : kind === 'miss'
     ? [cssVar('--text-quaternary', '#999')]
     : kind === 'confetti'
       ? [cssVar('--game-star', '#e8a200'), cssVar('--game-mint', '#9fe3c6'), cssVar('--apple-blue', '#0071e3'), cssVar('--game-heart', '#e5294f'), cssVar('--game-combo', '#f26a00')]
       : [cssVar('--game-star', '#e8a200'), cssVar('--game-mint', '#9fe3c6'), '#ffffff'];
-  const n = count ?? (kind === 'confetti' ? 90 : kind === 'miss' ? 10 : 26);
+  const n = count ?? (kind === 'confetti' ? 90 : kind === 'miss' ? 10 : kind === 'coin' ? 12 : 26);
   for (let i = 0; i < n; i += 1) {
-    const angle = kind === 'confetti' ? -Math.PI / 2 + (Math.random() - 0.5) * 1.8 : Math.random() * Math.PI * 2;
-    const speed = kind === 'confetti' ? 7 + Math.random() * 9 : kind === 'miss' ? 1 + Math.random() * 2 : 2 + Math.random() * 5;
+    const angle = kind === 'confetti' || kind === 'coin' ? -Math.PI / 2 + (Math.random() - 0.5) * (kind === 'coin' ? 1.2 : 1.8) : Math.random() * Math.PI * 2;
+    const speed = kind === 'confetti' ? 7 + Math.random() * 9 : kind === 'coin' ? 3 + Math.random() * 3 : kind === 'miss' ? 1 + Math.random() * 2 : 2 + Math.random() * 5;
     particles.push({
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      gravity: kind === 'confetti' ? 0.28 : kind === 'miss' ? 0.12 : 0.06,
+      gravity: kind === 'confetti' ? 0.28 : kind === 'coin' ? 0.22 : kind === 'miss' ? 0.12 : 0.06,
       drag: kind === 'confetti' ? 0.985 : 0.95,
-      size: kind === 'confetti' ? 7 + Math.random() * 5 : kind === 'miss' ? 4 : 4 + Math.random() * 5,
-      shape: kind === 'confetti' ? 'rect' : kind === 'miss' ? 'dot' : Math.random() < 0.6 ? 'star' : 'dot',
+      size: kind === 'confetti' ? 7 + Math.random() * 5 : kind === 'coin' ? 6 + Math.random() * 3 : kind === 'miss' ? 4 : 4 + Math.random() * 5,
+      shape: kind === 'confetti' ? 'rect' : kind === 'coin' || kind === 'miss' ? 'dot' : Math.random() < 0.6 ? 'star' : 'dot',
       color: palette[Math.floor(Math.random() * palette.length)],
       rot: Math.random() * Math.PI,
       spin: (Math.random() - 0.5) * 0.3,

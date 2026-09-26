@@ -333,4 +333,23 @@ await db.exec('reset role;set role anon;');
 await assert.rejects(()=>db.query('select * from game_progress'),/permission denied/);
 await assert.rejects(()=>merge({}),/permission denied/);
 await db.exec('reset role;');
-await db.close();console.log('PASS: SQL migration, game progress merge (OR/max/latest, bonus deltas, validation, RPC-only writes, admin-only RLS), AI members (music scope, daily limit, expiry, own-row RLS), idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');
+
+// AI usage: written by the function (service role), read by the owner or an administrator.
+await db.exec(await readFile(new URL('../supabase/migrations/20260930000000_ai_usage.sql',import.meta.url),'utf8'));
+await db.exec(`insert into app_admins values('${a}') on conflict do nothing;`);
+const use=(user,extra='')=>db.query(`insert into ai_usage(user_id,action,provider,model,input_tokens,cached_tokens,output_tokens,reasoning_tokens,cost) values($1,'chat','deepseek','deepseek-flash',1000,800,300,200,0.0012)${extra}`,[user]);
+await use(a);await use(b);
+await assert.rejects(()=>db.query(`insert into ai_usage(user_id,action,provider,model,input_tokens,cached_tokens) values($1,'chat','x','m',10,20)`,[a]),/check constraint/,'cache hits cannot exceed input');
+await assert.rejects(()=>db.query(`insert into ai_usage(user_id,action,provider,model,output_tokens,reasoning_tokens) values($1,'chat','x','m',10,20)`,[a]),/check constraint/,'reasoning is part of output');
+await asUser(b);
+assert.equal((await db.query('select * from ai_usage')).rows.length,1,'a member reads only their own usage');
+await assert.rejects(()=>db.query(`insert into ai_usage(user_id,action,provider,model) values($1,'chat','x','m')`,[b]),/permission denied/);
+await asUser(a);
+assert.equal((await db.query('select * from ai_usage')).rows.length,2,'an administrator reads everyone');
+await assert.rejects(()=>db.query(`update ai_usage set cost=0`),/permission denied/);
+await db.exec('reset role;set role anon;');
+await assert.rejects(()=>db.query('select * from ai_usage'),/permission denied/);
+await db.exec('reset role;');
+await db.query(`insert into ai_settings(user_id,pricing) values($1,'{"deepseek-flash":{"input":2,"cached":0.2,"output":8}}') on conflict (user_id) do update set pricing=excluded.pricing`,[a]);
+await assert.rejects(()=>db.query(`update ai_settings set pricing='[1]' where user_id=$1`,[a]),/check constraint/);
+await db.close();console.log('PASS: SQL migration, AI usage (service-only writes, owner/admin reads, token checks, pricing column), game progress merge (OR/max/latest, bonus deltas, validation, RPC-only writes, admin-only RLS), AI members (music scope, daily limit, expiry, own-row RLS), idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');

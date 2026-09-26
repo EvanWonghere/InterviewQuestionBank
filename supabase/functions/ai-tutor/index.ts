@@ -10,6 +10,7 @@ import { handleLab } from './labs.ts';
 import { handleMusic } from './music.ts';
 import { handleArrange } from './musicArrange.ts';
 import { handleStrudel } from './musicStrudel.ts';
+import { createMeter, recordUsage, validatePricing } from './usage.js';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -48,15 +49,28 @@ export async function handleRequest(req: Request, factory = createClient) {
   const uid = auth.data.user.id;
   const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
   const deadline = requestDeadline();
+  // Every model call of this request reports its usage here; it is saved to ai_usage and returned
+  // with the answer (JSON field `usage`, or a `usage` event in a chat stream).
+  const meter = createMeter();
+  const onUsage = meter.add;
+  const withUsage = async (res: Response, pricing: unknown) => {
+   const summary = meter.summary(pricing);
+   if (!summary) return res;
+   await recordUsage(db, { userId: uid, action, requestId: input.requestId, meter, pricing });
+   if (!(res.headers.get('Content-Type') ?? '').includes('application/json')) return res;
+   const body = await res.json().catch(() => null);
+   if (!body || typeof body !== 'object' || Array.isArray(body)) return json(body, res.status);
+   return json({ ...body, usage: summary }, res.status);
+  };
   if (typeof action === 'string' && action.startsWith('lab-')) {
-   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
    const policy = settings?.credit_policy;
-   return await handleLab(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
-    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
+   return await withUsage(await handleLab(input,{uid,db,json,model:'pending',authorize:async()=>{const permission=await client.rpc('is_app_admin');return !permission.error&&permission.data===true;},
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline, onUsage }) : undefined}), settings?.pricing);
   }
   if (typeof action === 'string' && action.startsWith('music-')) {
-   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
    // Members use the cheapest routing, and hard turns stop at Luna; administrators keep their settings.
    const policy = access.admin ? settings?.credit_policy : 'aggressive';
@@ -66,29 +80,30 @@ export async function handleRequest(req: Request, factory = createClient) {
     // Structured proposals and snippets use the task route (JSON output), like question drafting.
     const callTask = env('AI_API_KEY') ? () => {
      const planned = planTaskTurn({ env, action, policy, maxSlot });
-     const routed = routedCall({ target: planned.target, fallback: planned.fallback, effort, deadline });
+     const routed = routedCall({ target: planned.target, fallback: planned.fallback, effort, deadline, onUsage });
      routed.execution.tier = planned.route.tier;
      return routed;
     } : undefined;
-    return await (action === 'music-arrange' ? handleArrange : handleStrudel)(input, { uid, db, json, authorize, callTask });
+    return await withUsage(await (action === 'music-arrange' ? handleArrange : handleStrudel)(input, { uid, db, json, authorize, callTask }), settings?.pricing);
    }
-   return await handleMusic(input,{uid,db,json,model:'pending',authorize,
-    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, maxSlot, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline }) : undefined});
+   return await withUsage(await handleMusic(input,{uid,db,json,model:'pending',authorize,
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: { phase: string; message: string; subject: string; recent: unknown[] }) => completeTutorText({ env, policy, maxSlot, phase: meta.phase, message: meta.message, subject: meta.subject, recent: meta.recent, messages, effort, deadline, onUsage }) : undefined}), settings?.pricing);
   }
   if (action === 'settings') {
-   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+   const settings = must(await db.from('ai_settings').select('base_url,model,reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
    const routing = publicRouting(env);
    // Cached copies of the previous quiz page still require settings.model before they enable send and evaluation.
    // Routing no longer reads that column; the value only keeps those copies usable.
-   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing, creditPolicy: effectivePolicy(settings?.credit_policy, routing.creditPolicy) });
+   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing, creditPolicy: effectivePolicy(settings?.credit_policy, routing.creditPolicy), pricing: settings?.pricing ?? {} });
   }
   if (action === 'save-settings' || action === 'test') {
    if (input.reasoningEffort != null && !REASONING_EFFORTS.includes(input.reasoningEffort)) return json({error:'无效思考强度'},400);
    if (input.creditPolicy != null && !CREDIT_POLICIES.includes(input.creditPolicy)) return json({error:'无效额度策略'},400);
    const effort=normalizeEffort(input.reasoningEffort);
    if(action === 'save-settings') {
-    const patch: { user_id: string; reasoning_effort: string; credit_policy?: string } = { user_id: uid, reasoning_effort: effort };
+    const patch: { user_id: string; reasoning_effort: string; credit_policy?: string; pricing?: unknown } = { user_id: uid, reasoning_effort: effort };
     if (CREDIT_POLICIES.includes(input.creditPolicy)) patch.credit_policy = input.creditPolicy;
+    if (input.pricing !== undefined) patch.pricing = validatePricing(input.pricing);
     must(await db.from('ai_settings').upsert(patch)); return json({ok:true});
    }
    if (!env('AI_API_KEY')) return json({error:'尚未设置服务端AI_API_KEY'},503);
@@ -123,10 +138,10 @@ export async function handleRequest(req: Request, factory = createClient) {
    return json({conversation:c,messages:(messages ?? []).reverse(),versionChanged:c.question_version !== q.updated_at});
   }
   if (action === 'evaluate' || action === 'interview-report' || action === 'weakness-report' || action === 'draft-question' || action === 'draft-weakness-questions') {
-   const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+   const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
    if(!env('AI_API_KEY')) return json({error:'尚未设置服务端 AI_API_KEY'},503);
    const planned=planTaskTurn({ env, action, policy: settings?.credit_policy });
-   const routed=routedCall({ target: planned.target, fallback: planned.fallback, effort: normalizeEffort(settings?.reasoning_effort), deadline });
+   const routed=routedCall({ target: planned.target, fallback: planned.fallback, effort: normalizeEffort(settings?.reasoning_effort), deadline, onUsage });
    routed.execution.tier=planned.route.tier;
    const ctx={uid,client,db,model:planned.target.model,json,must,callModel:routed.callModel};
    const table=action==='evaluate' ? 'ai_evaluations' : action==='interview-report' || action==='weakness-report' ? 'ai_reports' : null;
@@ -136,11 +151,11 @@ export async function handleRequest(req: Request, factory = createClient) {
     : action==='draft-weakness-questions' ? await handleWeaknessQuestions(input,ctx)
     : await handleWeaknessReport(input,ctx);
    if(routed.execution.fallbackUsed && table && typeof input.requestId==='string') await saveRouting(db, table, uid, input.requestId, { model: routed.execution.model });
-   return respond;
+   return await withUsage(respond, settings?.pricing);
   }
   if(action !== 'chat') return json({error:'未知操作'},400);
   validateChat(input);
-  const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy').eq('user_id',uid).maybeSingle());
+  const settings=must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
   if(!env('AI_API_KEY')) return json({error:'尚未设置服务端 AI_API_KEY'},503);
   const q=must(await db.from('questions').select('id,title,prompt_md,type,payload,updated_at').eq('id',input.questionId).single());
   if(!q)return json({error:'题目不存在'},404);
@@ -174,6 +189,7 @@ export async function handleRequest(req: Request, factory = createClient) {
     const upstream=await openChatStream({url:target.url,apiKey:target.apiKey,model:target.model,messages,effort,signal:attemptSignal()});
     for await(const event of iterateChatEvents(upstream.body)){
      if(event.thinking && Date.now()-lastThinking>5000){lastThinking=Date.now();emit('thinking',{thinking:true});}
+     if(event.usage) onUsage({provider:target.provider,model:target.model,usage:event.usage});
      if(event.text){body+=event.text;if(body.length>60000)throw new Error('回复超过长度限制');emit('delta',{text:event.text});}
      if(event.finishReason==='length') throw new Error('upstream_length');
      if(event.finishReason==='insufficient_system_resource') throw new Error('upstream_busy');
@@ -205,6 +221,8 @@ export async function handleRequest(req: Request, factory = createClient) {
      const updated=must(await db.from('ai_messages').update({status}).eq('id',begin.message.id).eq('status','running').select('status'));
      if(!updated?.length) status='stopped';
      if(active) await saveRouting(db,'ai_messages',uid,input.requestId,{model:active.model,provider:active.provider,model_tier:tier,pedagogy_action:pedagogy,fallback_used:fallbackUsed});
+     const usage=meter.summary(settings?.pricing);
+     if(usage){await recordUsage(db,{userId:uid,action,requestId:input.requestId,meter,pricing:settings?.pricing});emit('usage',{usage});}
      emit('done',{status,error:failure});
     } catch {emit('error',{message:'回复保存失败，当前内容仅为临时副本；请复制后检查历史'});}
     try{controller.close();}catch{/* client closed */}
@@ -218,6 +236,7 @@ export async function handleRequest(req: Request, factory = createClient) {
   if(text.includes('daily_limit'))return json({error:'今天的 AI 次数已用完，北京时间零点恢复'},429);
   if(text.includes('generation_busy'))return json({error:'本题还有生成中的请求，请停止或稍后刷新'},409);
   if(text==='missing_openai_key'||text==='missing_deepseek_key'||text.startsWith('API必须使用服务端允许的HTTPS域名')){const failure=modelFailure(error);return json(failure,failure.status);}
+  if(text.startsWith('无效价格表'))return json({error:text},400);
   if(text.includes('followup_invalid'))return json({error:'追问已回答、已达轮次上限或不属于本题，请刷新后重试'},400);
   // Input validation messages are authored in evaluation.js and safe to show.
   if(/^(无效|模拟面试评估需要|追问回答需为|作答过长|只能把|薄弱点数据过长)/.test(text))return json({error:text},400);

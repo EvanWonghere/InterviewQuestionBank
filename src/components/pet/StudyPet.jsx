@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PixelPet from './PixelPet';
 import { TIP_PAGES, pickTip } from './petTips';
+import { useSpendFloat } from './useSpendFloat';
+import { setEffectsQuiet } from '@/components/game/effects';
+import '@/components/game/game.css';
 import { usePetStore } from '@/store/petStore';
 import { useGameStore } from '@/store/gameStore';
 import { useQuestions } from '@/context/QuestionsContext';
@@ -52,6 +55,11 @@ export default function StudyPet() {
   const [greeting, setGreeting] = useState(() => !alreadyGreeted());
   const pointer = useRef(null);
   const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  // Quiet mode applies to effects on every page, not only the game pages.
+  useEffect(() => { setEffectsQuiet(quiet); }, [quiet]);
+  // What each AI answer cost floats up from 小芽; in quiet mode it says it instead.
+  useSpendFloat(buttonRef, { onQuiet: (text) => speak({ text: `这次花了 ${text.slice(1)}`, mood: 'talking', ms: 2500 }) });
   const visible = !hidden && !panelOpen;
   const compact = pathname.startsWith('/boss/');
   const today = game.today;
@@ -227,6 +235,7 @@ export default function StudyPet() {
         )}
       </span>
       <button
+        ref={buttonRef}
         type="button"
         className="study-pet-button"
         aria-label="小芽：打开菜单（可拖动，方向键换边）"

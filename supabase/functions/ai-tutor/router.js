@@ -134,7 +134,7 @@ export function planTaskTurn({ env, action, policy = undefined, maxSlot = /** @t
   return { catalog, route, target, fallback: target.provider === 'openai' ? catalog.deepseek : null };
 }
 
-export async function completeTutorText({ env, policy = undefined, maxSlot = /** @type {string | undefined} */ (undefined), phase, message, subject, recent, messages, effort, fetchImpl = fetch, deadline = requestDeadline() }) {
+export async function completeTutorText({ env, policy = undefined, maxSlot = /** @type {string | undefined} */ (undefined), phase, message, subject, recent, messages, effort, fetchImpl = fetch, deadline = requestDeadline(), onUsage }) {
   const plan = await planInteractiveTurn({ env, policy, maxSlot, phase, message, subject, recent, fetchImpl });
   const noted = insertPedagogyNote(messages, pedagogyNote(plan.decision.pedagogyAction, phase));
   const execution = { model: plan.target.model, provider: plan.target.provider, tier: plan.route.tier, fallbackUsed: false };
@@ -145,6 +145,7 @@ export async function completeTutorText({ env, policy = undefined, maxSlot = /**
     effort,
     fetchImpl,
     deadline,
+    onUsage,
     onFallback() {
       execution.model = plan.fallback.model;
       execution.provider = plan.fallback.provider;
@@ -154,7 +155,7 @@ export async function completeTutorText({ env, policy = undefined, maxSlot = /**
   return { body, decision: plan.decision, execution };
 }
 
-export function routedCall({ target, fallback, effort, deadline = requestDeadline() }) {
+export function routedCall({ target, fallback, effort, deadline = requestDeadline(), onUsage }) {
   /** @type {{ model: string, provider: string, tier: string | null, fallbackUsed: boolean }} */
   const execution = { model: target.model, provider: target.provider, tier: null, fallbackUsed: false };
   const callModelForTask = (messages, options = {}) => callRoutedModel({
@@ -163,6 +164,7 @@ export function routedCall({ target, fallback, effort, deadline = requestDeadlin
     messages,
     effort,
     deadline,
+    onUsage,
     json: true,
     budgetScale: options.budgetScale ?? 1,
     onFallback() {

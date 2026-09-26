@@ -31,3 +31,19 @@
 .game-stars { display: inline-flex; gap: 2px; align-items: center; vertical-align: middle; }
 .game-star { display: block; flex: none; }
 .game-pixel { font-family: var(--game-font-pixel); letter-spacing: 0.04em; }
+
+/* Effects: shared canvas and floating text (created by effects.js) */
+.game-fx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; }
+.game-float-text {
+  position: fixed;
+  z-index: 61;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+  font: 700 1rem var(--game-font-pixel);
+  color: var(--game-star);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  animation: game-float-up 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.game-float-text.is-muted { color: var(--text-tertiary); }
+.game-float-text.is-coin { color: var(--game-star); font-size: 0.95rem; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18); animation-duration: 1.8s; }
+@keyframes game-float-up { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.7); } 20% { opacity: 1; transform: translate(-50%, -14px) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(1); } }

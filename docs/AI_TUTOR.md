@@ -98,6 +98,16 @@ npx supabase functions deploy ai-tutor
 - 云端作品同步（不经过 ai-tutor）：迁移 `20260927000000_music_works.sql` 新建 `music_works`（`kind` 为 `score`/`live`/`arrangement`，`body` 为 jsonb，删除后为 null 并保留墓碑）。博客的 `sync.mjs` 在管理员登录后用自己的会话直接读写该表：RLS 只允许 `user_id = auth.uid()` 且仍是管理员，只授予 authenticated 角色 select/insert/update，不能硬删除。触发器 `private.music_works_guard` 由服务端分配版本号（插入为 1、每次更新 +1），禁止改主键，每类最多 50 首未删除作品，全部 body 合计不超过 8 MB。浏览器更新时附带 `revision = 基准版本` 条件，云端已更新则影响 0 行，由博客按冲突处理（两份都保留）。练习进度不写入此表。
 - 发布顺序：先 `db push` 该迁移，再部署函数，再把 `https://yufenghuang.tech/study/music/` 加入 Auth 重定向白名单，最后在博客打开 `params.musicAI.enabled`。回退时先关博客开关；函数回退到上一版后 `music-*` 返回“未知操作”，不影响题库和实验室。
 
+## 用量与花费
+
+迁移 `20260930000000_ai_usage.sql` 新增 `ai_usage` 表和 `ai_settings.pricing` 列。
+
+- 记录：函数里每次模型调用成功后，按服务商返回的 `usage` 记一行：输入、缓存命中（DeepSeek `prompt_cache_hit_tokens`，OpenAI `prompt_tokens_details.cached_tokens`）、输出、其中的思考（`completion_tokens_details.reasoning_tokens`）。流式聊天请求带 `stream_options.include_usage`，从最后一个没有 choices 的块里读用量。回退和重试的每次调用都单独记。Jev 的教学决策调用不在内。写入失败只记日志，不影响回答。
+- 权限：只有函数（service role）能写；用户读自己的，管理员读全部（含 AI 成员的音乐练习室用量）。
+- 价格：「API 设置 → 用量与花费」里按模型填元 / 百万 token 的输入、缓存命中、输出单价，随「保存设置」写进 `ai_settings.pricing`（函数再校验一次：最多 12 个模型，单价 0—10000）。三格都填了的模型才计价。`ai_usage.cost` 是调用当时的价格；面板上的花费按当前价格重算，改价格后历史也跟着变。
+- 返回：JSON 响应多一个 `usage` 字段，聊天流在 `done` 之前多一个 `usage` 事件，内容是本次请求的合计 `{ input, cached, output, reasoning, calls, cost }`；有未定价的模型时 `cost` 为 null。
+- 展示：题库页面收到 `usage` 后，小芽（学习助手打开时是面板头部的小芽）飘出「-¥0.0123」和几枚金币；没定价时显示消耗的 token 数；安静模式下改成一句话。聊天回复的状态行显示本次花费、缓存命中率和思考 token。面板里汇总今天、近 7 天、近 30 天的花费、调用次数、缓存命中率、思考占输出的比例，并按模型、按功能拆开。
+
 ## 排错与验收边界
 
 可靠性更新（2026-09-17）：同一账号的后台登录通知和 token 刷新只复核权限，不卸载正在使用的聊天、评估和追问；确认退出、换号或失去权限仍会关闭助手。未发送的聊天草稿按账号与题目缓存在当前标签页，关闭助手再打开可恢复；失败时保留输入，退出或换号清理。标签页被系统丢弃、设备休眠或实际断网仍可能中断请求，聊天可从云端历史核对已保存部分。

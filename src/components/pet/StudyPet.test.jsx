@@ -127,4 +127,10 @@ describe('StudyPet', () => {
     expect(usePetStore.getState().hidden).toBe(true);
     expect(screen.queryByRole('button', { name: /小芽/ })).toBeNull();
   });
+
+  it('tells what an AI answer cost (quiet mode says it instead of the coin effect)', () => {
+    renderAt('/quiz');
+    act(() => { usePetStore.getState().spend({ input: 1200, cached: 900, output: 300, reasoning: 0, cost: 0.00123 }); });
+    expect(screen.getByText('这次花了 ¥0.0012')).toBeInTheDocument();
+  });
 });

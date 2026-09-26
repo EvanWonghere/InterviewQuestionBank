@@ -10,6 +10,7 @@ export const PET_STORAGE_KEY = 'iqb:pet';
  *   tutor (`opener`); a stage run says why the tutor is closed (`tutorBlocked`, e.g. no hint cards).
  * - Games call `react(event, data)`; tips call `speak(...)`. Either sets `speech`, which the pet
  *   shows for its duration. `speech.key` restarts the motion animation.
+ * - The AI client calls `spend(usage)` after each answer; the pet (or the open tutor panel) shows the cost.
  * Persisted: `hidden`, the dragged position (`side`, `height` and `across`, each a 0–1 share of the
  * free height / width), whether it snaps to the nearest side (`snap`), the reminder switch and which
  * reminder was shown on which day.
@@ -29,6 +30,7 @@ export const usePetStore = create(
       opener: null,
       tutorBlocked: null,
       speech: null,
+      spendEvent: null,
       setHidden: (hidden) => set({ hidden }),
       setPosition: (side, height, across = side === 'left' ? 0 : 1) => set({
         side, height: Math.max(0, Math.min(1, height)), across: Math.max(0, Math.min(1, across)),
@@ -55,6 +57,8 @@ export const usePetStore = create(
         if (line) get().speak({ ...line, ms: line.ms ?? REACTION_MS });
       },
       clearSpeech: () => set({ speech: null }),
+      // An AI answer's usage ({ input, cached, output, reasoning, cost }); `key` restarts the effect.
+      spend: (usage) => set((state) => ({ spendEvent: { key: (state.spendEvent?.key ?? 0) + 1, usage } })),
     }),
     {
       name: PET_STORAGE_KEY,

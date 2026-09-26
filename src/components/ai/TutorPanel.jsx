@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMarkdown } from '@/components/ai/ChatMarkdown';
 import { aiRequest, streamChat } from '@/data/aiRepository';
+import UsagePanel, { cleanPricing } from './UsagePanel';
+import { useSpendFloat } from '@/components/pet/useSpendFloat';
+import { describeSpend } from '@/lib/aiSpend';
 import { useNotesStore } from '@/store/notesStore';
 import { useAIDraft } from '@/lib/aiDrafts';
 import PixelPet from '@/components/pet/PixelPet';
@@ -55,7 +58,10 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [text, setText] = useAIDraft(`${user.id}:${question.id}:chat`); const [includeNote, setIncludeNote] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState({ reasoningEffort: 'high', configured: false, allowedOrigins: [], creditPolicy: 'aggressive', keys: { deepseek: false, openai: false, jev: false }, models: { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' } });
+  const [settings, setSettings] = useState({ reasoningEffort: 'high', configured: false, allowedOrigins: [], creditPolicy: 'aggressive', keys: { deepseek: false, openai: false, jev: false }, models: { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' }, pricing: {} });
+  // Usage of the replies sent in this session, by request id, for the reply's status line.
+  const [usageByRequest, setUsageByRequest] = useState({});
+  const avatarRef = useRef(null);
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [noteDraft, setNoteDraft] = useState(null); const [noteBusy, setNoteBusy] = useState(false);
   const [lastRequest, setLastRequest] = useState(null);
@@ -66,6 +72,8 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const running = messages.find((m) => m.status === 'running');
   const mood = running ? messageMood(running) : error ? 'sad' : celebrate ? 'happy' : 'idle';
   useEffect(() => { usePetStore.getState().setMood(mood); }, [mood]);
+  // While the panel is open the floating pet is hidden, so the cost pops from the header's 小芽.
+  useSpendFloat(avatarRef, { onQuiet: (spent) => setNotice(`本次回答花费 ${spent.slice(1)}`) });
   useEffect(() => {
     if (!celebrate) return undefined;
     const timer = window.setTimeout(() => setCelebrate(false), 2600);
@@ -126,6 +134,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
           creditPolicy: config.creditPolicy ?? 'aggressive',
           keys: config.keys ?? { deepseek: Boolean(config.configured), openai: false, jev: false },
           models: config.models ?? { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' },
+          pricing: config.pricing ?? {},
         });
         setSettingsOpen(!config.configured);
         setMessages(history.messages);
@@ -164,6 +173,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         if (event.truncated) setNotice('更早的对话超出条数或长度预算，未随本次请求发送；历史不会被删除。');
         else if (event.phaseFiltered) setNotice(phaseRef.current === 'hint' ? '答前提示只发送答前阶段的对话；答后内容未发送。' : '未完成的回复不会随本次请求发送。');
         if (event.thinking) setMessages(prev => prev.map(m => m.id === localId ? { ...m, thinking: true } : m));
+        if (event.usage) setUsageByRequest(prev => ({ ...prev, [request.requestId]: event.usage }));
         if (event.text) {
           markAssisted();
           setMessages(prev => prev.map(m => m.id === localId ? { ...m, body: m.body + event.text } : m));
@@ -193,7 +203,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const configure = async action => {
     setSettingsBusy(true); setError('');
     try {
-      const result = await aiRequest({ action, reasoningEffort: settings.reasoningEffort, creditPolicy: settings.creditPolicy });
+      const result = await aiRequest({ action, reasoningEffort: settings.reasoningEffort, creditPolicy: settings.creditPolicy, ...(action === 'save-settings' ? { pricing: cleanPricing(settings.pricing) } : {}) });
       if (alive.current && action === 'test') {
         const detail = Array.isArray(result.probes) ? describeProbes(result.probes) : '';
         if (result.ok === false) setError(detail || '连接测试未通过');
@@ -219,13 +229,14 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const statusLine = (m) => {
     if (m.status === 'running') return m.thinking && !m.body ? '思考中…' : '生成中…';
     if (m.status !== 'complete') return '未完成回复';
-    return 'AI生成 · 请结合资料核对';
+    const usage = usageByRequest[m.request_id ?? String(m.id).replace(/-reply$/, '')];
+    return `AI生成 · 请结合资料核对${usage ? ` · ${describeSpend(usage)}` : ''}`;
   };
   const phaseLabel = phase === 'hint' ? '答前提示' : '答后巩固';
   return <dialog ref={dialog} className="ai-tutor-panel" aria-labelledby="ai-title" onCancel={e => { e.preventDefault(); onClose(); }} onKeyDown={e => { if(e.key==='Escape'){e.preventDefault();onClose();} }}>
     <header className="ai-tutor-header">
       <div className="ai-tutor-identity">
-        <span className={`ai-tutor-avatar pet-mood-${mood}`}><PixelPet mood={mood} size={40} /></span>
+        <span ref={avatarRef} className={`ai-tutor-avatar pet-mood-${mood}`}><PixelPet mood={mood} size={40} /></span>
         <div className="min-w-0">
           <p className="ai-tutor-kicker">小芽 · 学习教练 <span className={`ai-phase-chip is-${phase}`}>{phaseLabel}</span></p>
           <h2 id="ai-title" className="ai-tutor-title">{question.legacyId || question.id} · {question.title}</h2>
@@ -249,6 +260,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <p className="type-caption">连接测试分别调用 DeepSeek、Luna 和 Sol，并逐项显示结果。Jev 显示为未测试。仅发送固定测试文本，可能产生三次少量调用费用。</p>
+        <UsagePanel models={settings.models} pricing={settings.pricing} onPricingChange={(pricing) => setSettings(s => ({ ...s, pricing }))} />
         <label className="ai-check"><input type="checkbox" checked={!petHidden} onChange={e => usePetStore.getState().setHidden(!e.target.checked)} /> 显示小芽</label>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}

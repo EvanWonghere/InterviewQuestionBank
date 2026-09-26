@@ -1552,3 +1552,24 @@ button.heat-cell {
   .dash-ledger-bar { grid-column: 1 / -1; grid-row: 2; }
   .dash-ledger-meta { display: none; }
 }
+
+/* ── API 设置 · usage and prices ─────────────────────────────────────── */
+.ai-usage { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.ai-usage-range { display: flex; gap: 6px; flex-wrap: wrap; }
+.ai-usage-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.ai-usage-figures div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-card); }
+.ai-usage-figures dt { font-size: 12px; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.ai-usage-figures dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-family: var(--font-serif); font-size: 22px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ai-usage-figures small { font-family: var(--font-sans); font-size: 11px; font-weight: 400; color: var(--text-tertiary); }
+.ai-usage-table-wrap { display: grid; gap: 12px; overflow-x: auto; }
+.ai-usage-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ai-usage-table caption { text-align: left; font-size: 12px; letter-spacing: 0.08em; color: var(--text-tertiary); padding-bottom: 4px; }
+.ai-usage-table th, .ai-usage-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); text-align: right; white-space: nowrap; }
+.ai-usage-table th:first-child { text-align: left; font-weight: 500; color: var(--text-primary); }
+.ai-usage-table thead th { font-weight: 500; color: var(--text-tertiary); }
+.ai-price-grid { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.ai-price-grid legend { padding: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.ai-price-row { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.ai-price-row.is-head span { font-size: 11px; color: var(--text-tertiary); }
+.ai-price-model { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.ai-price-row .input-apple { padding: 6px 8px; font-size: 13px; }

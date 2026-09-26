@@ -1,5 +1,6 @@
 import { requireSupabase } from '@/lib/supabase';
 import { sseData } from '../../supabase/functions/ai-tutor/core.js';
+import { reportSpend } from '@/lib/aiSpend';
 export async function aiRequest(input, { signal } = {}) {
   const client = requireSupabase();
   const { data, error } = await client.auth.getSession();
@@ -34,7 +35,11 @@ export async function aiRequest(input, { signal } = {}) {
     if (Array.isArray(detail.probes)) error.probes = detail.probes;
     throw error;
   }
-  if (input.action !== 'chat') return response.json();
+  if (input.action !== 'chat') {
+    const data = await response.json();
+    if (data?.usage) reportSpend(data.usage);
+    return data;
+  }
   if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('模型响应不是流式格式');
   return response;
 }
@@ -43,6 +48,7 @@ export async function streamChat(input, { signal, onEvent }) {
   let terminal = false;
   for await (const data of sseData(response.body)) {
     const event = JSON.parse(data);
+    if (event.usage) reportSpend(event.usage);
     onEvent(event);
     if (event.status || event.message) terminal = true;
   }

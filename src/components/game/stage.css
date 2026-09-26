@@ -107,20 +107,6 @@
 .stage-achievements small { font-size: 0.75rem; color: var(--text-tertiary); }
 .stage-achievement-badge { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 0.6rem; display: grid; place-items: center; font-size: 0.7rem; font-weight: 700; color: var(--game-star); background: var(--surface-card); }
 
-/* Effects: shared canvas and floating text (created by effects.js) */
-.game-fx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; }
-.game-float-text {
-  position: fixed;
-  z-index: 61;
-  pointer-events: none;
-  transform: translate(-50%, 0);
-  font: 700 1rem var(--game-font-pixel);
-  color: var(--game-star);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
-  animation: game-float-up 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-.game-float-text.is-muted { color: var(--text-tertiary); }
-
 @media (prefers-reduced-motion: no-preference) {
   .stage-intro > * { animation: game-rise 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
   .stage-intro > *:nth-child(2) { animation-delay: 0.12s; }
@@ -170,4 +156,3 @@
 @keyframes game-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.75; } }
 @keyframes game-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @keyframes game-flash { from { opacity: 1; } to { opacity: 0; } }
-@keyframes game-float-up { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.7); } 20% { opacity: 1; transform: translate(-50%, -14px) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(1); } }

@@ -10,7 +10,8 @@ function remainingSignal(deadline) {
 
 /** Non-streaming Chat Completions call; errors carry only the upstream status, never its body. */
 // budgetScale > 1 is for replies that carry several items (e.g. a set of drafted questions).
-export async function callModel({ url, apiKey, model, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, deadline = requestDeadline() }) {
+// onUsage({ provider, model, usage }) receives the provider's usage object of a successful call (usage.js).
+export async function callModel({ url, apiKey, model, provider, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, deadline = requestDeadline(), onUsage }) {
   const signal = remainingSignal(deadline);
   const post = (jsonOutput) => {
     signal.throwIfAborted();
@@ -36,6 +37,8 @@ export async function callModel({ url, apiKey, model, messages, effort, json = f
   if (choice?.finish_reason === 'insufficient_system_resource') throw new Error('upstream_busy');
   const content = choice?.message?.content;
   if (typeof content !== 'string' || !content.trim()) throw new Error('upstream_format');
+  // A call that returned text was billed, even if the caller later rejects its content.
+  if (onUsage && result?.usage) onUsage({ provider, model, usage: result.usage });
   return content;
 }
 
@@ -63,6 +66,8 @@ function chatBody({ url, model, messages, effort, json, stream, budgetScale }) {
     messages,
     ...tokenLimit(url, effort, budgetScale),
     stream,
+    // DeepSeek and OpenAI then send usage in a last chunk with no choices.
+    ...(stream ? { stream_options: { include_usage: true } } : {}),
     ...modelOptions(url, { effort, json }),
   });
 }
@@ -90,7 +95,7 @@ export async function openChatStream({ url, apiKey, model, messages, effort, sig
   return response;
 }
 
-/** Shared Chat Completions SSE reader. Reasoning text is not forwarded. */
+/** Shared Chat Completions SSE reader. Reasoning text is not forwarded; the usage chunk is. */
 export async function* iterateChatEvents(body) {
   let finished = false;
   for await (const data of sseData(body)) {
@@ -105,6 +110,7 @@ export async function* iterateChatEvents(body) {
       text: typeof delta.content === 'string' ? delta.content : '',
       thinking: typeof delta.reasoning_content === 'string' && delta.reasoning_content.length > 0,
       finishReason: choice.finish_reason ?? null,
+      usage: parsed.usage ?? null,
     };
   }
   if (!finished) throw new Error('响应中断或为空，请手动重试');
@@ -114,12 +120,12 @@ export async function* iterateChatEvents(body) {
  * One OpenAI failure before any text falls back to DeepSeek. A second failure is returned as-is.
  * onFallback runs only after the primary call has failed and before the fallback call.
  */
-export async function callRoutedModel({ target, fallback, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, onFallback, deadline = requestDeadline() }) {
+export async function callRoutedModel({ target, fallback, messages, effort, json = false, budgetScale = 1, fetchImpl = fetch, onFallback, deadline = requestDeadline(), onUsage }) {
   try {
-    return await callModel({ url: target.url, apiKey: target.apiKey, model: target.model, messages, effort, json, budgetScale, fetchImpl, deadline });
+    return await callModel({ url: target.url, apiKey: target.apiKey, model: target.model, provider: target.provider, messages, effort, json, budgetScale, fetchImpl, deadline, onUsage });
   } catch (error) {
     if (Date.now() >= deadline || !fallback?.apiKey || target.provider !== 'openai' || !isFallbackable(error)) throw error;
     if (onFallback) onFallback();
-    return await callModel({ url: fallback.url, apiKey: fallback.apiKey, model: fallback.model, messages, effort, json, budgetScale, fetchImpl, deadline });
+    return await callModel({ url: fallback.url, apiKey: fallback.apiKey, model: fallback.model, provider: fallback.provider, messages, effort, json, budgetScale, fetchImpl, deadline, onUsage });
   }
 }
