@@ -14,12 +14,6 @@ import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 export default function QuestionCard({ question, cardRef, onRated }) {
   if (!question) return null;
 
-  const difficultyChipClass = {
-    easy: 'chip chip-difficulty-easy',
-    medium: 'chip chip-difficulty-medium',
-    hard: 'chip chip-difficulty-hard',
-  }[question.difficulty] || 'chip';
-
   const difficultyLabel = {
     easy: '简单',
     medium: '中等',
@@ -29,29 +23,15 @@ export default function QuestionCard({ question, cardRef, onRated }) {
   const tags = Array.isArray(question.tags) ? question.tags : [];
 
   return (
-    <article ref={cardRef} className="surface-card-elevated">
-      <div className="p-6 lg:p-8">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <h2 className="type-card-title" style={{ color: 'var(--text-primary)' }}>
-            {question.title}
-          </h2>
-          <div className="flex shrink-0 gap-2">
-            {question.type && <span className="chip">{QUESTION_TYPE_LABELS[question.type] ?? question.type}</span>}
-            {difficultyLabel && <span className={difficultyChipClass}>{difficultyLabel}</span>}
-          </div>
-        </div>
+    <article ref={cardRef} className="surface-card-elevated question-page">
+      <div className="question-page-inner">
+        <p className="question-meta">
+          {[difficultyLabel, question.type ? QUESTION_TYPE_LABELS[question.type] ?? question.type : null].filter(Boolean).join(' · ')}
+          {tags.length > 0 && <span className="question-tags">{tags.join(' / ')}</span>}
+        </p>
+        <h2 className="question-title">{question.title}</h2>
 
-        {tags.length > 0 && (
-          <div className="mb-5 flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <span key={tag} className="chip">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div style={{ color: 'var(--text-secondary)' }}>
+        <div className="question-body">
           <QuestionContent content={question.question} />
         </div>
 

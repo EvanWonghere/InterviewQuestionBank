@@ -22,7 +22,7 @@ function StageNode({ stage, worldIndex, category, isCurrent }) {
 
   const content = (
     <>
-      <span className="map-node-circle game-pixel">{label}</span>
+      <span className="map-node-circle" title={label}>{stage.index}</span>
       {stage.cleared && (
         <Stars count={stage.stars} size={9} pendingThird={stage.stars === 2} className="map-node-stars" />
       )}
@@ -44,37 +44,27 @@ function StageNode({ stage, worldIndex, category, isCurrent }) {
   );
 }
 
-/** The chapter's boss node: an unlinked requirement badge until every stage is at least 2 stars,
- * then a link to the boss fight (gold with "WIN" once defeated). */
+/** The chapter's interviewer as a seal: grey until every stage has 2 stars, a dashed red 「面」 when
+ * ready (a link to the fight), and a stamped 「录用」 once defeated. */
 function BossNode({ category, bossReady, record }) {
   if (!bossReady) {
     return (
-      <span
-        className="map-node map-node-boss"
-        aria-disabled="true"
-        title="章末 Boss：需本章每关 ≥ 2 星"
-        aria-label="章末 Boss：需本章每关 ≥ 2 星"
-      >
-        BOSS
-      </span>
+      <span className="map-seal is-locked" aria-disabled="true" title="章末 Boss：需本章每关 ≥ 2 星" aria-label="章末 Boss：需本章每关 ≥ 2 星">面</span>
     );
   }
   const defeated = Boolean(record?.defeated);
   const ariaLabel = `${category.name} 章末 Boss`;
   const title = defeated ? `${ariaLabel}（已击败，最高伤害 ${record.bestDamage ?? 0}）` : ariaLabel;
   return (
-    <Link
-      to={bossHref(category)}
-      className={`map-node map-node-boss is-boss-ready${defeated ? ' is-boss-defeated' : ''}`}
-      title={title}
-      aria-label={ariaLabel}
-    >
-      {defeated ? 'WIN' : 'BOSS'}
+    <Link to={bossHref(category)} className={`map-seal ${defeated ? 'is-defeated' : 'is-ready'}`} title={title} aria-label={ariaLabel}>
+      {defeated ? '录用' : '面'}
     </Link>
   );
 }
 
-/** One category's world card: title, stats, stage path and boss node. */
+const CHAPTER_NUMERALS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+/** One category as a chapter in the table of contents: stages, the interviewer's seal and star count. */
 function RegionCard({ category, worldIndex, progress, records, today }) {
   const { stages, currentIndex, stars, maxStars, bossReady } = progress;
   const totalQuestions = stages.reduce((sum, s) => sum + s.questions.length, 0);
@@ -83,47 +73,24 @@ function RegionCard({ category, worldIndex, progress, records, today }) {
   const fightsLeft = bossFightsLeft(bossRecord, today);
 
   return (
-    <section className="surface-card map-region-card p-6">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <div>
-          <p className="type-eyebrow game-pixel" style={{ color: 'var(--game-mint-deep)' }}>
-            WORLD {worldIndex}
-          </p>
-          <h3 className="type-body-emphasis mt-1" style={{ color: 'var(--text-primary)' }}>
-            {category.name}
-          </h3>
-        </div>
-        <p className="type-caption shrink-0" style={{ color: 'var(--text-tertiary)' }}>
-          {totalQuestions} 题 · {stages.length} 关
-        </p>
+    <section className="map-chapter" aria-label={`第${CHAPTER_NUMERALS[worldIndex - 1] ?? worldIndex}章 ${category.name}`}>
+      <span className="map-chapter-no">第{CHAPTER_NUMERALS[worldIndex - 1] ?? worldIndex}章</span>
+      <div className="map-chapter-name">
+        <h3>{category.name}</h3>
+        <span>{totalQuestions} 题 · {stages.length} 关 · {status}</span>
       </div>
-
       <div className="map-path">
         {stages.map((stage) => (
-          <StageNode
-            key={stage.key}
-            stage={stage}
-            worldIndex={worldIndex}
-            category={category}
-            isCurrent={stage.index === currentIndex}
-          />
+          <StageNode key={stage.key} stage={stage} worldIndex={worldIndex} category={category} isCurrent={stage.index === currentIndex} />
         ))}
+        <span className="map-path-rule" aria-hidden="true" />
         <BossNode category={category} bossReady={bossReady} record={bossRecord} />
       </div>
-
-      <div className="mt-4 flex items-baseline justify-between">
-        <p className="type-caption" style={{ color: 'var(--text-tertiary)' }}>
-          已得 {stars} / {maxStars} 星
-        </p>
-        <p className="type-caption" style={{ color: 'var(--text-tertiary)' }}>
-          {status}
-        </p>
+      <div className="map-chapter-stars">
+        <span>{stars} / {maxStars} 星</span>
+        <span className="map-chapter-bar" aria-hidden="true"><span style={{ width: `${maxStars ? (stars / maxStars) * 100 : 0}%` }} /></span>
+        {bossReady && <small>面试官今日剩余 {fightsLeft} / {BOSS_DAILY_LIMIT} 次</small>}
       </div>
-      {bossReady && (
-        <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
-          Boss 今日剩余 {fightsLeft} / {BOSS_DAILY_LIMIT} 次
-        </p>
-      )}
     </section>
   );
 }
@@ -169,7 +136,7 @@ export default function MapPage() {
           闯关地图
         </p>
         <h1 className="type-display-lg mb-3" style={{ color: 'var(--text-primary)' }}>
-          一关一关地闯，把题目变成地图。
+          {level.next ? <>{level.name}，<br />距离{level.next.name}还差 {(level.next.xp - level.xp).toLocaleString()} 经验。</> : <>{level.name}，已经满级。</>}
         </h1>
         <p className="type-body-lg max-w-xl" style={{ color: 'var(--text-tertiary)' }}>
           每关 4–6 题，3 颗心；第 3 颗星要在之后的复习里点亮。
@@ -279,7 +246,7 @@ export default function MapPage() {
         </section>
       )}
 
-      <div className="map-region-grid">
+      <div className="map-toc">
         {regions.map(({ category, worldIndex, progress }) => (
           <RegionCard key={category.id} category={category} worldIndex={worldIndex} progress={progress} records={records} today={today} />
         ))}

@@ -178,8 +178,8 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
             </div>
           )}
           {(result.referenceAnswerMd || result.explanationMd || result.rubricMd) && (
-            <div className="answer-block rounded-2xl p-6" style={{ background: 'var(--filter-bg)', border: '1px solid var(--border-subtle)' }}>
-              <p className="type-eyebrow mb-3" style={{ color: 'var(--apple-blue)' }}>参考答案与解析</p>
+            <div className="answer-block reference-block">
+              <h3 className="reference-title">参考答案与解析</h3>
               <Markdown content={result.referenceAnswerMd || result.explanationMd} />
               {result.explanationMd && result.referenceAnswerMd && <Markdown content={result.explanationMd} className="mt-4" />}
               {result.rubricMd && <><p className="type-eyebrow mt-5 mb-2">评分标准</p><Markdown content={result.rubricMd} /></>}
@@ -209,7 +209,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
           {!saved ? (
             <div ref={ratingRef}>
               <p className="type-caption mb-2" style={{ color: 'var(--text-tertiary)' }}>本次掌握程度</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="rating-group">
                 {allowedRatings.map((key) => (
                   <button key={key} type="button" disabled={loading} onClick={() => rate(key)} className={`btn-status rating-${key}${key === suggestedRating ? ' is-suggested' : ''}`}>
                     {REVIEW_RATINGS[key].label}

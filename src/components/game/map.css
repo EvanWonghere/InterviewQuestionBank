@@ -229,3 +229,57 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.35); }
   50% { box-shadow: 0 0 0 6px rgba(10, 132, 255, 0.12); }
 }
+
+/* ── 书页: the map as a table of contents ─────────────────────────────── */
+.map-toc { display: grid; border-top: 1px solid var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
+.map-chapter {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(9rem, 13rem) minmax(0, 1fr) 11rem;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 18px 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+.map-chapter:first-child { border-top: 0; }
+.map-chapter-no { font-family: var(--font-serif); font-size: 15px; color: var(--text-tertiary); }
+.map-chapter-name { display: grid; gap: 2px; min-width: 0; }
+.map-chapter-name h3 { margin: 0; font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--text-primary); }
+.map-chapter-name span { font-size: 12px; color: var(--text-tertiary); }
+.map-chapter .map-path { gap: 18px 8px; padding-bottom: 10px; }
+.map-path-rule { width: 16px; height: 1px; background: var(--border-default); }
+.map-chapter-stars { display: grid; gap: 6px; justify-items: end; font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.map-chapter-stars small { font-family: var(--font-sans); font-size: 11px; color: var(--text-tertiary); }
+.map-chapter-bar { width: 100%; max-width: 9rem; height: 4px; border-radius: 2px; background: var(--track-bg); position: relative; overflow: hidden; }
+.map-chapter-bar span { position: absolute; inset: 0 auto 0 0; background: var(--game-star); border-radius: 2px; }
+@media (max-width: 900px) {
+  .map-chapter { grid-template-columns: 3.5rem minmax(0, 1fr); }
+  .map-chapter .map-path, .map-chapter-stars { grid-column: 2; }
+  .map-chapter-stars { justify-items: start; }
+}
+
+/* Stage marks: filled indigo when cleared, an indigo ring for the next one, a hairline when locked. */
+.map-chapter .map-node-circle { width: 30px; height: 30px; font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--border-default); background: transparent; color: var(--text-tertiary); }
+.map-chapter .map-node.is-cleared .map-node-circle { background: var(--apple-blue); border-color: var(--apple-blue); color: var(--accent-on); }
+.map-chapter .map-node.is-current .map-node-circle { border: 2px solid var(--apple-blue); color: var(--apple-blue); font-weight: 600; }
+.map-chapter .map-node.is-unlocked .map-node-circle { border-color: var(--apple-blue); color: var(--apple-blue); }
+.map-chapter .map-node.is-locked .map-node-circle { opacity: 1; border-style: dashed; color: var(--text-quaternary); }
+
+/* The interviewer's seal */
+.map-seal {
+  --seal: #a8322a;
+  width: 34px; height: 34px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif); font-weight: 700; font-size: 15px; line-height: 1;
+  border-radius: 4px; text-decoration: none;
+}
+:root[data-theme="dark"] .map-seal { --seal: #f08a7e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .map-seal { --seal: #f08a7e; } }
+.map-seal.is-locked { border: 1px solid var(--border-default); color: var(--text-quaternary); cursor: not-allowed; }
+.map-seal.is-ready { border: 1.5px dashed var(--seal); color: var(--seal); }
+.map-seal.is-ready:hover { background: color-mix(in srgb, var(--seal) 10%, transparent); }
+.map-seal.is-defeated { border: 2px solid var(--seal); color: var(--seal); font-size: 12px; letter-spacing: 0.05em; transform: rotate(-6deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .map-seal.is-ready { animation: map-seal-breathe 2.4s ease-in-out infinite; }
+  .is-quiet .map-seal.is-ready { animation: none; }
+}
+@keyframes map-seal-breathe { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--seal) 0%, transparent); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--seal) 14%, transparent); } }
