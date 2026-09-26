@@ -2,7 +2,11 @@ import { Link } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useGameStore } from '@/store/gameStore';
 import { useGameProgress } from '@/hooks/useGameProgress';
-import { chapterProgress, stageHref, ACHIEVEMENTS, FREEZE_MAX, patrolKey } from '@/lib/gameRules';
+import {
+  chapterProgress, stageHref, ACHIEVEMENTS, FREEZE_MAX, patrolKey,
+  bossKey, bossHref, bossFightsLeft, BOSS_DAILY_LIMIT,
+} from '@/lib/gameRules';
+import { pickDungeon } from '@/lib/weakDungeon';
 import Stars from '@/components/game/Stars';
 import PixelPet from '@/components/pet/PixelPet';
 import { PET_FORMS } from '@/components/pet/petGrowth';
@@ -39,11 +43,43 @@ function StageNode({ stage, worldIndex, category, isCurrent }) {
   );
 }
 
+/** The chapter's boss node: an unlinked requirement badge until every stage is at least 2 stars,
+ * then a link to the boss fight (gold with "WIN" once defeated). */
+function BossNode({ category, bossReady, record }) {
+  if (!bossReady) {
+    return (
+      <span
+        className="map-node map-node-boss"
+        aria-disabled="true"
+        title="章末 Boss：需本章每关 ≥ 2 星"
+        aria-label="章末 Boss：需本章每关 ≥ 2 星"
+      >
+        BOSS
+      </span>
+    );
+  }
+  const defeated = Boolean(record?.defeated);
+  const ariaLabel = `${category.name} 章末 Boss`;
+  const title = defeated ? `${ariaLabel}（已击败，最高伤害 ${record.bestDamage ?? 0}）` : ariaLabel;
+  return (
+    <Link
+      to={bossHref(category)}
+      className={`map-node map-node-boss is-boss-ready${defeated ? ' is-boss-defeated' : ''}`}
+      title={title}
+      aria-label={ariaLabel}
+    >
+      {defeated ? 'WIN' : 'BOSS'}
+    </Link>
+  );
+}
+
 /** One category's world card: title, stats, stage path and boss node. */
-function RegionCard({ category, worldIndex, progress }) {
+function RegionCard({ category, worldIndex, progress, records, today }) {
   const { stages, currentIndex, stars, maxStars, bossReady } = progress;
   const totalQuestions = stages.reduce((sum, s) => sum + s.questions.length, 0);
   const status = stages.every((s) => s.cleared) ? '全部通关' : stages.some((s) => s.cleared) ? '进行中' : '未开始';
+  const bossRecord = records[bossKey(category.id)];
+  const fightsLeft = bossFightsLeft(bossRecord, today);
 
   return (
     <section className="surface-card map-region-card p-6">
@@ -71,14 +107,7 @@ function RegionCard({ category, worldIndex, progress }) {
             isCurrent={stage.index === currentIndex}
           />
         ))}
-        <span
-          className={`map-node map-node-boss ${bossReady ? 'is-boss-ready' : ''}`}
-          aria-disabled="true"
-          title="章末 Boss：后续版本开放（需本章每关 ≥ 2 星）"
-          aria-label="章末 Boss：后续版本开放（需本章每关 ≥ 2 星）"
-        >
-          BOSS
-        </span>
+        <BossNode category={category} bossReady={bossReady} record={bossRecord} />
       </div>
 
       <div className="mt-4 flex items-baseline justify-between">
@@ -89,6 +118,11 @@ function RegionCard({ category, worldIndex, progress }) {
           {status}
         </p>
       </div>
+      {bossReady && (
+        <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+          Boss 今日剩余 {fightsLeft} / {BOSS_DAILY_LIMIT} 次
+        </p>
+      )}
     </section>
   );
 }
@@ -122,6 +156,8 @@ export default function MapPage() {
   const regions = sortedCategories
     .map((cat, i) => ({ category: cat, worldIndex: i + 1, progress: chapterProgress(questions ?? [], cat.id, { records, reviewStates, attempts }) }))
     .filter((r) => r.progress.stages.length > 0);
+  // Visitor data only (lapses, no AI-evaluation weaknesses): the map never fetches evaluations.
+  const dungeon = pickDungeon(questions ?? [], { reviewStates, attempts });
 
   return (
     <div className={quiet ? 'is-quiet' : ''}>
@@ -224,9 +260,21 @@ export default function MapPage() {
         )}
       </section>
 
+      {dungeon && (
+        <section className="surface-card map-dungeon-card mb-10 p-6">
+          <h2 className="type-body-emphasis" style={{ color: 'var(--text-primary)' }}>
+            弱点副本
+          </h2>
+          <p className="type-body mt-2" style={{ color: 'var(--text-secondary)' }}>
+            薄弱点「{dungeon.tag}」集结了 {dungeon.questions.length} 道题
+          </p>
+          <Link to="/dungeon" className="btn-blue mt-3 inline-block">挑战副本</Link>
+        </section>
+      )}
+
       <div className="map-region-grid">
         {regions.map(({ category, worldIndex, progress }) => (
-          <RegionCard key={category.id} category={category} worldIndex={worldIndex} progress={progress} />
+          <RegionCard key={category.id} category={category} worldIndex={worldIndex} progress={progress} records={records} today={today} />
         ))}
       </div>
 

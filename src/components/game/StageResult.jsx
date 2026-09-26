@@ -13,7 +13,7 @@ const STAR_DELAY_MS = 380;
  * A patrol shows how many third stars it lit instead of stage stars. Achievements unlocked since the
  * last announcement are shown once, then marked seen.
  */
-export default function StageResult({ mode = 'stage', label, title, cleared, flawless, results, total, maxCombo, gained, startXp, nextHref, progress, onReplay }) {
+export default function StageResult({ mode = 'stage', badge, title, cleared, flawless, results, total, maxCombo, gained, startXp, nextHref, progress, onReplay }) {
   const patrol = mode === 'patrol';
   const stageStars = patrol ? 0 : cleared ? (flawless ? 2 : 1) : 0;
   const lit = results.filter((r) => r.lit).length;
@@ -65,7 +65,7 @@ export default function StageResult({ mode = 'stage', label, title, cleared, fla
 
   return (
     <section className="stage-result surface-card-elevated" aria-labelledby="stage-result-title">
-      <p className="type-caption" style={{ color: 'var(--text-tertiary)' }}>{patrol ? '每日巡检' : `STAGE ${label}`} · {title}</p>
+      <p className="type-caption" style={{ color: 'var(--text-tertiary)' }}>{patrol ? '每日巡检' : badge} · {title}</p>
       <h1 id="stage-result-title" ref={titleRef} className={`stage-result-title game-pixel${cleared ? '' : ' is-failed'}`}>
         {(patrol ? 'PATROL DONE' : cleared ? 'STAGE CLEAR' : 'STAGE FAILED').split('').map((ch, i) => (
           <span key={i} style={{ animationDelay: `${i * 35}ms` }}>{ch === ' ' ? ' ' : ch}</span>

@@ -10,10 +10,15 @@ const questions = Array.from({ length: 7 }, (_, i) => ({ id: `q${i}`, title: `�
 vi.mock('@/context/QuestionsContext', () => ({
   useQuestions: () => ({ questions, categories: [{ id: 'c', name: 'C# 基础', order: 1 }], loading: false, error: null }),
 }));
+const auth = vi.hoisted(() => ({ value: { user: null, isAdmin: false } }));
+vi.mock('@/context/AuthContext', () => ({ useAuth: () => auth.value }));
 vi.mock('@/components/quiz/QuestionContent', () => ({ default: ({ content }) => <p>{content}</p> }));
 vi.mock('@/components/quiz/AnswerPanel', () => ({
-  default: ({ onRated }) => (
+  default: ({ onRated, onEvaluated, onAssistance, hintEnabled }) => (
     <div>
+      {hintEnabled && <button type="button" onClick={() => onAssistance?.()}>问小芽</button>}
+      <button type="button" onClick={() => onEvaluated?.({ round: 2, score: 72 })}>追问得 72 分</button>
+      <button type="button" onClick={() => onEvaluated?.({ round: 2, score: 40 })}>追问得 40 分</button>
       <button type="button" onClick={() => onRated('mastered', { quality: 4, correct: null, assisted: false, aiScore: null })}>评良好</button>
       <button type="button" onClick={() => onRated('wrong', { quality: 0, correct: false, assisted: false, aiScore: null })}>评重来</button>
       <button type="button" onClick={() => onRated('mastered', { quality: 5, correct: true, assisted: true, aiScore: null })}>用提示后答对</button>
@@ -35,6 +40,7 @@ const answer = (name) => {
 };
 
 beforeEach(() => {
+  auth.value = { user: null, isAdmin: false };
   window.scrollTo = vi.fn();
   useGameStore.setState({ records: {}, bestStars: {}, bonusXp: 0, quiet: true, seenAchievements: [] });
   useReviewStore.setState({ reviewStates: {}, attempts: [] });
@@ -94,5 +100,51 @@ describe('StagePage', () => {
   it('refuses a locked stage', () => {
     renderStage('/stage/c/2');
     expect(screen.getByText(/这一关还没解锁/)).toBeVisible();
+  });
+
+  it('spends hint cards on the tutor and earns one more at combo 5 (administrators)', () => {
+    auth.value = { user: { id: 'admin' }, isAdmin: true };
+    renderStage();
+    fireEvent.click(screen.getByRole('button', { name: '开始' }));
+    expect(screen.getByLabelText('提示卡剩余 2 张')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '问小芽' }));
+    fireEvent.click(screen.getByRole('button', { name: '问小芽' }));
+    expect(screen.getByLabelText('提示卡剩余 1 张'), 'one card per question').toBeInTheDocument();
+    answer('用提示后答对');
+    fireEvent.click(screen.getByRole('button', { name: '问小芽' }));
+    expect(screen.getByLabelText('提示卡剩余 0 张')).toBeInTheDocument();
+    answer('用提示后答对');
+    expect(screen.queryByRole('button', { name: '问小芽' }), 'no cards left').toBeNull();
+  });
+
+  it('revives one heart when a follow-up after a miss scores at least 60, once per run', () => {
+    auth.value = { user: { id: 'admin' }, isAdmin: true };
+    renderStage();
+    fireEvent.click(screen.getByRole('button', { name: '开始' }));
+    fireEvent.click(screen.getByRole('button', { name: '评重来' }));
+    expect(screen.getByRole('img', { name: '剩余 2 颗心' })).toBeInTheDocument();
+    expect(screen.getByText(/追问复活/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: '追问得 40 分' }));
+    expect(screen.getByRole('img', { name: '剩余 2 颗心' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '追问得 72 分' }));
+    expect(screen.getByRole('img', { name: '剩余 3 颗心' })).toBeInTheDocument();
+    expect(screen.getByText(/复活成功/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: '下一题' }));
+    fireEvent.click(screen.getByRole('button', { name: '评重来' }));
+    fireEvent.click(screen.getByRole('button', { name: '追问得 72 分' }));
+    expect(screen.getByRole('img', { name: '剩余 2 颗心' }), 'only once per run').toBeInTheDocument();
+  });
+
+  it('does not count a revived run as flawless', () => {
+    auth.value = { user: { id: 'admin' }, isAdmin: true };
+    renderStage();
+    fireEvent.click(screen.getByRole('button', { name: '开始' }));
+    fireEvent.click(screen.getByRole('button', { name: '评重来' }));
+    fireEvent.click(screen.getByRole('button', { name: '追问得 72 分' }));
+    fireEvent.click(screen.getByRole('button', { name: '下一题' }));
+    answer('评良好');
+    answer('评良好');
+    answer('评良好');
+    expect(useGameStore.getState().records['c:1']).toMatchObject({ cleared: true, flawless: false });
   });
 });

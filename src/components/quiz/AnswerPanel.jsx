@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from '@/components/common/Markdown';
 import { gradeCloudQuestion } from '@/data/questionRepository';
 import { gradeObjective, isObjectiveType } from '@/lib/grading';
@@ -33,7 +33,10 @@ export default function AnswerPanel(props) {
   return <AnswerPanelState key={props.question.id} {...props} />;
 }
 
-function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluationMode = 'practice', sessionId }) {
+// Stage game hooks (all optional): `onEvaluated` sees every AI evaluation round, `onAssistance` fires
+// the first time the tutor is used before submitting, and `hintEnabled={false}` closes the tutor
+// before submitting while leaving it open for the review afterwards.
+function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluationMode = 'practice', sessionId, onEvaluated, onAssistance, hintEnabled = true }) {
   const { user, isAdmin } = useAuth();
   const recordAttempt = useReviewStore((state) => state.recordAttempt);
   const setProgress = useProgressStore((state) => state.setProgress);
@@ -52,8 +55,11 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
   // Interview mode keeps the reference hidden until the AI follow-ups finish, are skipped, or AI is unavailable.
   const [revealed, setRevealed] = useState(evaluationMode !== 'interview');
   const reveal = useCallback(() => setRevealed(true), []);
+  const onEvaluatedRef = useRef(onEvaluated);
+  useEffect(() => { onEvaluatedRef.current = onEvaluated; }, [onEvaluated]);
   const applyEvaluation = useCallback((evaluation) => {
     setAiEvaluation(evaluation);
+    onEvaluatedRef.current?.(evaluation);
     // Error reasons belong to this attempt, which is the original answer; a slip made only in a
     // follow-up round must not be filed against it.
     const reasons = originalAnswerWeaknesses(evaluation.result, { isFollowUp: evaluation.round > 1 })
@@ -219,7 +225,7 @@ function AnswerPanelState({ question, onRated, assistantEnabled = true, evaluati
         </div>
       )}
       {assisted && <p className="type-caption mt-3">本次作答使用过AI辅助；对错与自评仍由原流程记录。</p>}
-      <TutorEntry primary enabled={assistantEnabled} question={question} phase={result ? 'review' : 'hint'} submission={submission} onAssistance={() => { if (!submitted.current) { assistance.current = true; setAssisted(true); } }} />
+      <TutorEntry primary enabled={assistantEnabled && (hintEnabled || Boolean(result))} question={question} phase={result ? 'review' : 'hint'} submission={submission} onAssistance={() => { if (!submitted.current) { if (!assistance.current) onAssistance?.(); assistance.current = true; setAssisted(true); } }} />
       {error && <p className="type-caption mt-3" style={{ color: 'var(--error-fg)' }}>{error}</p>}
     </section>
   );

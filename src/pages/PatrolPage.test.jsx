@@ -11,6 +11,7 @@ const questions = Array.from({ length: 3 }, (_, i) => ({ id: `q${i}`, title: `�
 vi.mock('@/context/QuestionsContext', () => ({
   useQuestions: () => ({ questions, categories: [{ id: 'c', name: 'C# 基础', order: 1 }], loading: false, error: null }),
 }));
+vi.mock('@/context/AuthContext', () => ({ useAuth: () => ({ user: null, isAdmin: false }) }));
 vi.mock('@/components/quiz/QuestionContent', () => ({ default: ({ content }) => <p>{content}</p> }));
 vi.mock('@/components/quiz/AnswerPanel', () => ({
   default: ({ question, onRated }) => (

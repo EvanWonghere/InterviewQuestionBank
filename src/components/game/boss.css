@@ -1,0 +1,45 @@
+/* Chapter boss fight. Motion lives in the no-preference block; quiet mode stops it via .game-quiet. */
+
+.boss-arena { display: grid; justify-items: center; gap: 1rem; padding: 2rem 1.25rem; text-align: center; max-width: 36rem; margin: 0 auto; width: 100%; }
+.boss-taunt { font-size: 1rem; color: var(--text-secondary); max-width: 32ch; }
+.boss-sprite-wrap { display: inline-flex; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.18)); }
+.boss-sprite-wrap.is-defeated { filter: grayscale(1); opacity: 0.6; transform: rotate(-12deg) translateY(6px); }
+
+.boss-hp { display: grid; gap: 0.3rem; width: 100%; max-width: 26rem; }
+.boss-hp-label { font-size: 0.75rem; font-weight: 700; color: var(--game-heart); text-align: left; font-variant-numeric: tabular-nums; }
+.boss-hp-track { display: block; height: 0.9rem; border-radius: 0.3rem; background: var(--track-bg); overflow: hidden; border: 1px solid var(--border-default); }
+.boss-hp-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--game-heart), var(--game-combo)); transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.boss-hp-fill.is-low { background: var(--game-heart); }
+
+.boss-hud {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 1rem;
+  background: var(--surface-sidebar);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-elevated);
+}
+.boss-hud .boss-hp { flex: 1 1 12rem; }
+.boss-hud-name { display: grid; line-height: 1.2; }
+.boss-hud-name small { font-size: 0.7rem; color: var(--text-tertiary); }
+.boss-report { max-width: 56rem; margin: 0 auto; width: 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .boss-arena .boss-sprite-wrap { animation: boss-idle 2.4s ease-in-out infinite; }
+  .boss-arena .boss-sprite-wrap.is-defeated { animation: boss-fall 0.9s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+  .boss-sprite-wrap.is-hit { animation: boss-hit 0.45s ease; }
+  .boss-hp.is-shaking { animation: game-shake 0.42s ease; }
+  .boss-taunt { animation: game-rise 0.5s ease 0.2s both; }
+}
+
+@keyframes boss-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes boss-hit { 0% { filter: none; transform: none; } 30% { filter: brightness(1.8) saturate(0.2); transform: translateX(-6px) rotate(-4deg); } 60% { transform: translateX(5px) rotate(3deg); } 100% { filter: none; transform: none; } }
+@keyframes boss-fall { from { transform: none; opacity: 1; filter: none; } to { transform: rotate(-12deg) translateY(6px); opacity: 0.6; filter: grayscale(1); } }

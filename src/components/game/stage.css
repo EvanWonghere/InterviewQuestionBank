@@ -29,6 +29,9 @@
 .stage-combo { min-width: 6.5rem; font-weight: 700; color: var(--game-combo); }
 .stage-combo.is-hot { text-shadow: 0 0 10px color-mix(in srgb, var(--game-combo) 45%, transparent); }
 .stage-combo.is-blazing { color: var(--game-heart); text-shadow: 0 0 14px color-mix(in srgb, var(--game-heart) 55%, transparent); }
+.stage-cards { font-weight: 700; color: var(--game-mint-deep); padding: 0.1rem 0.45rem; border-radius: 0.4rem; border: 1px solid currentColor; }
+.stage-cards.is-empty { color: var(--text-quaternary); }
+.stage-cards.is-bumped { animation: game-bump 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
 .stage-xp { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .stage-pips { display: flex; gap: 4px; margin-left: auto; }
 .stage-pip { width: 1.25rem; height: 0.375rem; border-radius: 3px; background: var(--track-bg); transition: background-color 0.3s ease; }
@@ -70,6 +73,8 @@
 .stage-verdict-text { color: var(--text-secondary); }
 .stage-verdict-pet { display: flex; }
 .stage-next { grid-column: 1 / -1; justify-self: end; }
+.stage-revive { grid-column: 1 / -1; padding: 0.5rem 0.75rem; border-radius: 0.6rem; background: var(--surface-card); color: var(--text-secondary); border: 1px dashed var(--game-heart); }
+.stage-revive.is-done { border-style: solid; border-color: var(--success-fg); color: var(--success-fg); }
 @media (max-width: 560px) {
   .stage-verdict { grid-template-columns: auto 1fr auto; }
   .stage-verdict-text { grid-column: 1 / -1; grid-row: 2; }

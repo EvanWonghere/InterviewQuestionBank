@@ -9,7 +9,7 @@
 1. 第三颗星必须靠之后的复习拿到，当场最多 2 星。
 2. 自评题只有「重来」扣心；「困难」算过关但清零连击。
 3. 地图软锁：所有分类都开放，章内关卡按顺序解锁；随机练习、分类列表、复习页不受影响。
-4. 第一、二阶段不加表：星级和经验从现有记录推导，其余存在本地 store。
+4. 第一、二阶段不加表：星级和经验从现有记录推导，其余存在本地 store。第三阶段为管理员加了 `game_progress` 做跨设备同步。
 
 ## 第一阶段范围
 
@@ -35,7 +35,17 @@
 | 地图页 | 巡检入口、连签和补签卡、成就墙 |
 | 结算页 | 新成就只提示一次（`gameStore.seenAchievements`），显示连签天数 |
 
-Boss 不在前两个阶段内。
+## 第三阶段范围
+
+| 部分 | 位置 |
+|---|---|
+| 跨设备同步 | 迁移 `supabase/migrations/20260929000000_game_progress.sql`（2026-09-26 经批准已应用），`src/data/gameRepository.js`，`src/hooks/useGameSync.js` |
+| 章末 Boss | `src/pages/BossPage.jsx`，路由 `#/boss/<分类 slug>`；`BossSprite.jsx`、`boss.css` |
+| 提示卡、追问复活 | `StageRun.jsx`；`AnswerPanel` 新增可选参数 `onEvaluated`、`onAssistance`、`hintEnabled` |
+| 弱点副本 | `src/lib/weakDungeon.js`，`src/pages/DungeonPage.jsx`，路由 `#/dungeon` |
+| 地图 | Boss 入口、每日剩余次数、弱点副本卡片 |
+
+四个 AI 玩法都复用 `ai-tutor` 现有的作答评估（含追问）、面试报告和学习助手，没有改 Edge Function。
 
 ## 规则
 
@@ -77,7 +87,7 @@ Boss 不在前两个阶段内。
 
 局内「+N XP」显示的是真实增量（最高星的提升 + 失误经验 + 连击奖励）；重玩已拿过星的题，增量可能为 0。
 
-已知限制：`bestStars`、`bonusXp` 和关卡记录只在本机；换设备后经验会从当前记录重新推导，连击奖励和关卡记录从零开始。
+管理员的 `bestStars`、`bonusXp` 和关卡记录经 `game_progress` 跨设备同步；访客只在本机。
 
 ### 每日巡检
 
@@ -108,6 +118,37 @@ Boss 不在前两个阶段内。
 
 成就从记录推导，只有「已提示过」存在本地；换设备后已解锁的成就会在下一次结算再提示一次。
 
+### 跨设备同步
+
+只对管理员开启，访客和 AI 会员仍只存本地。`game_progress` 每个管理员一行，保存关卡、巡检、Boss 记录，每题历史最高星，连击奖励经验，已提示过的成就。浏览器只能调用 `game_progress_merge`，不能直接写表。合并与顺序无关：布尔取或、数字取大、时间取晚、最高星只升不降、成就取并集。连击奖励按「上次同步后新增的量」（`pendingBonus`）累加，单次最多 10000。
+
+`useGameSync` 在管理员的云端作答记录加载完成后合并一次，之后每次本地变化（`localRev`）1.5 秒防抖再合并。失败只保留在本地，等下一次变化再试，不会反复重试。客户端的 `mergeRecords` / `maxStars` 与 SQL 同规则。旧版本本地攒下的连击奖励在第一次同步时整体补传（store 版本 1 的迁移）。已知取舍：请求成功但响应丢失时，这次的奖励增量下次会再加一遍。
+
+### 章末 Boss
+
+本章每关都 ≥ 2 星后解锁。牌组是本章已发布的困难题随机 3 道，不够用中等题补。面试官 100 点血：
+
+- 管理员走模拟面试模式的 AI 评估：每题伤害等于首答和追问里最高 AI 分数的一半，追问把分数提高算暴击；作答自评不再额外加伤害。结束后显示本场「面试官战报」（现有面试报告，一次模型调用）。
+- 没有 AI 时按自评算：重来 0、困难 20、良好 35、简单 40。
+- 血量归零即 K.O.，提前结算。每天最多 3 场（`fightDay` / `fightsToday`，按本地自然日），记最高伤害 `bestDamage` 和是否击败过 `defeated`。中途离开的场次不计数。
+- 每章的面试官名字和台词是手写的，不调用模型。
+
+### 提示卡
+
+只对管理员（学习助手本来就只对管理员开放）。每关 2 张；连击第一次到 5 时再送 1 张。作答前第一次问小芽用掉一张（同一题不重复扣）；用完后作答前不能再问，提交后查看解析时照常可以问。星级规则不变：问过的题最多 1 星。巡检和弱点副本同样适用。
+
+### 追问复活
+
+只对管理员、只在有心的关卡里。扣心后，这题的 AI 评估（练习模式要手动点开）如果给出追问，追问轮次（`round > 1`）得分 ≥ 60 就补回 1 颗心，每关一次；心归零时复活可以接着打。复活过的关不算无伤（`flawless` 看这一轮有没有 0 星答题，不看剩余心数）。
+
+### 弱点副本
+
+标签权重 = 带这个标签的题的失误次数之和，管理员再加上 AI 评估弱点汇总里每个标签 `count × 2`。按权重从高到低，取第一个至少有 3 道已发布题的标签，题目按当前星级从低到高、失误从多到少排，取 5 道，3 颗心。记录键 `dungeon:1`。地图卡片只看本地失误，不去拉评估记录，所以地图和副本页选中的标签偶尔会不同。原方案里「通关后该标签在巡检中优先」没有做。
+
+### 新增成就
+
+「拿到 Offer」（击败任意一章的面试官）和「合批大师」（击败「渲染与图形学」的面试官），成就共 10 个。Boss 结算页不提示新成就，下一次关卡结算和地图成就墙会显示。
+
 ## 特效
 
 - 答对：星星依次弹入、星形粒子、上浮「+N XP」；点亮第 3 颗星时加彩纸。
@@ -120,7 +161,8 @@ Boss 不在前两个阶段内。
 ## 验证
 
 ```bash
-npx vitest run src/lib/gameRules.test.js src/pages/StagePage.test.jsx src/pages/PatrolPage.test.jsx src/pages/MapPage.test.jsx src/components/quiz/AnswerPanel.test.jsx
+npx vitest run src/lib/gameRules.test.js src/lib/weakDungeon.test.js src/hooks/useGameSync.test.jsx src/pages/StagePage.test.jsx src/pages/PatrolPage.test.jsx src/pages/BossPage.test.jsx src/pages/DungeonPage.test.jsx src/pages/MapPage.test.jsx src/components/quiz/AnswerPanel.test.jsx
+npm run test:ai-db   # game_progress 合并与权限
 npm run lint
 npm run build
 ```

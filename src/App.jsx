@@ -13,13 +13,17 @@ import MigrationPage from '@/pages/MigrationPage';
 import MapPage from '@/pages/MapPage';
 import StagePage from '@/pages/StagePage';
 import PatrolPage from '@/pages/PatrolPage';
+import BossPage from '@/pages/BossPage';
+import DungeonPage from '@/pages/DungeonPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
+import { useGameSync } from '@/hooks/useGameSync';
 
 const ChatMarkdownFixturePage = lazy(() => import('@/pages/ChatMarkdownFixturePage'));
 
 function CloudLearningInit() {
   useCloudLearning();
+  useGameSync();
   return null;
 }
 
@@ -37,6 +41,8 @@ export default function App() {
               <Route path="map" element={<MapPage />} />
               <Route path="stage/:categoryId/:index" element={<StagePage />} />
               <Route path="patrol" element={<PatrolPage />} />
+              <Route path="boss/:categoryId" element={<BossPage />} />
+              <Route path="dungeon" element={<DungeonPage />} />
               <Route path="quiz" element={<QuizPage />} />
               <Route path="quiz/:categoryId" element={<QuizPage />} />
               <Route path="list/:status" element={<QuizPage />} />

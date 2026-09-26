@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACHIEVEMENTS, activeDays, answerStars, answerXp, buildStages, chapterProgress, currentStars, dueQuestions, levelFor,
-  mergeBestStars, nextCombo, petForm, questionXp, streakFrom, totalXp, unlockedAchievements,
+  maxStars, mergeBestStars, mergeRecord, mergeRecords, nextCombo, petForm, questionXp, streakFrom, totalXp, unlockedAchievements,
 } from './gameRules';
 
 const q = (id, difficulty = 'medium', order = 0, extra = {}) => ({ id, categoryId: 'c', difficulty, order, status: 'published', ...extra });
@@ -171,5 +171,16 @@ describe('phase 2 rules', () => {
     expect(unlockedAchievements({ ...base, records, attempts, streak: { streak: 30 } }))
       .toEqual(['first-clear', 'zero-gc', 'steady-60', 'solo-dev', 'three-way-handshake', 'lts']);
     expect(ACHIEVEMENTS.find((a) => a.id === 'zero-gc').check({ ...base, records: { 'uuid-cs:1': { cleared: true, flawless: true, unassisted: false } } })).toBe(false);
+  });
+});
+
+describe('cloud merge', () => {
+  it('merges records the way game_progress_merge does', () => {
+    expect(mergeRecord(
+      { cleared: true, flawless: false, maxCombo: 3, lastRunAt: '2026-09-26T01:00:00Z' },
+      { cleared: false, flawless: true, maxCombo: 6, lastRunAt: '2026-09-25T01:00:00Z', bestDamage: 80, note: { x: 1 } },
+    )).toEqual({ cleared: true, flawless: true, maxCombo: 6, lastRunAt: '2026-09-26T01:00:00Z', bestDamage: 80 });
+    expect(mergeRecords({ a: { cleared: true } }, { b: { completed: true } })).toEqual({ a: { cleared: true }, b: { completed: true } });
+    expect(maxStars({ q1: 3, q2: 1 }, { q1: 2, q2: 2, q3: 1 })).toEqual({ q1: 3, q2: 2, q3: 1 });
   });
 });

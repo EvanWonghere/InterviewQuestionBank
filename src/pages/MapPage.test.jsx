@@ -4,15 +4,16 @@ import { MemoryRouter } from 'react-router-dom';
 import MapPage from './MapPage';
 import { useGameStore } from '@/store/gameStore';
 import { useReviewStore } from '@/store/reviewStore';
+import { ACHIEVEMENTS } from '@/lib/gameRules';
 
 const questions = [
   { id: 'q1', title: '题1', categoryId: 'cat-a', difficulty: 'easy', status: 'published' },
   { id: 'q2', title: '题2', categoryId: 'cat-a', difficulty: 'easy', status: 'published' },
   { id: 'q3', title: '题3', categoryId: 'cat-a', difficulty: 'medium', status: 'published' },
   { id: 'q4', title: '题4', categoryId: 'cat-a', difficulty: 'medium', status: 'published' },
-  { id: 'q5', title: '题5', categoryId: 'cat-a', difficulty: 'hard', status: 'published' },
-  { id: 'q6', title: '题6', categoryId: 'cat-a', difficulty: 'hard', status: 'published' },
-  { id: 'q7', title: '题7', categoryId: 'cat-a', difficulty: 'hard', status: 'published' },
+  { id: 'q5', title: '题5', categoryId: 'cat-a', difficulty: 'hard', status: 'published', tags: ['edge-cases'] },
+  { id: 'q6', title: '题6', categoryId: 'cat-a', difficulty: 'hard', status: 'published', tags: ['edge-cases'] },
+  { id: 'q7', title: '题7', categoryId: 'cat-a', difficulty: 'hard', status: 'published', tags: ['edge-cases'] },
 ];
 
 vi.mock('@/context/QuestionsContext', () => ({
@@ -66,7 +67,7 @@ describe('MapPage', () => {
     expect(screen.getByText('今天没有到期题')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '开始巡检' })).not.toBeInTheDocument();
 
-    expect(screen.getByText(/已解锁 0 \/ 8/)).toBeInTheDocument();
+    expect(screen.getByText(`成就 · 已解锁 0 / ${ACHIEVEMENTS.length}`)).toBeInTheDocument();
   });
 
   it('links to the patrol page when a question is due for review', () => {
@@ -92,5 +93,40 @@ describe('MapPage', () => {
     render(<MemoryRouter><MapPage /></MemoryRouter>);
 
     expect(screen.getByText('连续 1 天')).toBeInTheDocument();
+  });
+
+  it('links the boss node once every stage is flawlessly cleared, otherwise leaves it unlinked', () => {
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    const boss = screen.getByLabelText(/章末 Boss/);
+    expect(boss.tagName).not.toBe('A');
+
+    useGameStore.setState({
+      records: {
+        'cat-a:1': { cleared: true, flawless: true, unassisted: true, maxCombo: 0, completed: true, runs: 1 },
+        'cat-a:2': { cleared: true, flawless: true, unassisted: true, maxCombo: 0, completed: true, runs: 1 },
+      },
+    });
+    cleanup();
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    const bossLink = screen.getByRole('link', { name: 'C# 基础 章末 Boss' });
+    expect(bossLink).toHaveAttribute('href', '/boss/cat-a');
+  });
+
+  it('shows a dungeon card for a tag with at least 3 lapsed questions', () => {
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    expect(screen.queryByText('弱点副本')).not.toBeInTheDocument();
+
+    useReviewStore.setState({
+      reviewStates: {
+        q5: { lapseCount: 2 },
+        q6: { lapseCount: 1 },
+        q7: { lapseCount: 1 },
+      },
+      attempts: [],
+    });
+    cleanup();
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    expect(screen.getByText('薄弱点「edge-cases」集结了 3 道题')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '挑战副本' })).toHaveAttribute('href', '/dungeon');
   });
 });

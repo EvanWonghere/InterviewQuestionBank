@@ -10,7 +10,7 @@ function Heart({ lost }) {
 }
 
 /** Sticky run header: stage label, hearts (none in a patrol), combo, XP gained, per-question pips and the pet. */
-export default function StageHud({ ref, heartsRef, comboRef, label, hearts, combo, gained, results, position, total, pet, petForm }) {
+export default function StageHud({ ref, heartsRef, comboRef, cardsRef, label, hearts, combo, gained, results, position, total, pet, petForm, hintCards = null }) {
   return (
     <div ref={ref} className="stage-hud">
       <span className="stage-hud-pet"><PixelPet form={petForm} mood={pet} size={32} /></span>
@@ -18,6 +18,11 @@ export default function StageHud({ ref, heartsRef, comboRef, label, hearts, comb
       {hearts !== null && (
         <span ref={heartsRef} className="stage-hearts" role="img" aria-label={`剩余 ${hearts} 颗心`}>
           {Array.from({ length: HEARTS_PER_STAGE }, (_, i) => <Heart key={i} lost={i >= hearts} />)}
+        </span>
+      )}
+      {hintCards !== null && (
+        <span ref={cardsRef} className={`stage-cards game-pixel${hintCards === 0 ? ' is-empty' : ''}`} title="问一次小芽用掉一张；连击到 5 再送一张" aria-label={`提示卡剩余 ${hintCards} 张`}>
+          HINT ×{hintCards}
         </span>
       )}
       <span ref={comboRef} className={`stage-combo game-pixel${combo >= 5 ? ' is-blazing' : combo >= 3 ? ' is-hot' : ''}`} aria-live="polite">

@@ -60,6 +60,10 @@
   border: 1px solid var(--border-subtle);
 }
 
+.map-dungeon-card {
+  border: 1px dashed var(--game-heart);
+}
+
 .map-patrol-done {
   padding: 3px 10px;
   border-radius: 999px;
@@ -199,6 +203,26 @@
 .map-node-boss.is-boss-ready {
   border: 2px solid var(--game-star);
   opacity: 1;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-node-boss.is-boss-ready {
+    animation: map-boss-glow 2s ease-in-out infinite;
+  }
+}
+.is-quiet .map-node-boss.is-boss-ready {
+  animation: none;
+}
+.map-node-boss.is-boss-defeated {
+  background: var(--game-star);
+  border-color: var(--game-star);
+  color: #3a2600;
+  opacity: 1;
+}
+
+@keyframes map-boss-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 162, 0, 0.35); }
+  50% { box-shadow: 0 0 8px 3px rgba(232, 162, 0, 0.45); }
 }
 
 @keyframes map-pulse {

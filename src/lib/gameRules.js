@@ -308,6 +308,17 @@ export const ACHIEVEMENTS = [
     },
   },
   {
+    id: 'offer', badge: 'OFFER', name: '拿到 Offer', description: '击败任意一章的面试官',
+    check: ({ records }) => Object.entries(records).some(([key, r]) => key.startsWith('boss:') && r.defeated),
+  },
+  {
+    id: 'batch-master', badge: 'DC', name: '合批大师', description: '击败「渲染与图形学」的面试官',
+    check: ({ records, categories }) => {
+      const render = categories.find((c) => categorySlug(c) === 'rendering-graphics');
+      return Boolean(render && records[`boss:${render.id}`]?.defeated);
+    },
+  },
+  {
     id: 'lts', badge: 'LTS', name: '长期支持', description: '连续答题 30 天（补签卡算数）',
     check: ({ streak }) => streak.streak >= 30,
   },
@@ -316,3 +327,73 @@ export const ACHIEVEMENTS = [
 export function unlockedAchievements(context) {
   return ACHIEVEMENTS.filter((a) => a.check(context)).map((a) => a.id);
 }
+
+// ── Phase 3: cloud merge (mirrors public.game_progress_merge) ───────────
+
+/** Field-by-field merge of one record: booleans OR, numbers max, strings (ISO timestamps) latest. */
+export function mergeRecord(stored = {}, incoming = {}) {
+  const result = { ...stored };
+  for (const [key, value] of Object.entries(incoming ?? {})) {
+    const current = result[key];
+    if (current === undefined) {
+      if (['boolean', 'number', 'string'].includes(typeof value)) result[key] = value;
+    } else if (typeof current === 'boolean' && typeof value === 'boolean') {
+      result[key] = current || value;
+    } else if (typeof current === 'number' && typeof value === 'number') {
+      result[key] = Math.max(current, value);
+    } else if (typeof current === 'string' && typeof value === 'string') {
+      result[key] = value > current ? value : current;
+    }
+  }
+  return result;
+}
+
+export function mergeRecords(a = {}, b = {}) {
+  const result = { ...a };
+  for (const [key, record] of Object.entries(b ?? {})) result[key] = mergeRecord(result[key], record);
+  return result;
+}
+
+export function maxStars(a = {}, b = {}) {
+  const result = { ...a };
+  for (const [id, stars] of Object.entries(b ?? {})) result[id] = Math.max(result[id] ?? 0, stars);
+  return result;
+}
+
+// ── Phase 3: chapter boss ───────────────────────────────────────────────
+
+export const BOSS_HP = 100;
+export const BOSS_QUESTIONS = 3;
+export const BOSS_DAILY_LIMIT = 3;
+// Without AI, damage comes from the self-rating: 重来 0, 困难 20, 良好 35, 简单 40.
+const RATING_DAMAGE = { 0: 0, 3: 20, 4: 35, 5: 40 };
+
+export const bossKey = (categoryId) => `boss:${categoryId}`;
+export const bossHref = (category) => `/boss/${categorySlug(category)}`;
+
+/** A question's damage from its best AI score so far: half the score, so ~67 average beats the boss. */
+export const aiDamage = (score) => Math.round(Math.max(0, Math.min(100, score)) / 2);
+export const ratingDamage = (quality) => RATING_DAMAGE[quality] ?? 0;
+
+export function bossFightsLeft(record, today) {
+  const used = record?.fightDay === today ? record.fightsToday ?? 0 : 0;
+  return Math.max(0, BOSS_DAILY_LIMIT - used);
+}
+
+/** The boss deck: random hard questions of the chapter, topped up with medium ones. */
+export function bossDeck(questions, categoryId, random = Math.random) {
+  const pool = stageQuestions(questions, categoryId);
+  const shuffle = (list) => list.map((q) => [random(), q]).sort((a, b) => a[0] - b[0]).map(([, q]) => q);
+  const hard = shuffle(pool.filter((q) => q.difficulty === 'hard'));
+  const medium = shuffle(pool.filter((q) => q.difficulty !== 'hard'));
+  return [...hard, ...medium].slice(0, BOSS_QUESTIONS);
+}
+
+// ── Phase 3: hint cards and revive ──────────────────────────────────────
+
+export const HINT_CARDS = 2;
+export const HINT_CARD_COMBO = 5; // reaching this combo once per run earns one more card
+export const REVIVE_SCORE = 60;
+
+/** A follow-up round (round > 1) scoring at least REVIVE_SCORE earns back one heart, once per run. */
+export const revives = (evaluation) => (evaluation?.round ?? 1) > 1 && (evaluation?.score ?? 0) >= REVIVE_SCORE;

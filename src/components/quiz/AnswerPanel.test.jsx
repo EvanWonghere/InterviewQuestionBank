@@ -74,8 +74,10 @@ describe('AnswerPanel AI evaluation', () => {
 
   it('reports the rating details to onRated for the stage game', async () => {
     const onRated = vi.fn();
-    await submit({ onRated });
+    const onEvaluated = vi.fn();
+    await submit({ onRated, onEvaluated });
     entryProps().onEvaluated(aiEvaluation);
+    expect(onEvaluated).toHaveBeenCalledWith(aiEvaluation);
     fireEvent.click(await screen.findByRole('button', { name: /^良好/ }));
     await waitFor(() => expect(onRated).toHaveBeenCalled());
     expect(onRated).toHaveBeenCalledWith('mastered', { quality: 4, correct: null, assisted: false, aiScore: 64 });
