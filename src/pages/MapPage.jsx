@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useGameStore } from '@/store/gameStore';
 import { useGameProgress } from '@/hooks/useGameProgress';
-import { chapterProgress, stageHref } from '@/lib/gameRules';
+import { chapterProgress, stageHref, ACHIEVEMENTS, FREEZE_MAX, patrolKey } from '@/lib/gameRules';
 import Stars from '@/components/game/Stars';
 import PixelPet from '@/components/pet/PixelPet';
+import { PET_FORMS } from '@/components/pet/petGrowth';
 import '@/components/game/game.css';
 import '@/components/game/map.css';
 
@@ -97,7 +98,9 @@ export default function MapPage() {
   const records = useGameStore((s) => s.records);
   const quiet = useGameStore((s) => s.quiet);
   const setQuiet = useGameStore((s) => s.setQuiet);
-  const { reviewStates, attempts, level } = useGameProgress(questions ?? []);
+  const {
+    reviewStates, attempts, level, today, streak, dueCount, petForm, achievements,
+  } = useGameProgress(questions, categories);
 
   if (loading) {
     return (
@@ -114,6 +117,7 @@ export default function MapPage() {
     );
   }
 
+  const patrolDone = Boolean(records[patrolKey(today)]?.completed);
   const sortedCategories = [...(categories || [])].sort((a, b) => a.order - b.order);
   const regions = sortedCategories
     .map((cat, i) => ({ category: cat, worldIndex: i + 1, progress: chapterProgress(questions ?? [], cat.id, { records, reviewStates, attempts }) }))
@@ -135,10 +139,13 @@ export default function MapPage() {
 
       <section className="surface-card-elevated map-level-card mb-10 p-6">
         <div className="flex flex-wrap items-center gap-5">
-          <PixelPet mood="happy" size={64} />
+          <PixelPet form={petForm} mood={petForm === 'droop' ? 'sad' : 'happy'} size={64} />
           <div className="min-w-[180px] flex-1">
             <p className="type-body-emphasis" style={{ color: 'var(--text-primary)' }}>
               {level.name}
+            </p>
+            <p className="type-caption mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+              {PET_FORMS[petForm].name} · {PET_FORMS[petForm].hint}
             </p>
             <p className="type-caption mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
               {level.next ? `${level.xp} / ${level.next.xp} XP` : '已满级'}
@@ -156,6 +163,35 @@ export default function MapPage() {
                 下一级：{level.next.name}
               </p>
             )}
+            {petForm === 'droop' && (
+              <p
+                className="type-caption mt-1 map-droop-notice"
+                style={{ background: 'var(--warning-bg)', color: 'var(--warning-fg)' }}
+              >
+                有 {dueCount} 道题到期了，小芽蔫了。去巡检吧。
+              </p>
+            )}
+          </div>
+          <div className="map-streak min-w-[140px]">
+            <p className="game-pixel type-body-emphasis" style={{ color: 'var(--text-primary)' }}>
+              {streak.streak > 0 ? `连续 ${streak.streak} 天` : '今天开始第 1 天'}
+            </p>
+            <div className="map-freeze-row mt-1" aria-label={`补签卡 ${streak.freezes} / ${FREEZE_MAX}`}>
+              {Array.from({ length: FREEZE_MAX }).map((_, i) => (
+                <span key={i} className={`map-freeze-chip${i < streak.freezes ? ' is-filled' : ''}`} />
+              ))}
+              <span className="type-caption ml-1" style={{ color: 'var(--text-tertiary)' }}>补签卡</span>
+            </div>
+            {streak.streak > 0 && !streak.activeToday && (
+              <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                今天还没答题，答一题就能续上
+              </p>
+            )}
+            {streak.frozen > 0 && (
+              <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                本轮用过 {streak.frozen} 张补签卡
+              </p>
+            )}
           </div>
           <label className="map-quiet-toggle">
             <input type="checkbox" checked={quiet} onChange={(e) => setQuiet(e.target.checked)} />
@@ -167,11 +203,58 @@ export default function MapPage() {
         </p>
       </section>
 
+      <section className="surface-card map-patrol-card mb-10 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="type-body-emphasis" style={{ color: 'var(--text-primary)' }}>
+            今日巡检
+          </h2>
+          {patrolDone && <span className="map-patrol-done type-caption">今天已巡检</span>}
+        </div>
+        {dueCount > 0 ? (
+          <>
+            <p className="type-body mt-2" style={{ color: 'var(--text-secondary)' }}>
+              {dueCount} 道题到期，每次巡检最多 8 题。第 3 颗星主要在这里点亮。
+            </p>
+            <Link to="/patrol" className="btn-blue mt-3 inline-block">开始巡检</Link>
+          </>
+        ) : (
+          <p className="type-body mt-2" style={{ color: 'var(--text-secondary)' }}>
+            今天没有到期题
+          </p>
+        )}
+      </section>
+
       <div className="map-region-grid">
         {regions.map(({ category, worldIndex, progress }) => (
           <RegionCard key={category.id} category={category} worldIndex={worldIndex} progress={progress} />
         ))}
       </div>
+
+      <section className="mt-10">
+        <h2 className="type-body-emphasis mb-4" style={{ color: 'var(--text-primary)' }}>
+          成就 · 已解锁 {achievements.length} / {ACHIEVEMENTS.length}
+        </h2>
+        <div className="map-achievement-grid">
+          {ACHIEVEMENTS.map((a) => {
+            const unlocked = achievements.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                className={`map-achievement-card${unlocked ? ' is-unlocked' : ' is-locked'}`}
+                aria-label={`${a.name}，${unlocked ? '已解锁' : '未解锁'}`}
+              >
+                <span className="map-achievement-badge game-pixel">{a.badge}</span>
+                <p className="type-body-emphasis mt-2" style={{ color: unlocked ? 'var(--game-star)' : 'var(--text-tertiary)' }}>
+                  {a.name}
+                </p>
+                <p className="type-caption mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                  {a.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

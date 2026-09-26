@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PET_SEQUENCES, frameRects } from './pixelPetSprites';
+import { formFrameRects } from './petGrowth';
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Pixel-art study pet. `mood`: idle | thinking | talking | happy | sad | sleep. */
-export default function PixelPet({ mood = 'idle', size = 64, still = false, className = '' }) {
+/** Pixel-art study pet. `mood`: idle | thinking | talking | happy | sad | sleep; `form` (stage game): sprout | twin | bloom | droop. */
+export default function PixelPet({ mood = 'idle', size = 64, still = false, className = '', form }) {
   const steps = PET_SEQUENCES[mood] ?? PET_SEQUENCES.idle;
   const [tick, setTick] = useState({ mood, index: 0 });
   // A mood change restarts its loop without an extra effect-driven render.
@@ -17,7 +18,7 @@ export default function PixelPet({ mood = 'idle', size = 64, still = false, clas
   }, [mood, index, steps, still]);
 
   const name = steps[index][0];
-  const rects = useMemo(() => frameRects(name), [name]);
+  const rects = useMemo(() => (form ? formFrameRects(name, form) : frameRects(name)), [name, form]);
   return (
     <svg className={`pixel-pet pet-mood-${mood} ${className}`} width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true" focusable="false">
       {rects.map((r) => <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.width} height="1" fill={r.fill} />)}

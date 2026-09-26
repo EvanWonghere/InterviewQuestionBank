@@ -9,15 +9,17 @@ function Heart({ lost }) {
   );
 }
 
-/** Sticky run header: stage label, hearts, combo, XP gained, per-question pips and the pet. */
-export default function StageHud({ ref, heartsRef, comboRef, label, hearts, combo, gained, results, position, total, pet }) {
+/** Sticky run header: stage label, hearts (none in a patrol), combo, XP gained, per-question pips and the pet. */
+export default function StageHud({ ref, heartsRef, comboRef, label, hearts, combo, gained, results, position, total, pet, petForm }) {
   return (
     <div ref={ref} className="stage-hud">
-      <span className="stage-hud-pet"><PixelPet mood={pet} size={32} /></span>
-      <span className="stage-hud-label game-pixel">STAGE {label}</span>
-      <span ref={heartsRef} className="stage-hearts" role="img" aria-label={`剩余 ${hearts} 颗心`}>
-        {Array.from({ length: HEARTS_PER_STAGE }, (_, i) => <Heart key={i} lost={i >= hearts} />)}
-      </span>
+      <span className="stage-hud-pet"><PixelPet form={petForm} mood={pet} size={32} /></span>
+      <span className="stage-hud-label game-pixel">{label}</span>
+      {hearts !== null && (
+        <span ref={heartsRef} className="stage-hearts" role="img" aria-label={`剩余 ${hearts} 颗心`}>
+          {Array.from({ length: HEARTS_PER_STAGE }, (_, i) => <Heart key={i} lost={i >= hearts} />)}
+        </span>
+      )}
       <span ref={comboRef} className={`stage-combo game-pixel${combo >= 5 ? ' is-blazing' : combo >= 3 ? ' is-hot' : ''}`} aria-live="polite">
         {combo > 1 ? `COMBO ×${combo}` : ''}
       </span>

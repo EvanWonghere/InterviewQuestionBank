@@ -95,6 +95,13 @@
 .stage-result-list { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 0.35rem; }
 .stage-result-list li { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.45rem 0.75rem; border-radius: 0.6rem; background: var(--filter-bg); font-size: 0.85rem; color: var(--text-secondary); text-align: left; }
 
+.stage-result-lit { font-size: 1.6rem; font-weight: 700; color: var(--game-star); align-self: center; }
+.stage-achievements { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 0.5rem; }
+.stage-achievements li { display: flex; gap: 0.75rem; align-items: center; padding: 0.7rem 0.9rem; border-radius: 0.9rem; border: 1.5px dashed var(--game-star); background: var(--game-star-soft); text-align: left; }
+.stage-achievements b { display: block; font-size: 0.9rem; color: var(--text-primary); }
+.stage-achievements small { font-size: 0.75rem; color: var(--text-tertiary); }
+.stage-achievement-badge { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 0.6rem; display: grid; place-items: center; font-size: 0.7rem; font-weight: 700; color: var(--game-star); background: var(--surface-card); }
+
 /* Effects: shared canvas and floating text (created by effects.js) */
 .game-fx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; }
 .game-float-text {
@@ -130,6 +137,7 @@
   .stage-result-title span { animation: game-letter 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
   .stage-result-star { animation: game-star-drop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
   .stage-result-star.is-1 { animation-name: game-star-drop-mid; }
+  .stage-achievements li { animation: game-slam 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
   .stage-promoted { animation: game-slam 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) 1.5s both; }
   html.game-flash::after {
     content: '';

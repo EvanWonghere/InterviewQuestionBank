@@ -28,7 +28,7 @@ vi.mock('@/context/QuestionsContext', () => ({
 }));
 
 beforeEach(() => {
-  useGameStore.setState({ records: {}, bestStars: {}, bonusXp: 0, quiet: false });
+  useGameStore.setState({ records: {}, bestStars: {}, bonusXp: 0, quiet: false, seenAchievements: [] });
   // Only q1 has any review history; that alone isn't enough to clear stage 1 (needs every
   // question in the stage at >=2 stars), so stage 1 stays unlocked-but-not-cleared and
   // stage 2 (4/3 split of 7 questions) stays locked.
@@ -58,5 +58,39 @@ describe('MapPage', () => {
 
     const boss = screen.getByLabelText(/章末 Boss/);
     expect(boss.tagName).not.toBe('A');
+  });
+
+  it('shows no due questions by default and lists every achievement as locked', () => {
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+
+    expect(screen.getByText('今天没有到期题')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '开始巡检' })).not.toBeInTheDocument();
+
+    expect(screen.getByText(/已解锁 0 \/ 8/)).toBeInTheDocument();
+  });
+
+  it('links to the patrol page when a question is due for review', () => {
+    useReviewStore.setState({
+      reviewStates: {
+        q1: { lastQuality: 4, repetitions: 1, lapseCount: 0, dueAt: new Date(Date.now() - 86400000).toISOString() },
+      },
+      attempts: [],
+    });
+
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+
+    expect(screen.getByText(/1 道题到期/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '开始巡检' })).toHaveAttribute('href', '/patrol');
+  });
+
+  it('shows a 1-day streak when an attempt was answered today', () => {
+    useReviewStore.setState({
+      reviewStates: {},
+      attempts: [{ question_id: 'q1', quality: 4, answered_at: new Date().toISOString() }],
+    });
+
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+
+    expect(screen.getByText('连续 1 天')).toBeInTheDocument();
   });
 });

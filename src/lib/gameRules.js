@@ -195,3 +195,124 @@ export function chapterProgress(questions, categoryId, { records = {}, reviewSta
     bossReady: stages.length > 0 && stages.every((s) => s.stars >= 2),
   };
 }
+
+// ── Phase 2: daily patrol, streak, achievements, pet growth ─────────────
+
+export const PATROL_SIZE = 8;
+export const FREEZE_EVERY = 7;
+export const FREEZE_MAX = 2;
+
+/** Due questions for today's patrol, earliest due first. */
+export function dueQuestions(questions, reviewStates, now = Date.now(), limit = PATROL_SIZE) {
+  return questions
+    .map((q) => ({ q, state: stateFor(reviewStates, q) }))
+    .filter(({ q, state }) => (q.status ?? 'published') === 'published' && state?.dueAt && new Date(state.dueAt).getTime() <= now)
+    .sort((a, b) => new Date(a.state.dueAt) - new Date(b.state.dueAt))
+    .slice(0, limit)
+    .map(({ q }) => q);
+}
+
+export const patrolKey = (day) => `patrol:${day}`;
+
+/** Local calendar days with at least one rated answer. */
+export function activeDays(attempts) {
+  return [...new Set((attempts ?? []).map((a) => dayKey(a.answered_at)))].sort();
+}
+
+const shiftDay = (key, days) => new Date(Date.parse(`${key}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+
+/**
+ * Replays the calendar from the first active day: an active day extends the streak and every
+ * 7th streak day earns a freeze card (at most 2); a missed day uses a card or resets the streak.
+ * Today still counts as pending until it ends, so a streak is not lost before bedtime.
+ */
+export function streakFrom(days, today) {
+  const active = new Set(days);
+  let streak = 0;
+  let freezes = 0;
+  let frozen = 0;
+  if (!days.length) return { streak, freezes, frozen, activeToday: false };
+  for (let day = days[0]; day <= today; day = shiftDay(day, 1)) {
+    if (active.has(day)) {
+      streak += 1;
+      if (streak % FREEZE_EVERY === 0) freezes = Math.min(FREEZE_MAX, freezes + 1);
+    } else if (day !== today) {
+      if (streak > 0 && freezes > 0) { freezes -= 1; frozen += 1; } else { streak = 0; frozen = 0; }
+    }
+  }
+  return { streak, freezes, frozen, activeToday: active.has(today) };
+}
+
+/** Pet form by level, drooping when reviews pile up. */
+export function petForm(levelIndex, dueCount) {
+  if (dueCount >= 10) return 'droop';
+  if (levelIndex >= 4) return 'bloom';
+  if (levelIndex >= 2) return 'twin';
+  return 'sprout';
+}
+
+const longestUnassistedRun = (attempts) => {
+  let best = 0;
+  let run = 0;
+  for (const a of attempts ?? []) {
+    run = a.assistance_used ? 0 : run + 1;
+    best = Math.max(best, run);
+  }
+  return best;
+};
+
+/**
+ * One-time achievements. `check` receives
+ * { questions, categories, reviewStates, attempts, bestStars, records, streak }.
+ */
+export const ACHIEVEMENTS = [
+  {
+    id: 'first-clear', badge: 'GO', name: '第一关', description: '通关任意一关',
+    check: ({ records }) => Object.entries(records).some(([key, r]) => !key.startsWith('patrol:') && r.cleared),
+  },
+  {
+    id: 'zero-gc', badge: 'GC', name: '零 GC', description: 'C# 基础任一关无伤、不问小芽通关',
+    check: ({ records, categories }) => {
+      const cs = categories.find((c) => categorySlug(c) === 'csharp-basics');
+      return Boolean(cs) && Object.entries(records).some(([key, r]) => key.startsWith(`${cs.id}:`) && r.flawless && r.unassisted);
+    },
+  },
+  {
+    id: 'steady-60', badge: '60', name: '稳定 60 帧', description: '一关内连击达到 6',
+    check: ({ records }) => Object.values(records).some((r) => (r.maxCombo ?? 0) >= 6),
+  },
+  {
+    id: 'solo-dev', badge: 'SOLO', name: '独立开发', description: '连续 20 题不问小芽',
+    check: ({ attempts }) => longestUnassistedRun(attempts) >= 20,
+  },
+  {
+    id: 'undefined-behavior', badge: 'UB', name: '未定义行为', description: '一道错过 3 次的 C++ 题复习到 3 星',
+    check: ({ questions, categories, reviewStates, attempts }) => {
+      const cpp = categories.find((c) => categorySlug(c) === 'cpp-basics');
+      return Boolean(cpp) && questions.some((q) => q.categoryId === cpp.id
+        && (stateFor(reviewStates, q)?.lapseCount ?? 0) >= 3 && currentStars(q, reviewStates, attempts) === 3);
+    },
+  },
+  {
+    id: 'il2cpp-survivor', badge: 'AOT', name: 'IL2CPP 幸存者', description: '所有困难题至少 2 星',
+    check: ({ questions, bestStars }) => {
+      const hard = questions.filter((q) => q.difficulty === 'hard' && (q.status ?? 'published') === 'published');
+      return hard.length > 0 && hard.every((q) => (bestStars[q.id] ?? 0) >= 2);
+    },
+  },
+  {
+    id: 'three-way-handshake', badge: 'SYN', name: '三次握手', description: '连续 3 天完成每日巡检',
+    check: ({ records }) => {
+      const days = Object.keys(records).filter((k) => k.startsWith('patrol:') && records[k].completed).map((k) => k.slice(7)).sort();
+      return days.some((d, i) => i >= 2 && days[i - 1] === shiftDay(d, -1) && days[i - 2] === shiftDay(d, -2));
+    },
+  },
+  {
+    id: 'lts', badge: 'LTS', name: '长期支持', description: '连续答题 30 天（补签卡算数）',
+    check: ({ streak }) => streak.streak >= 30,
+  },
+];
+
+export function unlockedAchievements(context) {
+  return ACHIEVEMENTS.filter((a) => a.check(context)).map((a) => a.id);
+}

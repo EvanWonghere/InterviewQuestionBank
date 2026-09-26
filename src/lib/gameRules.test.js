@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  answerStars, answerXp, buildStages, chapterProgress, currentStars, levelFor, mergeBestStars, nextCombo, questionXp, totalXp,
+  ACHIEVEMENTS, activeDays, answerStars, answerXp, buildStages, chapterProgress, currentStars, dueQuestions, levelFor,
+  mergeBestStars, nextCombo, petForm, questionXp, streakFrom, totalXp, unlockedAchievements,
 } from './gameRules';
 
 const q = (id, difficulty = 'medium', order = 0, extra = {}) => ({ id, categoryId: 'c', difficulty, order, status: 'published', ...extra });
@@ -120,5 +121,55 @@ describe('chapterProgress', () => {
     const chapter = chapterProgress(questions, 'c', { records, reviewStates: {}, attempts: [] });
     expect(chapter.stages.map((s) => s.stars)).toEqual([2, 2]);
     expect(chapter).toMatchObject({ currentIndex: null, bossReady: true });
+  });
+});
+
+describe('phase 2 rules', () => {
+  it('lists due published questions, earliest first, capped', () => {
+    const questions = [q('a'), q('b'), q('c'), q('d', 'medium', 0, { status: 'draft' })];
+    const states = {
+      a: { dueAt: '2026-09-25T00:00:00Z' }, b: { dueAt: '2026-09-20T00:00:00Z' },
+      c: { dueAt: '2026-10-01T00:00:00Z' }, d: { dueAt: '2026-09-01T00:00:00Z' },
+    };
+    const now = Date.parse('2026-09-26T00:00:00Z');
+    expect(dueQuestions(questions, states, now).map((x) => x.id)).toEqual(['b', 'a']);
+    expect(dueQuestions(questions, states, now, 1).map((x) => x.id)).toEqual(['b']);
+  });
+
+  it('counts active days and keeps today pending', () => {
+    expect(activeDays([{ answered_at: '2026-09-25T04:00:00Z' }, { answered_at: '2026-09-25T05:00:00Z' }])).toEqual(['2026-09-25']);
+    expect(streakFrom([], '2026-09-26')).toMatchObject({ streak: 0, activeToday: false });
+    expect(streakFrom(['2026-09-24', '2026-09-25'], '2026-09-26')).toMatchObject({ streak: 2, activeToday: false });
+    expect(streakFrom(['2026-09-24'], '2026-09-26')).toMatchObject({ streak: 0 });
+  });
+
+  it('earns a freeze card every 7 days and spends it on a missed day', () => {
+    const week = Array.from({ length: 7 }, (_, i) => `2026-09-0${i + 1}`);
+    expect(streakFrom(week, '2026-09-07')).toMatchObject({ streak: 7, freezes: 1 });
+    // 09-08 missed, 09-09 active: the card covers the gap
+    expect(streakFrom([...week, '2026-09-09'], '2026-09-09')).toMatchObject({ streak: 8, freezes: 0, frozen: 1 });
+    // two missed days with one card: reset
+    expect(streakFrom([...week, '2026-09-10'], '2026-09-10')).toMatchObject({ streak: 1, freezes: 0 });
+  });
+
+  it('picks the pet form from level and due count', () => {
+    expect(petForm(0, 0)).toBe('sprout');
+    expect(petForm(2, 3)).toBe('twin');
+    expect(petForm(5, 9)).toBe('bloom');
+    expect(petForm(5, 10)).toBe('droop');
+  });
+
+  it('unlocks achievements from records, attempts and categories', () => {
+    const categories = [{ id: 'uuid-cs', slug: 'csharp-basics', name: 'C#' }];
+    const base = { questions: [], categories, reviewStates: {}, attempts: [], bestStars: {}, records: {}, streak: { streak: 0 } };
+    expect(unlockedAchievements(base)).toEqual([]);
+    const records = {
+      'uuid-cs:1': { cleared: true, flawless: true, unassisted: true, maxCombo: 6 },
+      'patrol:2026-09-24': { completed: true }, 'patrol:2026-09-25': { completed: true }, 'patrol:2026-09-26': { completed: true },
+    };
+    const attempts = Array.from({ length: 20 }, () => ({ assistance_used: false }));
+    expect(unlockedAchievements({ ...base, records, attempts, streak: { streak: 30 } }))
+      .toEqual(['first-clear', 'zero-gc', 'steady-60', 'solo-dev', 'three-way-handshake', 'lts']);
+    expect(ACHIEVEMENTS.find((a) => a.id === 'zero-gc').check({ ...base, records: { 'uuid-cs:1': { cleared: true, flawless: true, unassisted: false } } })).toBe(false);
   });
 });

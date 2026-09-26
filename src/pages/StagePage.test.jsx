@@ -36,7 +36,7 @@ const answer = (name) => {
 
 beforeEach(() => {
   window.scrollTo = vi.fn();
-  useGameStore.setState({ records: {}, bestStars: {}, bonusXp: 0, quiet: true });
+  useGameStore.setState({ records: {}, bestStars: {}, bonusXp: 0, quiet: true, seenAchievements: [] });
   useReviewStore.setState({ reviewStates: {}, attempts: [] });
 });
 afterEach(cleanup);
@@ -58,6 +58,8 @@ describe('StagePage', () => {
     expect(screen.getByRole('heading', { name: /STAGE\s*CLEAR/ })).toBeVisible();
     expect(screen.getByRole('img', { name: '本关 2 颗星' })).toBeVisible();
     expect(screen.getByRole('link', { name: '下一关' })).toHaveAttribute('href', '/stage/c/2');
+    expect(screen.getByText('新成就：第一关')).toBeVisible();
+    expect(useGameStore.getState().seenAchievements).toContain('first-clear');
     expect(useGameStore.getState().records['c:1']).toMatchObject({ cleared: true, flawless: true, runs: 1 });
     // combo ×2..×4 on easy questions: 10% / 20% / 30% of 10 XP
     expect(useGameStore.getState().bonusXp).toBe(1 + 2 + 3);
