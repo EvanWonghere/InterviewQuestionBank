@@ -366,7 +366,7 @@ export const BOSS_HP = 100;
 export const BOSS_QUESTIONS = 3;
 export const BOSS_DAILY_LIMIT = 3;
 // Without AI, damage comes from the self-rating: 重来 0, 困难 20, 良好 35, 简单 40.
-const RATING_DAMAGE = { 0: 0, 3: 20, 4: 35, 5: 40 };
+export const RATING_DAMAGE = { 0: 0, 3: 20, 4: 35, 5: 40 };
 
 export const bossKey = (categoryId) => `boss:${categoryId}`;
 export const bossHref = (category) => `/boss/${categorySlug(category)}`;

@@ -15,6 +15,7 @@ import StagePage from '@/pages/StagePage';
 import PatrolPage from '@/pages/PatrolPage';
 import BossPage from '@/pages/BossPage';
 import DungeonPage from '@/pages/DungeonPage';
+import HandbookPage from '@/pages/HandbookPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
 import { useGameSync } from '@/hooks/useGameSync';
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="patrol" element={<PatrolPage />} />
               <Route path="boss/:categoryId" element={<BossPage />} />
               <Route path="dungeon" element={<DungeonPage />} />
+              <Route path="handbook" element={<HandbookPage />} />
               <Route path="quiz" element={<QuizPage />} />
               <Route path="quiz/:categoryId" element={<QuizPage />} />
               <Route path="list/:status" element={<QuizPage />} />

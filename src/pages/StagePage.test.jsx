@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import StagePage from './StagePage';
 import { useGameStore } from '@/store/gameStore';
 import { useReviewStore } from '@/store/reviewStore';
+import { usePetStore } from '@/store/petStore';
 
 // 7 questions → stages of 4 and 3.
 const questions = Array.from({ length: 7 }, (_, i) => ({ id: `q${i}`, title: `题${i}`, question: `Q${i}?`, categoryId: 'c', difficulty: 'easy', order: i, status: 'published' }));
@@ -58,7 +59,9 @@ describe('StagePage', () => {
     fireEvent.click(screen.getByRole('button', { name: '评良好' }));
     expect(screen.getByText('COMBO ×2')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: '下一题' }));
-    answer('评良好');
+    fireEvent.click(screen.getByRole('button', { name: '评良好' }));
+    expect(usePetStore.getState().speech?.text, '小芽 cheers the third in a row').toBe('三连！');
+    fireEvent.click(screen.getByRole('button', { name: '下一题' }));
     answer('评良好');
 
     expect(screen.getByRole('heading', { name: /STAGE\s*CLEAR/ })).toBeVisible();
@@ -90,6 +93,7 @@ describe('StagePage', () => {
     answer('评重来');
     fireEvent.click(screen.getByRole('button', { name: '评重来' }));
     expect(screen.getByRole('img', { name: '剩余 0 颗心' })).toBeInTheDocument();
+    expect(usePetStore.getState().speech?.text).toBe('休息一下再来，已答的都记下了。');
     fireEvent.click(screen.getByRole('button', { name: '查看结算' }));
 
     expect(screen.getByRole('heading', { name: /STAGE\s*FAILED/ })).toBeVisible();

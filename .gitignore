@@ -30,3 +30,6 @@ dist-ssr
 htmls/
 
 dist-ai/
+
+# Local preview servers for Claude Code
+.claude/launch.json

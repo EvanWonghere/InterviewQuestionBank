@@ -3,32 +3,20 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useAuth } from '@/context/AuthContext';
 import { useGameStore } from '@/store/gameStore';
+import { usePetStore } from '@/store/petStore';
 import { useGameProgress } from '@/hooks/useGameProgress';
 import QuestionContent from '@/components/quiz/QuestionContent';
 import AnswerPanel from '@/components/quiz/AnswerPanel';
 import InterviewReport from '@/components/ai/InterviewReport';
 import BossSprite from '@/components/game/BossSprite';
+import { bossFor } from '@/components/game/bosses';
 import { burst, burstFrom, effectsEnabled, floatText, pulseClass, setEffectsQuiet } from '@/components/game/effects';
 import {
-  BOSS_DAILY_LIMIT, BOSS_HP, aiDamage, bossDeck, bossFightsLeft, bossKey, categorySlug, chapterProgress, findCategory, ratingDamage,
+  BOSS_DAILY_LIMIT, BOSS_HP, aiDamage, bossDeck, bossFightsLeft, bossKey, chapterProgress, findCategory, ratingDamage,
 } from '@/lib/gameRules';
 import '@/components/game/game.css';
 import '@/components/game/stage.css';
 import '@/components/game/boss.css';
-
-// Hand-written interviewer lines per chapter; no model call.
-const BOSSES = {
-  'csharp-basics': { name: 'C# 面试官', taunt: '先说说，装箱发生在哪一行？' },
-  'unity-core': { name: 'Unity 主程', taunt: '生命周期的调用顺序，背熟了吗？' },
-  'rendering-graphics': { name: '图形程序', taunt: '一帧里的 Draw Call 都是从哪来的？' },
-  'algorithms-datastructures': { name: '算法面试官', taunt: '先别写代码，复杂度是多少？' },
-  'project-practice': { name: '项目负责人', taunt: '这个方案上线以后出过事故吗？' },
-  'cpp-basics': { name: 'C++ 面试官', taunt: '这段代码是不是未定义行为？' },
-  'os-fundamentals': { name: '系统面试官', taunt: '进程和线程，你先挑一个讲。' },
-  'computer-networks': { name: '网络面试官', taunt: '三次握手，第三次能省吗？' },
-  'design-patterns': { name: '架构师', taunt: '这里为什么不用单例？' },
-};
-const bossFor = (category) => BOSSES[categorySlug(category)] ?? { name: `${category.name} 面试官`, taunt: '我们开始吧。' };
 
 export default function BossPage() {
   const { categoryId: param } = useParams();
@@ -113,6 +101,7 @@ function BossFight({ category, boss, questions: allQuestions, record, fightsLeft
     const crit = (evaluation.round ?? 1) > 1 && add > 0;
     setLog((l) => [...l, { questionId: question.id, round: evaluation.round ?? 1, score: evaluation.score, add, crit }]);
     hit(add, { crit });
+    if (crit) usePetStore.getState().react('crit');
   };
 
   // Without an AI evaluation the self-rating decides the damage.
@@ -130,6 +119,7 @@ function BossFight({ category, boss, questions: allQuestions, record, fightsLeft
     recordBoss({ key: bossKey(category.id), defeated, damage: total, day: today });
     setPhase('done');
     window.scrollTo?.({ top: 0, behavior: 'smooth' });
+    if (defeated) usePetStore.getState().react('ko');
     if (defeated && effectsEnabled()) {
       window.setTimeout(() => burst(window.innerWidth / 2, window.innerHeight * 0.35, { kind: 'confetti', count: 160 }), 300);
     }

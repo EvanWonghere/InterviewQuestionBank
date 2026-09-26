@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuestions } from '@/context/QuestionsContext';
 import { useGameStore } from '@/store/gameStore';
+import { usePetStore } from '@/store/petStore';
 import { useGameProgress } from '@/hooks/useGameProgress';
 import {
   chapterProgress, stageHref, ACHIEVEMENTS, FREEZE_MAX, patrolKey,
@@ -131,6 +132,8 @@ export default function MapPage() {
   const { categories, questions, loading, error } = useQuestions();
   const records = useGameStore((s) => s.records);
   const quiet = useGameStore((s) => s.quiet);
+  const petHidden = usePetStore((s) => s.hidden);
+  const setPetHidden = usePetStore((s) => s.setHidden);
   const setQuiet = useGameStore((s) => s.setQuiet);
   const {
     reviewStates, attempts, level, today, streak, dueCount, petForm, achievements,
@@ -171,6 +174,10 @@ export default function MapPage() {
         <p className="type-body-lg max-w-xl" style={{ color: 'var(--text-tertiary)' }}>
           每关 4–6 题，3 颗心；第 3 颗星要在之后的复习里点亮。
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link to="/handbook" className="btn-neutral">闯关手册</Link>
+          {petHidden && <button type="button" className="btn-ghost" onClick={() => setPetHidden(false)}>叫回小芽</button>}
+        </div>
       </section>
 
       <section className="surface-card-elevated map-level-card mb-10 p-6">

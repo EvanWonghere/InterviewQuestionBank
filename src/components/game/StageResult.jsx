@@ -4,7 +4,8 @@ import PixelPet from '@/components/pet/PixelPet';
 import Stars, { Star } from '@/components/game/Stars';
 import { burst, burstFrom, effectsEnabled } from '@/components/game/effects';
 import { useGameStore } from '@/store/gameStore';
-import { ACHIEVEMENTS, levelFor } from '@/lib/gameRules';
+import { usePetStore } from '@/store/petStore';
+import { ACHIEVEMENTS, levelFor, petForm } from '@/lib/gameRules';
 
 const STAR_DELAY_MS = 380;
 
@@ -24,6 +25,13 @@ export default function StageResult({ mode = 'stage', badge, title, cleared, fla
   const before = levelFor(startXp);
   const after = levelFor(startXp + gained);
   const promoted = after.index > before.index;
+  // 小芽 celebrates a promotion as the banner lands; a new form means it grew.
+  useEffect(() => {
+    if (!promoted) return undefined;
+    const grew = petForm(before.index, 0) !== petForm(after.index, 0);
+    const timer = window.setTimeout(() => usePetStore.getState().react('promote', { grew }), 1500);
+    return () => window.clearTimeout(timer);
+  }, [promoted, before.index, after.index]);
   const animate = effectsEnabled();
   const [shownXp, setShownXp] = useState(animate ? 0 : gained);
   const [barFrom] = useState(promoted ? 0 : before.progress);
@@ -135,6 +143,7 @@ export default function StageResult({ mode = 'stage', badge, title, cleared, fla
         {nextHref && <Link to={nextHref} className="btn-blue">下一关</Link>}
         <button type="button" className={nextHref ? 'btn-neutral' : 'btn-blue'} onClick={onReplay}>再来一次</button>
         <Link to="/map" className="btn-neutral">返回地图</Link>
+        <Link to="/handbook" className="btn-ghost">闯关手册</Link>
       </div>
     </section>
   );

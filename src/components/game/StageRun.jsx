@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useReviewStore } from '@/store/reviewStore';
 import { useGameStore } from '@/store/gameStore';
+import { usePetStore } from '@/store/petStore';
 import QuestionContent from '@/components/quiz/QuestionContent';
 import AnswerPanel from '@/components/quiz/AnswerPanel';
-import PixelPet from '@/components/pet/PixelPet';
 import Stars from '@/components/game/Stars';
 import StageHud from '@/components/game/StageHud';
 import StageResult from '@/components/game/StageResult';
@@ -23,7 +23,7 @@ const VERDICT = ['MISS', 'OK', 'NICE'];
  * miss a follow-up answered well in the AI evaluation revives one heart, once per run.
  */
 export default function StageRun({ mode = 'stage', recordKey, questions: runQuestions, label, badge: badgeProp, title, nextHref, progress, onReplay }) {
-  const { bestStars, reviewStates, level: startLevel, petForm } = progress;
+  const { bestStars, reviewStates, level: startLevel } = progress;
   const patrol = mode === 'patrol';
   // Short pixel label for the HUD, intro and result: STAGE 1-2, PATROL, or a caller's own (e.g. DUNGEON).
   const badge = badgeProp ?? (patrol ? 'PATROL' : `STAGE ${label}`);
@@ -41,7 +41,6 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
   const [gained, setGained] = useState(0);
   const [results, setResults] = useState([]);
   const [phase, setPhase] = useState('intro'); // intro | answering | rated | done
-  const [pet, setPet] = useState('idle');
   const [cards, setCards] = useState(HINT_CARDS);
   const [cardEarned, setCardEarned] = useState(false);
   const [cardUsedOn, setCardUsedOn] = useState(null);
@@ -81,7 +80,20 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
     if (last.combo === 3 || last.combo === 5) pulseClass(document.documentElement, 'game-flash', 700);
     floatText(target, `+${last.xp} XP`, last.stars === 0 ? 'muted' : 'xp');
     if (last.cardEarned) window.setTimeout(() => { floatText(cardsRef.current, '+1 提示卡', 'xp'); pulseClass(cardsRef.current, 'is-bumped', 500); }, 400);
+    // 小芽 reacts to the same moment (the floating pet is the only one on screen).
+    const pet = usePetStore.getState();
+    if (last.stars === 0) pet.react(last.heartsLeft === 0 ? 'fail' : 'miss', { canRevive: last.canRevive });
+    else if (last.lit) pet.react('lit');
+    else if (last.combo >= 5 && (last.combo === 5 || last.cardEarned)) pet.react('combo5', { card: last.cardEarned });
+    else if (last.combo === 3) pet.react('combo3');
   }, [phase, last]);
+
+  // Tell 小芽's menu why the tutor is closed before answering once the hint cards are spent.
+  const tutorBlocked = isAdmin && phase === 'answering' && cards === 0 && cardUsedOn !== question?.id;
+  useEffect(() => {
+    usePetStore.getState().setTutorBlocked(tutorBlocked ? '提示卡用完了' : null);
+    return () => usePetStore.getState().setTutorBlocked(null);
+  }, [tutorBlocked]);
 
   const handleAssistance = () => {
     if (cardUsedOn === question.id) return;
@@ -95,7 +107,7 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
     setRevived(true);
     setHearts((h) => h + 1);
     setResults((r) => r.map((item, i) => (i === r.length - 1 ? { ...item, revived: true } : item)));
-    setPet('happy');
+    usePetStore.getState().react('revive');
     burstFrom(heartsRef.current, { kind: 'confetti', count: 40 });
     floatText(heartsRef.current, 'REVIVE +1', 'xp');
   };
@@ -117,12 +129,12 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
     const earnsCard = isAdmin && !cardEarned && newCombo >= HINT_CARD_COMBO;
     if (earnsCard) { setCardEarned(true); setCards((c) => c + 1); }
 
-    if (!patrol && stars === 0) setHearts(hearts - 1);
+    const heartsLeft = !patrol && stars === 0 ? hearts - 1 : hearts;
+    if (heartsLeft !== hearts) setHearts(heartsLeft);
     setCombo(newCombo);
     setMaxCombo((m) => Math.max(m, newCombo));
     setGained((g) => g + xp);
-    setResults((r) => [...r, { questionId: question.id, title: question.title, stars, assisted: detail.assisted, xp, combo: newCombo, lit: nowStars === 3 && oldBest < 3, cardEarned: earnsCard }]);
-    setPet(stars === 0 ? 'sad' : 'happy');
+    setResults((r) => [...r, { questionId: question.id, title: question.title, stars, assisted: detail.assisted, xp, combo: newCombo, lit: nowStars === 3 && oldBest < 3, cardEarned: earnsCard, heartsLeft, canRevive: !patrol && isAdmin && !revived }]);
     setPhase('rated');
   };
 
@@ -139,7 +151,6 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
       return;
     }
     setPosition((p) => p + 1);
-    setPet('idle');
     setPhase('answering');
     window.scrollTo?.({ top: 0, behavior: 'smooth' });
   };
@@ -180,8 +191,6 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
         results={results}
         position={position}
         total={questions.length}
-        pet={pet}
-        petForm={petForm}
         cardsRef={cardsRef}
         hintCards={isAdmin ? cards : null}
       />
@@ -230,7 +239,6 @@ export default function StageRun({ mode = 'stage', recordKey, questions: runQues
                 </span>
               )}
               {last.revived && <span className="stage-revive is-done type-caption">追问答得好，复活成功，补回 1 颗心！</span>}
-              <span className="stage-verdict-pet"><PixelPet form={petForm} mood={last.stars === 0 ? 'sad' : 'happy'} size={40} still /></span>
               <button type="button" className="btn-blue stage-next" onClick={goNext} autoFocus>
                 {failed ? '查看结算' : position === questions.length - 1 ? '结算' : '下一题'}
               </button>
