@@ -59,7 +59,7 @@ export default function Layout() {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <span className="topbar-brand">Interview Bank</span>
+        <span className="topbar-brand">面试题库</span>
       </header>
 
       {/* Backdrop (mobile only) */}

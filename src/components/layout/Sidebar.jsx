@@ -100,14 +100,14 @@ export default function Sidebar({ categories, questions = [], className = '', on
           <button
             type="button"
             onClick={goToBlog}
-            className="font-display text-left text-[19px] font-semibold leading-tight tracking-tight"
-            style={{ color: 'var(--text-primary)' }}
+            className="font-display text-left text-[22px] font-bold leading-tight"
+            style={{ color: 'var(--text-primary)', letterSpacing: '0.04em' }}
             title="返回博客"
           >
-            Interview Bank
+            面试题库
           </button>
-          <p className="type-micro mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-            Unity · C++ · Algorithms
+          <p className="type-eyebrow mt-1" style={{ color: 'var(--text-tertiary)', fontSize: 11, letterSpacing: '0.18em' }}>
+            Interview Bank
           </p>
         </div>
         {onClose && (

@@ -2,9 +2,12 @@ import { useQuestions } from '@/context/QuestionsContext';
 import ProgressPanel from '@/components/dashboard/ProgressPanel';
 import PracticeHeatmap from '@/components/dashboard/PracticeHeatmap';
 import { Link } from 'react-router-dom';
+import TodayTiles from '@/components/dashboard/TodayTiles';
+import { useGameProgress } from '@/hooks/useGameProgress';
 
 export default function DashboardPage() {
   const { categories, questions, loading, error } = useQuestions();
+  const game = useGameProgress(questions, categories);
 
   if (loading) {
     return (
@@ -24,37 +27,25 @@ export default function DashboardPage() {
     );
   }
 
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? '夜深了' : hour < 11 ? '早上好' : hour < 13 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
+  const today = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
+
   return (
-    <div>
-      {/* Hero */}
-      <section className="mb-12">
-        <p
-          className="type-eyebrow mb-4"
-          style={{ color: 'var(--apple-blue)' }}
-        >
-          Interview Question Bank
-        </p>
-        <h1 className="type-display-lg mb-3" style={{ color: 'var(--text-primary)' }}>
-          专注每一题，<br />积累每一寸进步。
+    <div className="dash-page">
+      <header className="dash-hero">
+        <p className="type-eyebrow" style={{ color: 'var(--text-tertiary)', textTransform: 'none' }}>{today}</p>
+        <h1 className="type-display-lg" style={{ color: 'var(--text-primary)' }}>
+          {greeting}。{game.dueCount ? <>今天有 {game.dueCount} 道题<br />等你巡检。</> : <>今天没有到期题，<br />挑一关继续吧。</>}
         </h1>
-        <p
-          className="type-body-lg max-w-xl"
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          按分类系统化刷题，标记错题与待复习，模拟面试与随机抽题让节奏更接近真实场景。
-        </p>
-        <div className="mt-7 flex flex-wrap gap-3">
-          <Link to="/quiz" className="btn-blue-large">
-            开始刷题
-          </Link>
-          <Link to="/random-practice" className="btn-blue-outline">
-            随机刷题
-          </Link>
-          <Link to="/mock-interview" className="btn-blue-outline">
-            模拟面试
-          </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link to={game.dueCount ? '/patrol' : '/map'} className="btn-blue-large">{game.dueCount ? '开始巡检' : '闯关地图'}</Link>
+          <Link to="/random-practice" className="btn-neutral">随机刷题</Link>
+          <Link to="/mock-interview" className="btn-neutral">模拟面试</Link>
         </div>
-      </section>
+      </header>
+
+      <TodayTiles questions={questions} game={game} />
 
       <PracticeHeatmap />
 
