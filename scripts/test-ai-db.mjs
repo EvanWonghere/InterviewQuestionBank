@@ -298,4 +298,39 @@ assert.deepEqual(await access(a),{admin:true,scopes:['quiz','labs','music']});
 await db.exec(`update ai_settings set window_start=now()-interval '2 minutes',request_count=0;`);
 for(let i=70;i<=75;i++){await music(i,{user:a,subject:'pitch'});await done();}
 assert.equal((await db.query(`select count(*)::int as n from ai_member_usage where user_id=$1`,[a])).rows[0].n,0);
-await db.close();console.log('PASS: SQL migration, AI members (music scope, daily limit, expiry, own-row RLS), idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');
+
+// Stage game cloud copy: administrator-only, written only through the order-independent merge RPC.
+await db.exec(await readFile(new URL('../supabase/migrations/20260929000000_game_progress.sql',import.meta.url),'utf8'));
+const asUser=user=>db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`);
+const merge=(records,stars={},bonus=0,seen=[])=>db.query('select * from game_progress_merge($1,$2,$3,$4)',[JSON.stringify(records),JSON.stringify(stars),bonus,seen]).then(r=>r.rows[0]);
+await asUser(a);
+const g1=await merge({'cat:1':{cleared:true,flawless:false,maxCombo:3,runs:1,lastRunAt:'2026-09-26T01:00:00Z'},'patrol:2026-09-26':{completed:true}},{q1:2,q2:3},12,['first-clear']);
+assert.equal(g1.user_id,a);assert.equal(g1.bonus_xp,12);
+// A second device: an older, weaker copy of the same stage plus its own progress.
+const g2=await merge({'cat:1':{cleared:false,flawless:true,maxCombo:6,runs:1,lastRunAt:'2026-09-25T01:00:00Z'},'boss:cat':{defeated:true,bestScore:81}},{q1:3,q2:1,q3:2},5,['steady-60','first-clear']);
+assert.deepEqual(g2.records['cat:1'],{cleared:true,flawless:true,maxCombo:6,runs:1,lastRunAt:'2026-09-26T01:00:00Z'},'booleans OR, numbers max, timestamps latest');
+assert.deepEqual(g2.records['boss:cat'],{defeated:true,bestScore:81});
+assert.ok(g2.records['patrol:2026-09-26'].completed);
+assert.deepEqual(g2.best_stars,{q1:3,q2:3,q3:2},'best stars never go down');
+assert.equal(g2.bonus_xp,17,'bonus deltas from two devices add up');
+assert.deepEqual(g2.seen_achievements,['first-clear','steady-60']);
+assert.equal((await merge({},{},0,[])).bonus_xp,17,'an empty sync changes nothing');
+for(const bad of [
+ ()=>merge({'../x':{}}),()=>merge({'cat:1':true}),()=>merge({},{q1:4}),()=>merge({},{q1:'3'}),
+ ()=>merge({},{},-1),()=>merge({},{},20000),()=>merge({},{},0,['Bad Id']),
+]) await assert.rejects(bad,/game_progress_invalid/);
+// Only the RPC writes; each administrator sees only their own row.
+await assert.rejects(()=>db.query(`update game_progress set bonus_xp=999`),/permission denied/);
+await assert.rejects(()=>db.query(`insert into game_progress(user_id) values($1)`,[a]),/permission denied/);
+await assert.rejects(()=>db.query(`delete from game_progress`),/permission denied/);
+assert.equal((await db.query('select * from game_progress')).rows.length,1);
+await assert.rejects(()=>db.query(`select private.game_merge_record('{}','{}')`),/permission denied/);
+// Not an administrator (b is an expired AI member): no row, no merge.
+await asUser(b);
+await assert.rejects(()=>merge({}),/permission denied for game_progress/);
+assert.equal((await db.query('select * from game_progress')).rows.length,0);
+await db.exec('reset role;set role anon;');
+await assert.rejects(()=>db.query('select * from game_progress'),/permission denied/);
+await assert.rejects(()=>merge({}),/permission denied/);
+await db.exec('reset role;');
+await db.close();console.log('PASS: SQL migration, game progress merge (OR/max/latest, bonus deltas, validation, RPC-only writes, admin-only RLS), AI members (music scope, daily limit, expiry, own-row RLS), idempotency, single-flight, 10/min, owner/admin RLS, revocation, append conflict, clear isolation, NULL legacy assistance, practice calendar, AI evaluation chains/limits/reports, reasoning settings, 150s stale cutoff, question provenance, music AI dedup/conflict/single-flight/shared limit/RLS/clear, strudel kind, music works RLS/revisions/limits/tombstones');
