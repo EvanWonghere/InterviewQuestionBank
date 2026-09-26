@@ -85,3 +85,21 @@ Deno.test('prices calls from the built-in table, off-peak and overrides', () => 
  eq(priceAt('mystery',peak,null),null,'unknown model');
  eq(priceAt('mystery',peak,{models:{mystery:{input:1,cached:1,output:1}}}),{input:1,cached:1,output:1},'override prices an unknown model');
 });
+
+import { FX_TTL_MS, resetFxCache, usdToCny } from './fx.js';
+Deno.test('fetches USD to CNY, falls back, validates and caches', async () => {
+ resetFxCache();
+ const calls=[];
+ const ok=(body)=>new Response(JSON.stringify(body),{status:200});
+ let fetchImpl=async(url)=>{calls.push(url);return url.includes('frankfurter')?ok({date:'2026-09-25',rates:{CNY:6.7132}}):ok({});};
+ eq(await usdToCny({fetchImpl,now:0}),{rate:6.7132,date:'2026-09-25',source:'欧洲央行（Frankfurter）'},'primary');
+ eq(await usdToCny({fetchImpl,now:FX_TTL_MS-1}),{rate:6.7132,date:'2026-09-25',source:'欧洲央行（Frankfurter）'},'cached');
+ eq(calls.length,1,'one fetch within the ttl');
+ fetchImpl=async(url)=>url.includes('frankfurter')?new Response('',{status:503}):ok({time_last_update_utc:'Sat, 26 Sep 2026 00:02:32 +0000',rates:{CNY:6.72}});
+ eq(await usdToCny({fetchImpl,now:FX_TTL_MS+1}),{rate:6.72,date:'2026-09-26',source:'ExchangeRate-API'},'fallback source');
+ fetchImpl=async()=>ok({rates:{CNY:720}});
+ eq((await usdToCny({fetchImpl,now:3*FX_TTL_MS})).rate,6.72,'implausible rate keeps the last good one');
+ resetFxCache();
+ fetchImpl=async()=>{throw new TypeError('offline');};
+ eq(await usdToCny({fetchImpl,now:0}),{rate:DEFAULT_USD_TO_CNY,date:null,source:'默认值'},'default before any success');
+});

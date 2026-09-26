@@ -17,21 +17,23 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('UsagePanel', () => {
   it('prices calls from the built-in table without any setup', async () => {
-    render(<UsagePanel models={{ fast: 'deepseek-flash', default: 'gpt-6-luna' }} pricing={{}} onPricingChange={() => {}} />);
+    render(<UsagePanel models={{ fast: 'deepseek-flash', default: 'gpt-6-luna' }} pricing={{}} fx={{ rate: 7.1, date: '2026-09-25', source: '欧洲央行（Frankfurter）' }} onPricingChange={() => {}} />);
     await screen.findByRole('table', { name: '按模型' });
     const block = document.querySelector('.ai-usage-figures');
-    // deepseek peak: (500*2 + 1500*0.04 + 1000*8)/1e6 = 0.00906; luna: (1000*0.1 + 500*0.5)*7.1/1e6 = 0.002485
+    // deepseek peak: (500*2 + 1500*0.04 + 1000*8)/1e6 = 0.00906; luna at the live rate: (1000*0.1 + 500*0.5)*7.1/1e6 = 0.002485
     expect(block).toHaveTextContent('¥0.0115另有 1 次未定价');
+    expect(screen.getByText(/汇率 7\.1000（欧洲央行（Frankfurter） 2026-09-25，每 12 小时自动更新）/)).toBeInTheDocument();
     expect(block).toHaveTextContent('缓存命中50%');
     expect(screen.getByRole('table', { name: /单价/ })).toHaveTextContent('高峰价');
     expect(screen.getByRole('table', { name: '按功能' })).toHaveTextContent('学习助手');
   });
 
-  it('uses the saved exchange rate and overrides', async () => {
-    render(<UsagePanel models={{}} pricing={{ rate: 7, models: { 'mystery-model': { input: 1000, cached: 0, output: 1000 } } }} onPricingChange={() => {}} />);
+  it('prefers a manual exchange rate over the live one, and uses overrides', async () => {
+    render(<UsagePanel models={{}} pricing={{ rate: 7, models: { 'mystery-model': { input: 1000, cached: 0, output: 1000 } } }} fx={{ rate: 6.7, date: '2026-09-25', source: 'x' }} onPricingChange={() => {}} />);
     await screen.findByRole('table', { name: '按模型' });
     // luna at 7: 0.00245; deepseek 0.00906; mystery (10*1000 + 10*1000)/1e6 = 0.02
     expect(document.querySelector('.ai-usage-figures')).toHaveTextContent('¥0.0315');
+    expect(screen.getByText(/（手动设置）/)).toBeInTheDocument();
   });
 
   it('edits overrides and the rate, and keeps only complete rows for saving', async () => {

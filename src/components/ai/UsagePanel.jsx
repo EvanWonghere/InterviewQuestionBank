@@ -52,8 +52,13 @@ function summarize(rows, pricing) {
  * API 设置 → where the tokens went. Prices are built in (prices.js, with DeepSeek's off-peak rate);
  * the exchange rate and per-model overrides are optional and saved with save-settings.
  */
-export default function UsagePanel({ models, pricing: rawPricing, onPricingChange }) {
-  const pricing = normalizePricing(rawPricing);
+export default function UsagePanel({ models, pricing: rawPricing, fx, onPricingChange }) {
+  const saved = useMemo(() => normalizePricing(rawPricing), [rawPricing]);
+  // What the function uses: a manual rate if one was saved, otherwise the live rate it fetched.
+  const pricing = useMemo(
+    () => ({ ...saved, rate: Number(saved.rate) > 0 ? Number(saved.rate) : fx?.rate ?? DEFAULT_USD_TO_CNY }),
+    [saved, fx],
+  );
   const [range, setRange] = useState(7);
   const [state, setState] = useState({ rows: [], loading: true, error: '' });
 
@@ -77,16 +82,17 @@ export default function UsagePanel({ models, pricing: rawPricing, onPricingChang
   const priceModels = [...new Set([...Object.values(models ?? {}), ...Object.keys(pricing.models), ...byModel.map(([m]) => m)])].filter(Boolean);
 
   const setPrice = (model, field, value) => {
-    const current = { input: '', cached: '', output: '', ...(pricing.models[model] ?? {}) };
+    const current = { input: '', cached: '', output: '', ...(saved.models[model] ?? {}) };
     current[field] = value;
-    onPricingChange({ ...pricing, models: { ...pricing.models, [model]: current } });
+    onPricingChange({ ...saved, models: { ...saved.models, [model]: current } });
   };
   const clearPrice = (model) => {
-    const next = { ...pricing.models };
+    const next = { ...saved.models };
     delete next[model];
-    onPricingChange({ ...pricing, models: next });
+    onPricingChange({ ...saved, models: next });
   };
-  const rate = Number(pricing.rate) > 0 ? Number(pricing.rate) : DEFAULT_USD_TO_CNY;
+  const rate = pricing.rate;
+  const rateNote = Number(saved.rate) > 0 ? '手动设置' : fx?.date ? `${fx.source} ${fx.date}，每 12 小时自动更新` : '自动获取失败，暂用默认值';
   const peakNow = deepSeekPeak(Date.now());
   const yuan = (n) => (n < 0.1 ? n.toFixed(3) : n < 10 ? n.toFixed(2) : n.toFixed(1));
 
@@ -134,7 +140,7 @@ export default function UsagePanel({ models, pricing: rawPricing, onPricingChang
           <tbody>{priceModels.map((model) => {
             const price = priceAt(model, Date.now(), pricing);
             const builtIn = BUILT_IN_PRICES[model];
-            const source = pricing.models[model] ? '自定义' : builtIn?.offPeakFactor ? (peakNow ? '高峰价' : '闲时半价') : builtIn?.currency === 'USD' ? `美元 × ${rate}` : builtIn ? '' : '未定价';
+            const source = pricing.models[model] ? '自定义' : builtIn?.offPeakFactor ? (peakNow ? '高峰价' : '闲时半价') : builtIn?.currency === 'USD' ? `美元 × ${rate.toFixed(4)}` : builtIn ? '' : '未定价';
             return (
               <tr key={model}>
                 <th scope="row">{model}{source && <small className="ai-price-source">{source}</small>}</th>
@@ -145,23 +151,24 @@ export default function UsagePanel({ models, pricing: rawPricing, onPricingChang
         </table>
       </div>
       <p className="type-caption">
-        DeepSeek 在北京时间工作日 9:00–12:00、14:00–18:00 按高峰价，其余时间（含周末）半价；每次调用按它发生的时刻计价，现在是{peakNow ? '高峰时段' : '闲时'}。法定节假日也是闲时，但这里按工作日计，节假日会略高估。OpenAI 按美元价格乘汇率折算。
+        DeepSeek 在北京时间工作日 9:00–12:00、14:00–18:00 按高峰价，其余时间（含周末）半价；每次调用按它发生的时刻计价，现在是{peakNow ? '高峰时段' : '闲时'}。法定节假日也是闲时，但这里按工作日计，节假日会略高估。
+        OpenAI 按美元价格折算，汇率 {rate.toFixed(4)}（{rateNote}）。
       </p>
-      <label className="ai-rate">美元汇率
-        <input className="input-apple" type="number" min="0.01" max="100" step="0.01" inputMode="decimal" placeholder={String(DEFAULT_USD_TO_CNY)}
-          value={pricing.rate} onChange={(e) => onPricingChange({ ...pricing, rate: e.target.value })} aria-label="美元兑人民币汇率" />
-      </label>
       <details className="ai-price-override">
-        <summary>自定义单价（服务商调价、或用了不在表里的模型时再填）</summary>
+        <summary>自定义单价与汇率（服务商调价、用了不在表里的模型，或想固定汇率时再填）</summary>
+        <label className="ai-rate">手动汇率
+          <input className="input-apple" type="number" min="0.01" max="100" step="0.0001" inputMode="decimal" placeholder={`留空自动（${(fx?.rate ?? DEFAULT_USD_TO_CNY).toFixed(4)}）`}
+            value={saved.rate} onChange={(e) => onPricingChange({ ...saved, rate: e.target.value })} aria-label="美元兑人民币汇率" />
+        </label>
         <fieldset className="ai-price-grid">
           <legend>元 / 百万 token，高峰价；DeepSeek 闲时仍按半价</legend>
           <div className="ai-price-row is-head" aria-hidden="true"><span />{PRICE_FIELDS.map(([, label]) => <span key={label}>{label}</span>)}</div>
           {priceModels.map((model) => (
             <div key={model} className="ai-price-row" role="group" aria-label={`${model} 单价`}>
-              <span className="ai-price-model">{model}{pricing.models[model] && <button type="button" className="ai-text-btn" onClick={() => clearPrice(model)}>恢复内置</button>}</span>
+              <span className="ai-price-model">{model}{saved.models[model] && <button type="button" className="ai-text-btn" onClick={() => clearPrice(model)}>恢复内置</button>}</span>
               {PRICE_FIELDS.map(([field, label]) => (
                 <input key={field} className="input-apple" type="number" min="0" max="10000" step="0.01" inputMode="decimal"
-                  aria-label={`${model} ${label}单价`} value={pricing.models[model]?.[field] ?? ''} onChange={(e) => setPrice(model, field, e.target.value)} />
+                  aria-label={`${model} ${label}单价`} value={saved.models[model]?.[field] ?? ''} onChange={(e) => setPrice(model, field, e.target.value)} />
               ))}
             </div>
           ))}

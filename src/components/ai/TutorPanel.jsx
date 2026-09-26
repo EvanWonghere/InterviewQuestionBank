@@ -58,7 +58,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [text, setText] = useAIDraft(`${user.id}:${question.id}:chat`); const [includeNote, setIncludeNote] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState({ reasoningEffort: 'high', configured: false, allowedOrigins: [], creditPolicy: 'aggressive', keys: { deepseek: false, openai: false, jev: false }, models: { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' }, pricing: {} });
+  const [settings, setSettings] = useState({ reasoningEffort: 'high', configured: false, allowedOrigins: [], creditPolicy: 'aggressive', keys: { deepseek: false, openai: false, jev: false }, models: { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' }, pricing: {}, fx: null });
   // Usage of the replies sent in this session, by request id, for the reply's status line.
   const [usageByRequest, setUsageByRequest] = useState({});
   const avatarRef = useRef(null);
@@ -135,6 +135,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
           keys: config.keys ?? { deepseek: Boolean(config.configured), openai: false, jev: false },
           models: config.models ?? { fast: 'deepseek-flash', default: 'gpt-6-luna', reasoning: 'gpt-6-sol' },
           pricing: config.pricing ?? {},
+          fx: config.fx ?? null,
         });
         setSettingsOpen(!config.configured);
         setMessages(history.messages);
@@ -260,7 +261,7 @@ export default function TutorPanel({ question, phase = 'hint', submission, onAss
         <p className="type-caption">DeepSeek 使用 thinking 字段，OpenAI 只发送 reasoning_effort。聊天、评估、报告和连接测试共用。思考越强越慢，单次最长等待 90 秒；超时或截断时可降低强度。</p>
         <p className="type-caption">允许的域名：{settings.allowedOrigins.join('、') || '需在服务端设置AI_ALLOWED_ORIGINS'}</p>
         <p className="type-caption">连接测试分别调用 DeepSeek、Luna 和 Sol，并逐项显示结果。Jev 显示为未测试。仅发送固定测试文本，可能产生三次少量调用费用。</p>
-        <UsagePanel models={settings.models} pricing={settings.pricing} onPricingChange={(pricing) => setSettings(s => ({ ...s, pricing }))} />
+        <UsagePanel models={settings.models} pricing={settings.pricing} fx={settings.fx} onPricingChange={(pricing) => setSettings(s => ({ ...s, pricing }))} />
         <label className="ai-check"><input type="checkbox" checked={!petHidden} onChange={e => usePetStore.getState().setHidden(!e.target.checked)} /> 显示小芽</label>
         <div className="flex gap-2"><button className="btn-blue" disabled={settingsBusy || busy} onClick={() => configure('save-settings')}>保存设置</button><button className="btn-neutral" disabled={settingsBusy || busy || !settings.configured} onClick={() => configure('test')}>测试连接</button></div>
       </section>}

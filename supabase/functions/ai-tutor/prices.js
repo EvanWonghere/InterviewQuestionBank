@@ -4,7 +4,8 @@
 // Update the table when a provider changes prices; API 设置 can override a model meanwhile.
 
 export const PRICES_CHECKED_AT = '2026-09-26';
-export const DEFAULT_USD_TO_CNY = 7.1;
+// Used only when no exchange-rate source has answered yet (fx.js); about the rate on 2026-09-25.
+export const DEFAULT_USD_TO_CNY = 6.7;
 
 export const BUILT_IN_PRICES = {
   // DeepSeek bills half price outside its peak hours (deepSeekPeak).

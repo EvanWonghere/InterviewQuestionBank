@@ -11,6 +11,7 @@ import { handleMusic } from './music.ts';
 import { handleArrange } from './musicArrange.ts';
 import { handleStrudel } from './musicStrudel.ts';
 import { createMeter, recordUsage, validatePricing } from './usage.js';
+import { usdToCny } from './fx.js';
 const env = (key: string) => Deno.env.get(key) ?? '';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'no-store' };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -53,7 +54,12 @@ export async function handleRequest(req: Request, factory = createClient) {
   // with the answer (JSON field `usage`, or a `usage` event in a chat stream).
   const meter = createMeter();
   const onUsage = meter.add;
-  const withUsage = async (res: Response, pricing: unknown) => {
+  // The exchange rate is fetched alongside the request (cached for 12 hours), so pricing adds no wait.
+  const fx = usdToCny();
+  // A manual rate from API 设置 wins over the live one.
+  const effectivePricing = async (saved: any) => ({ ...(saved ?? {}), rate: saved?.rate ?? (await fx).rate });
+  const withUsage = async (res: Response, saved: unknown) => {
+   const pricing = await effectivePricing(saved);
    const summary = meter.summary(pricing);
    if (!summary) return res;
    await recordUsage(db, { userId: uid, action, requestId: input.requestId, meter, pricing });
@@ -94,7 +100,7 @@ export async function handleRequest(req: Request, factory = createClient) {
    const routing = publicRouting(env);
    // Cached copies of the previous quiz page still require settings.model before they enable send and evaluation.
    // Routing no longer reads that column; the value only keeps those copies usable.
-   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing, creditPolicy: effectivePolicy(settings?.credit_policy, routing.creditPolicy), pricing: settings?.pricing ?? {} });
+   return json({ settings: { base_url: settings?.base_url ?? '', model: settings?.model || routing.models.fast, reasoning_effort: settings?.reasoning_effort ?? 'high' }, reasoningEfforts: REASONING_EFFORTS, configured: routing.keys.deepseek, allowedOrigins: env('AI_ALLOWED_ORIGINS').split(',').filter(Boolean), ...routing, creditPolicy: effectivePolicy(settings?.credit_policy, routing.creditPolicy), pricing: settings?.pricing ?? {}, fx: await fx });
   }
   if (action === 'save-settings' || action === 'test') {
    if (input.reasoningEffort != null && !REASONING_EFFORTS.includes(input.reasoningEffort)) return json({error:'无效思考强度'},400);
@@ -221,8 +227,9 @@ export async function handleRequest(req: Request, factory = createClient) {
      const updated=must(await db.from('ai_messages').update({status}).eq('id',begin.message.id).eq('status','running').select('status'));
      if(!updated?.length) status='stopped';
      if(active) await saveRouting(db,'ai_messages',uid,input.requestId,{model:active.model,provider:active.provider,model_tier:tier,pedagogy_action:pedagogy,fallback_used:fallbackUsed});
-     const usage=meter.summary(settings?.pricing);
-     if(usage){await recordUsage(db,{userId:uid,action,requestId:input.requestId,meter,pricing:settings?.pricing});emit('usage',{usage});}
+     const pricing=await effectivePricing(settings?.pricing);
+     const usage=meter.summary(pricing);
+     if(usage){await recordUsage(db,{userId:uid,action,requestId:input.requestId,meter,pricing});emit('usage',{usage});}
      emit('done',{status,error:failure});
     } catch {emit('error',{message:'回复保存失败，当前内容仅为临时副本；请复制后检查历史'});}
     try{controller.close();}catch{/* client closed */}
