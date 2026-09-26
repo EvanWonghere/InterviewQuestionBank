@@ -104,7 +104,7 @@ describe('provider fallback', () => {
     const body = new ReadableStream({ start(controller) { controller.enqueue(encoded); controller.close(); } });
     const events = [];
     for await (const event of iterateChatEvents(body)) events.push(event);
-    expect(events).toEqual([{ text: '可见', thinking: true, finishReason: null }]);
+    expect(events).toEqual([{ text: '可见', thinking: true, finishReason: null, usage: null }]);
     expect(JSON.stringify(events)).not.toContain('secret');
   });
 });

@@ -1,3 +1,4 @@
+/* global Deno */
 import { costOf, createMeter, normalizeUsage, recordUsage, validatePricing } from './usage.js';
 import { callModel, iterateChatEvents, openChatStream } from './modelClient.js';
 const eq=(a,b,msg)=>{if(JSON.stringify(a)!==JSON.stringify(b))throw Error(`${msg}: ${JSON.stringify(a)} !== ${JSON.stringify(b)}`);};
