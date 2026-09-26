@@ -1,6 +1,7 @@
 /* global Deno */
 import { costOf, createMeter, normalizeUsage, recordUsage, validatePricing } from './usage.js';
 import { callModel, iterateChatEvents, openChatStream } from './modelClient.js';
+import { BUILT_IN_PRICES, DEFAULT_USD_TO_CNY, deepSeekPeak, priceAt } from './prices.js';
 const eq=(a,b,msg)=>{if(JSON.stringify(a)!==JSON.stringify(b))throw Error(`${msg}: ${JSON.stringify(a)} !== ${JSON.stringify(b)}`);};
 
 Deno.test('normalizes DeepSeek and OpenAI usage', () => {
@@ -18,15 +19,16 @@ Deno.test('prices cached input separately and sums a request', () => {
  const meter=createMeter();
  meter.add({provider:'deepseek',model:'flash',usage:{prompt_tokens:1000,prompt_cache_hit_tokens:1000,completion_tokens:100}});
  meter.add({provider:'openai',model:'luna',usage:{prompt_tokens:500,completion_tokens:50}});
- eq(meter.summary({flash:price,luna:price}),{input:1500,cached:1000,output:150,reasoning:0,calls:2,cost:Number(((1000*0.5+100*8+500*2+50*8)/1e6).toFixed(6))},'priced');
- eq(meter.summary({flash:price}).cost,null,'one unpriced model hides the total');
+ eq(meter.summary({models:{flash:price,luna:price}}),{input:1500,cached:1000,output:150,reasoning:0,calls:2,cost:Number(((1000*0.5+100*8+500*2+50*8)/1e6).toFixed(6))},'priced');
+ eq(meter.summary({models:{flash:price}}).cost,null,'one unpriced model hides the total');
  eq(createMeter().summary({}),null,'no calls');
 });
 
 Deno.test('validates the price table', () => {
- eq(validatePricing({'deepseek-flash':{input:'2',cached:0.2,output:8}}),{'deepseek-flash':{input:2,cached:0.2,output:8}},'ok');
+ eq(validatePricing({'deepseek-flash':{input:'2',cached:0.2,output:8}}),{models:{'deepseek-flash':{input:2,cached:0.2,output:8}}},'a flat map is read as models');
+ eq(validatePricing({rate:'7.2',models:{}}),{rate:7.2,models:{}},'rate');
  eq(validatePricing(null),null,'cleared');
- for (const bad of [[],{'bad model':{input:1,cached:1,output:1}},{m:{input:-1,cached:0,output:0}},{m:{input:1,cached:1}},Object.fromEntries(Array.from({length:13},(_,i)=>[`m${i}`,{input:1,cached:1,output:1}]))]) {
+ for (const bad of [{rate:0},{rate:'x'},{models:[]},[],{'bad model':{input:1,cached:1,output:1}},{m:{input:-1,cached:0,output:0}},{m:{input:1,cached:1}},Object.fromEntries(Array.from({length:13},(_,i)=>[`m${i}`,{input:1,cached:1,output:1}]))]) {
   let threw=false;try{validatePricing(bad);}catch(e){threw=e.message.startsWith('无效价格表');}
   if(!threw)throw Error(`accepted ${JSON.stringify(bad).slice(0,40)}`);
  }
@@ -36,7 +38,7 @@ Deno.test('records one row per call and never throws', async () => {
  const meter=createMeter();
  meter.add({provider:'deepseek',model:'flash',usage:{prompt_tokens:10,completion_tokens:5}});
  let rows=null;
- await recordUsage({from:()=>({insert:async(r)=>{rows=r;return {error:null};}})},{userId:'u',action:'evaluate',requestId:'not-a-uuid',meter,pricing:{flash:{input:1,cached:1,output:1}}});
+ await recordUsage({from:()=>({insert:async(r)=>{rows=r;return {error:null};}})},{userId:'u',action:'evaluate',requestId:'not-a-uuid',meter,pricing:{models:{flash:{input:1,cached:1,output:1}}}});
  eq(rows,[{user_id:'u',action:'evaluate',request_id:null,provider:'deepseek',model:'flash',input_tokens:10,cached_tokens:0,output_tokens:5,reasoning_tokens:0,cost:0.000015}],'row');
  await recordUsage({from:()=>({insert:async()=>{throw Error('db down');}})},{userId:'u',action:'x',meter,pricing:null});
 });
@@ -60,4 +62,26 @@ Deno.test('streams ask for usage and yield the usage chunk', async () => {
  const usages=[];let text='';
  for await (const e of iterateChatEvents(res.body)){text+=e.text;if(e.usage)usages.push(e.usage);}
  eq(text,'hi','text');eq(usages,[{prompt_tokens:9,completion_tokens:2}],'usage');
+});
+
+Deno.test('knows DeepSeek peak hours in Beijing time', () => {
+ // 2026-09-28 is a Monday.
+ eq(deepSeekPeak('2026-09-28T01:30:00Z'),true,'Mon 09:30');
+ eq(deepSeekPeak('2026-09-28T04:30:00Z'),false,'Mon 12:30 lunch');
+ eq(deepSeekPeak('2026-09-28T09:59:00Z'),true,'Mon 17:59');
+ eq(deepSeekPeak('2026-09-28T10:00:00Z'),false,'Mon 18:00');
+ eq(deepSeekPeak('2026-09-27T02:00:00Z'),false,'Sunday');
+ eq(deepSeekPeak('2026-09-26T17:00:00Z'),false,'Sun 01:00 Beijing (Sat UTC)');
+});
+
+Deno.test('prices calls from the built-in table, off-peak and overrides', () => {
+ const peak='2026-09-28T02:00:00Z', night='2026-09-28T16:00:00Z';
+ eq(priceAt('deepseek-flash',peak,null),{input:2,cached:0.04,output:8},'deepseek peak');
+ eq(priceAt('deepseek-flash',night,null),{input:1,cached:0.02,output:4},'deepseek off-peak');
+ const luna=BUILT_IN_PRICES['gpt-6-luna'];
+ eq(priceAt('gpt-6-luna',peak,null),{input:luna.input*DEFAULT_USD_TO_CNY,cached:luna.cached*DEFAULT_USD_TO_CNY,output:luna.output*DEFAULT_USD_TO_CNY},'usd at default rate');
+ eq(priceAt('gpt-6-sol',peak,{rate:7}).output,70,'usd at saved rate');
+ eq(priceAt('deepseek-flash',night,{models:{'deepseek-flash':{input:4,cached:0.1,output:16}}}),{input:2,cached:0.05,output:8},'override keeps off-peak');
+ eq(priceAt('mystery',peak,null),null,'unknown model');
+ eq(priceAt('mystery',peak,{models:{mystery:{input:1,cached:1,output:1}}}),{input:1,cached:1,output:1},'override prices an unknown model');
 });

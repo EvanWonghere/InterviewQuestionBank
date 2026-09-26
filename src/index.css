@@ -1606,3 +1606,8 @@ button.heat-cell {
 .ai-message-avatar { border-radius: 10px; background: var(--surface-card); }
 .ai-composer { border-radius: 12px; background: var(--surface-card); }
 .ai-composer:focus-within { box-shadow: 0 0 0 3px var(--accent-soft); }
+.ai-price-source { display: block; font-size: 11px; font-weight: 400; color: var(--text-tertiary); }
+.ai-rate { display: grid; grid-template-columns: auto 8rem; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); }
+.ai-price-override > summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+.ai-price-override[open] > summary { margin-bottom: 10px; }
+.ai-price-model .ai-text-btn { display: block; padding: 2px 0; font-size: 11px; }

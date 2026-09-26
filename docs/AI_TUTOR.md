@@ -104,7 +104,7 @@ npx supabase functions deploy ai-tutor
 
 - 记录：函数里每次模型调用成功后，按服务商返回的 `usage` 记一行：输入、缓存命中（DeepSeek `prompt_cache_hit_tokens`，OpenAI `prompt_tokens_details.cached_tokens`）、输出、其中的思考（`completion_tokens_details.reasoning_tokens`）。流式聊天请求带 `stream_options.include_usage`，从最后一个没有 choices 的块里读用量。回退和重试的每次调用都单独记。Jev 的教学决策调用不在内。写入失败只记日志，不影响回答。
 - 权限：只有函数（service role）能写；用户读自己的，管理员读全部（含 AI 成员的音乐练习室用量）。
-- 价格：「API 设置 → 用量与花费」里按模型填元 / 百万 token 的输入、缓存命中、输出单价，随「保存设置」写进 `ai_settings.pricing`（函数再校验一次：最多 12 个模型，单价 0—10000）。三格都填了的模型才计价。`ai_usage.cost` 是调用当时的价格；面板上的花费按当前价格重算，改价格后历史也跟着变。
+- 价格：内置在 `supabase/functions/ai-tutor/prices.js`（2026-09-26 按 DeepSeek 与 OpenAI 官方价格页核对）：`deepseek-flash`、`deepseek-v4-pro` 按人民币；`gpt-6-luna`、`gpt-6-sol` 按美元标准档短上下文价，再乘汇率（默认 7.1，可在设置里改）。DeepSeek 高峰为北京时间工作日 9:00–12:00、14:00–18:00，其余时间半价；每次调用按它结束的时刻判断，法定节假日未建模，按工作日高峰计（会略高估）。服务商调价或换了表里没有的模型时，在「API 设置 → 用量与花费 → 自定义单价」里按元 / 百万 token 填高峰价覆盖（DeepSeek 闲时仍按半价），随「保存设置」写进 `ai_settings.pricing`（`{ rate, models }`，函数再校验：最多 12 个模型，单价 0—10000，汇率 0—100）。调价时同时更新 `prices.js`。`ai_usage.cost` 是调用当时的价格；面板上的花费按当前价格表重算。
 - 返回：JSON 响应多一个 `usage` 字段，聊天流在 `done` 之前多一个 `usage` 事件，内容是本次请求的合计 `{ input, cached, output, reasoning, calls, cost }`；有未定价的模型时 `cost` 为 null。
 - 展示：题库页面收到 `usage` 后，小芽（学习助手打开时是面板头部的小芽）飘出「-¥0.0123」和几枚金币；没定价时显示消耗的 token 数；安静模式下改成一句话。聊天回复的状态行显示本次花费、缓存命中率和思考 token。面板里汇总今天、近 7 天、近 30 天的花费、调用次数、缓存命中率、思考占输出的比例，并按模型、按功能拆开。
 

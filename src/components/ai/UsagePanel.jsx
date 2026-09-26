@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { requireSupabase } from '@/lib/supabase';
+import {
+  BUILT_IN_PRICES, DEFAULT_USD_TO_CNY, PRICES_CHECKED_AT, deepSeekPeak, priceAt,
+} from '../../../supabase/functions/ai-tutor/prices.js';
 
 const DAY_MS = 86_400_000;
 const PRICE_FIELDS = [['input', '输入'], ['cached', '缓存命中'], ['output', '输出']];
@@ -12,11 +15,18 @@ const k = (n) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1000 
 const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 const money = (n) => (n == null ? '—' : `¥${n < 1 ? n.toFixed(4) : n.toFixed(2)}`);
 
-/** Cost at the prices currently entered (not the ones saved with each row), so a price fix applies to history. */
+/** Cost at today's price table and overrides, priced at the time of the call (DeepSeek off-peak). */
 function costAt(row, pricing) {
-  const price = pricing?.[row.model];
+  const price = priceAt(row.model, row.created_at, pricing);
   if (!price) return null;
   return ((row.input_tokens - row.cached_tokens) * price.input + row.cached_tokens * price.cached + row.output_tokens * price.output) / 1_000_000;
+}
+
+/** ai_settings.pricing as { rate, models }; the first saved shape was a flat model map. */
+export function normalizePricing(pricing) {
+  if (!pricing || typeof pricing !== 'object') return { rate: '', models: {} };
+  if ('models' in pricing || 'rate' in pricing) return { rate: pricing.rate ?? '', models: pricing.models ?? {} };
+  return { rate: '', models: pricing };
 }
 
 function summarize(rows, pricing) {
@@ -39,10 +49,11 @@ function summarize(rows, pricing) {
 }
 
 /**
- * API 设置 → prices and where the tokens went. Prices are per million tokens in yuan, by model name;
- * the function saves them with save-settings and uses them for the cost 小芽 shows after each answer.
+ * API 设置 → where the tokens went. Prices are built in (prices.js, with DeepSeek's off-peak rate);
+ * the exchange rate and per-model overrides are optional and saved with save-settings.
  */
-export default function UsagePanel({ models, pricing, onPricingChange }) {
+export default function UsagePanel({ models, pricing: rawPricing, onPricingChange }) {
+  const pricing = normalizePricing(rawPricing);
   const [range, setRange] = useState(7);
   const [state, setState] = useState({ rows: [], loading: true, error: '' });
 
@@ -63,15 +74,21 @@ export default function UsagePanel({ models, pricing, onPricingChange }) {
   const since = Date.now() - range * DAY_MS;
   const rows = useMemo(() => state.rows.filter((row) => new Date(row.created_at).getTime() >= since), [state.rows, since]);
   const { total, byModel, byAction } = useMemo(() => summarize(rows, pricing), [rows, pricing]);
-  const priceModels = [...new Set([...Object.values(models ?? {}), ...Object.keys(pricing ?? {}), ...byModel.map(([m]) => m)])].filter(Boolean);
+  const priceModels = [...new Set([...Object.values(models ?? {}), ...Object.keys(pricing.models), ...byModel.map(([m]) => m)])].filter(Boolean);
 
   const setPrice = (model, field, value) => {
-    const next = { ...(pricing ?? {}) };
-    const current = { input: '', cached: '', output: '', ...(next[model] ?? {}) };
+    const current = { input: '', cached: '', output: '', ...(pricing.models[model] ?? {}) };
     current[field] = value;
-    next[model] = current;
-    onPricingChange(next);
+    onPricingChange({ ...pricing, models: { ...pricing.models, [model]: current } });
   };
+  const clearPrice = (model) => {
+    const next = { ...pricing.models };
+    delete next[model];
+    onPricingChange({ ...pricing, models: next });
+  };
+  const rate = Number(pricing.rate) > 0 ? Number(pricing.rate) : DEFAULT_USD_TO_CNY;
+  const peakNow = deepSeekPeak(Date.now());
+  const yuan = (n) => (n < 0.1 ? n.toFixed(3) : n < 10 ? n.toFixed(2) : n.toFixed(1));
 
   return (
     <section className="ai-usage" aria-label="用量与价格">
@@ -110,32 +127,61 @@ export default function UsagePanel({ models, pricing, onPricingChange }) {
           {!rows.length && <p className="type-caption">这段时间还没有记录。部署后每次调用都会记下输入、缓存命中、输出和思考的 token 数。</p>}
         </>
       )}
-      <fieldset className="ai-price-grid">
-        <legend>单价（元 / 百万 token，按服务商价格填写）</legend>
-        <div className="ai-price-row is-head" aria-hidden="true"><span />{PRICE_FIELDS.map(([, label]) => <span key={label}>{label}</span>)}</div>
-        {priceModels.map((model) => (
-          <div key={model} className="ai-price-row" role="group" aria-label={`${model} 单价`}>
-            <span className="ai-price-model">{model}</span>
-            {PRICE_FIELDS.map(([field, label]) => (
-              <input key={field} className="input-apple" type="number" min="0" max="10000" step="0.01" inputMode="decimal"
-                aria-label={`${model} ${label}单价`} value={pricing?.[model]?.[field] ?? ''} onChange={(e) => setPrice(model, field, e.target.value)} />
-            ))}
-          </div>
-        ))}
-      </fieldset>
-      <p className="type-caption">三格都填了的模型才会计价，保存设置后生效；没定价时小芽显示消耗的 token 数。花费按这里的当前单价计算，改价格后历史也会重算。</p>
+      <div className="ai-usage-table-wrap">
+        <table className="ai-usage-table">
+          <caption>单价（元 / 百万 token，{PRICES_CHECKED_AT} 按官方价格页核对）</caption>
+          <thead><tr><th scope="col">模型</th><th scope="col">输入</th><th scope="col">缓存命中</th><th scope="col">输出</th></tr></thead>
+          <tbody>{priceModels.map((model) => {
+            const price = priceAt(model, Date.now(), pricing);
+            const builtIn = BUILT_IN_PRICES[model];
+            const source = pricing.models[model] ? '自定义' : builtIn?.offPeakFactor ? (peakNow ? '高峰价' : '闲时半价') : builtIn?.currency === 'USD' ? `美元 × ${rate}` : builtIn ? '' : '未定价';
+            return (
+              <tr key={model}>
+                <th scope="row">{model}{source && <small className="ai-price-source">{source}</small>}</th>
+                {price ? ['input', 'cached', 'output'].map((f) => <td key={f}>{yuan(price[f])}</td>) : <td colSpan={3}>—</td>}
+              </tr>
+            );
+          })}</tbody>
+        </table>
+      </div>
+      <p className="type-caption">
+        DeepSeek 在北京时间工作日 9:00–12:00、14:00–18:00 按高峰价，其余时间（含周末）半价；每次调用按它发生的时刻计价，现在是{peakNow ? '高峰时段' : '闲时'}。法定节假日也是闲时，但这里按工作日计，节假日会略高估。OpenAI 按美元价格乘汇率折算。
+      </p>
+      <label className="ai-rate">美元汇率
+        <input className="input-apple" type="number" min="0.01" max="100" step="0.01" inputMode="decimal" placeholder={String(DEFAULT_USD_TO_CNY)}
+          value={pricing.rate} onChange={(e) => onPricingChange({ ...pricing, rate: e.target.value })} aria-label="美元兑人民币汇率" />
+      </label>
+      <details className="ai-price-override">
+        <summary>自定义单价（服务商调价、或用了不在表里的模型时再填）</summary>
+        <fieldset className="ai-price-grid">
+          <legend>元 / 百万 token，高峰价；DeepSeek 闲时仍按半价</legend>
+          <div className="ai-price-row is-head" aria-hidden="true"><span />{PRICE_FIELDS.map(([, label]) => <span key={label}>{label}</span>)}</div>
+          {priceModels.map((model) => (
+            <div key={model} className="ai-price-row" role="group" aria-label={`${model} 单价`}>
+              <span className="ai-price-model">{model}{pricing.models[model] && <button type="button" className="ai-text-btn" onClick={() => clearPrice(model)}>恢复内置</button>}</span>
+              {PRICE_FIELDS.map(([field, label]) => (
+                <input key={field} className="input-apple" type="number" min="0" max="10000" step="0.01" inputMode="decimal"
+                  aria-label={`${model} ${label}单价`} value={pricing.models[model]?.[field] ?? ''} onChange={(e) => setPrice(model, field, e.target.value)} />
+              ))}
+            </div>
+          ))}
+        </fieldset>
+      </details>
+      <p className="type-caption">改动随「保存设置」生效。花费按当前价格表重新计算，历史也跟着变。</p>
     </section>
   );
 }
 
-/** Complete price rows only, as numbers, for save-settings. */
-export function cleanPricing(pricing) {
-  const clean = {};
-  for (const [model, price] of Object.entries(pricing ?? {})) {
+/** The rate and complete override rows only, as numbers, for save-settings. */
+export function cleanPricing(rawPricing) {
+  const pricing = normalizePricing(rawPricing);
+  const models = {};
+  for (const [model, price] of Object.entries(pricing.models)) {
     const values = PRICE_FIELDS.map(([field]) => Number(price?.[field]));
     if (PRICE_FIELDS.every(([field]) => price?.[field] !== '' && price?.[field] != null) && values.every((v) => Number.isFinite(v) && v >= 0)) {
-      clean[model] = Object.fromEntries(PRICE_FIELDS.map(([field], i) => [field, values[i]]));
+      models[model] = Object.fromEntries(PRICE_FIELDS.map(([field], i) => [field, values[i]]));
     }
   }
-  return clean;
+  const rate = Number(pricing.rate);
+  return { ...(pricing.rate !== '' && Number.isFinite(rate) && rate > 0 ? { rate } : {}), models };
 }
