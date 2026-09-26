@@ -66,3 +66,14 @@ test('loads build and OS topic gaps on mobile without horizontal overflow', asyn
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
 });
+
+test('overview, map and handbook fit phone and tablet widths', async ({ page }) => {
+  for (const width of [390, 700]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const [hash, text] of [['./#/', '各分类'], ['./#/map', '闯关地图'], ['./#/handbook', '闯关手册']]) {
+      await page.goto(hash);
+      await expect(page.getByText(text).first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${hash} at ${width}px`).toBe(true);
+    }
+  }
+});
