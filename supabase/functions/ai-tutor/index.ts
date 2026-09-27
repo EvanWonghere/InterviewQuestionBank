@@ -1,3 +1,5 @@
+import { financeVision } from './financeVision.ts';
+import { handleFinance } from './finance.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import { validateChat, buildContext, HISTORY_TURNS } from './core.js';
 import { handleDraftQuestion, handleEvaluate, handleInterviewReport, handleWeaknessQuestions, handleWeaknessReport, latestEvaluationSummary } from './evaluate.ts';
@@ -46,7 +48,9 @@ export async function handleRequest(req: Request, factory = createClient) {
   const raw = await req.text(); if (raw.length > 40000) return json({error:'请求过大'},413);
   const input = JSON.parse(raw); const action = input.action;
   const scope = MEMBER_SCOPE(action);
-  if (!access.admin && !(scope && access.scopes.includes(scope))) return json({error:'仅管理员可用'},403);
+  const finance = typeof action === 'string' && action.startsWith('finance-');
+  if (finance) { const permission = await client.rpc('is_finance_owner'); if (permission.error || permission.data !== true) return json({error:'未获私人学习室授权'},403); }
+  else if (!access.admin && !(scope && access.scopes.includes(scope))) return json({error:'仅管理员可用'},403);
   const uid = auth.data.user.id;
   const db = factory(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false}});
   const deadline = requestDeadline();
@@ -68,6 +72,11 @@ export async function handleRequest(req: Request, factory = createClient) {
    if (!body || typeof body !== 'object' || Array.isArray(body)) return json(body, res.status);
    return json({ ...body, usage: summary }, res.status);
   };
+  if (finance) {
+   const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
+   return await withUsage(await handleFinance(input,{uid,db,json,completeVision:financeVision(env,deadline,onUsage),authorize:async()=>{const p=await client.rpc('is_finance_owner');return !p.error&&p.data===true;},
+    completeTutorText: env('AI_API_KEY') ? (messages: unknown[], meta: {phase:string;message:string;subject:string;recent:unknown[]}) => completeTutorText({env,policy:settings?.credit_policy,phase:meta.phase,message:meta.message,subject:meta.subject,recent:meta.recent,messages,effort:normalizeEffort(settings?.reasoning_effort),deadline,onUsage}) : undefined}),settings?.pricing);
+  }
   if (typeof action === 'string' && action.startsWith('lab-')) {
    const settings = must(await db.from('ai_settings').select('reasoning_effort,credit_policy,pricing').eq('user_id',uid).maybeSingle());
    const effort = normalizeEffort(settings?.reasoning_effort);
