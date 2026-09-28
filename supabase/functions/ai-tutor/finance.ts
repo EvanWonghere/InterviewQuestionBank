@@ -1,4 +1,7 @@
 // Integrated by scripts/integrate-backend.mjs; never imported into the public app.
+import { actOnRun, replay, startRun } from "./financeSim.ts";
+import { financeScenarios, scenarioById } from "./financeScenarios.ts";
+import type { SimRun } from "./financeSim.ts";
 const must = (r: any) => {
   if (r.error) throw Error(r.error.message);
   return r.data;
@@ -39,7 +42,7 @@ export async function handleFinance(input: any, ctx: any) {
   const action = input.action;
   try {
     if (action === "finance-load") {
-      const [lessons, records, notes, history, resources] = await Promise.all([
+      const [lessons, records, notes, history, resources, simRuns] = await Promise.all([
         db
           .from("finance_lessons")
           .select("*")
@@ -62,6 +65,7 @@ export async function handleFinance(input: any, ctx: any) {
           .order("created_at", { ascending: false })
           .limit(30),
         db.from("finance_resources").select("id,title,source"),
+        db.from("finance_sim_runs").select("*").eq("user_id", uid).order("updated_at", { ascending: false }).limit(30),
       ]);
       return json({
         lessons: must(lessons).map((r: any) => r.content),
@@ -69,8 +73,43 @@ export async function handleFinance(input: any, ctx: any) {
         notes: must(notes),
         history: must(history),
         resources: must(resources).map((resource: any) => ({ id: resource.id, title: resourceTitles[resource.id] ?? resource.title, source: resource.source })),
+        simRuns: must(simRuns),
+        simScenarios: financeScenarios.filter((scenario) => scenario.id !== "free" || must(simRuns).filter((run: any) => run.status === "complete" && run.scenario_id !== "free").map((run: any) => run.scenario_id).filter((id: string, index: number, ids: string[]) => ids.indexOf(id) === index).length >= financeScenarios.length - 1),
         visionAvailable: !!completeVision,
       });
+    }
+    if (action === "finance-sim-start") {
+      if (!uuid(input.id)) throw Error("练习局 ID 无效");
+      const scenario = scenarioById(text(input.scenarioId, 80), Number(input.scenarioVersion));
+      if (!scenario) throw Error("关卡版本不存在");
+      const existing = must(await db.from("finance_sim_runs").select("*").eq("id", input.id).eq("user_id", uid).maybeSingle());
+      if (existing) {
+        const started = existing.events?.[0];
+        if (existing.scenario_id !== scenario.id || existing.scenario_version !== scenario.version || started?.positionCap !== Number(input.positionCap) || started?.plan !== text(input.plan ?? "", 2000).trim()) throw Error("练习局 ID 已用于其他开局参数");
+        return json({ run: existing });
+      }
+      if (scenario.id === "free") {
+        const finished = must(await db.from("finance_sim_runs").select("scenario_id").eq("user_id", uid).eq("status", "complete"));
+        if (new Set(finished.map((run: any) => run.scenario_id).filter((id: string) => id !== "free")).size < financeScenarios.length - 1) throw Error("完成全部关卡后解锁自由练习");
+      }
+      const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+      const run = startRun(scenario, seed, Number(input.positionCap), text(input.plan ?? "", 2000), new Date().toISOString(), input.id);
+      const inserted = must(await db.from("finance_sim_runs").insert({ ...run, user_id: uid }).select().single());
+      return json({ run: inserted });
+    }
+    if (action === "finance-sim-act") {
+      if (!uuid(input.id) || !uuid(input.requestId) || !Number.isInteger(input.expectedRevision) || !input.simAction || typeof input.simAction !== "object" || Array.isArray(input.simAction) || JSON.stringify(input.simAction).length > 4000) throw Error("练习操作无效");
+      const row = must(await db.from("finance_sim_runs").select("*").eq("id", input.id).eq("user_id", uid).single()) as SimRun;
+      const previous = row.events.find((event: any) => event.requestId === input.requestId);
+      if (previous) {
+        if (canonical(previous.requestPayload) !== canonical(input.simAction)) throw Error("请求 ID 已用于其他练习操作");
+        return json({ run: row, recovered: true });
+      }
+      if (row.revision !== input.expectedRevision) return json({ error: "练习局已在别处更新，请重新读取" }, 409);
+      const next = actOnRun(row, input.simAction, new Date().toISOString(), input.requestId);
+      const saved = must(await db.from("finance_sim_runs").update({ events: next.events, status: next.status, revision: next.revision, updated_at: new Date().toISOString() }).eq("id", row.id).eq("user_id", uid).eq("revision", row.revision).select().maybeSingle());
+      if (!saved) return json({ error: "练习局并发更新，请重新读取" }, 409);
+      return json({ run: saved });
     }
     if (action === "finance-resource")
       return json({
@@ -89,6 +128,8 @@ export async function handleFinance(input: any, ctx: any) {
       const allowed = [
         "platform",
         "market",
+        "quoteDelay",
+        "ruleDifference",
         "symbol",
         "currency",
         "time",
@@ -145,7 +186,7 @@ export async function handleFinance(input: any, ctx: any) {
       const stages = ["pre", "execution", "review"];
       if (!prior && body.stage !== "pre") throw Error("日志必须从下单前开始");
       if (prior?.body?.sealedAt) {
-        const fixed = ["platform", "market", "symbol", "currency", "purpose", "expected", "invalidIf", "position", "sealedAt"];
+        const fixed = ["platform", "market", "symbol", "currency", "quoteDelay", "ruleDifference", "purpose", "expected", "invalidIf", "position", "sealedAt"];
         if (fixed.some((key) => canonical(prior.body[key] ?? null) !== canonical(body[key] ?? null)))
           throw Error("已封存的下单前记录只能追加更正");
         const oldCorrections = prior.body.corrections ?? [];
