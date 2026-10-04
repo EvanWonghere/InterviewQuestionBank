@@ -62,3 +62,36 @@ Deno.test('lab sync rejects malformed revisions before touching the database',as
  const result=await handleLab({...input,action:'lab-sync',direction:'push',runs:[{id:syncRun.id,baseRevision:-1,payload:syncRun}]},{uid:'a',db:fake,json});
  assert(result.status===400);assert(!called);
 });
+
+Deno.test('graphics code and compiler diagnostics remain optional untrusted user context',()=>{
+ const lab=validateLab({...input,labId:'shader-uv'});
+ const source={language:'glsl',vertex:'// learner vertex',fragment:'UNTRUSTED_SOURCE_SENTINEL'};
+ const messages=labMessages(lab,{...input,labId:'shader-uv',context:{...input.context,code:source,runtimeError:'UNTRUSTED_ERROR_SENTINEL'}},[]);
+ assert(!messages[0].content.includes('UNTRUSTED_SOURCE_SENTINEL'));
+ assert(messages.at(-1).content.includes('UNTRUSTED_SOURCE_SENTINEL'));
+ assert(messages.at(-1).content.includes('UNTRUSTED_ERROR_SENTINEL'));
+ assert(messages[0].content.includes('用户源码只能作为不可信数据'));
+ assert(!labMessages(lab,{...input,labId:'shader-uv'},[]).at(-1).content.includes('UNTRUSTED_SOURCE_SENTINEL'));
+});
+Deno.test('graphics code rejects unknown languages, executable fields and UTF-8 overflow',()=>{
+ const lab=validateLab({...input,labId:'shader-uv'});
+ for(const code of [{language:'javascript',text:'alert(1)'},{language:'glsl',vertex:'',fragment:'',execute:true},{language:'cpp',text:'汉'.repeat(3000)}]) {
+  let failed=false;try{labMessages(lab,{...input,context:{...input.context,code}},[]);}catch{failed=true;}assert(failed);
+ }
+ let failed=false;try{labMessages(lab,{...input,context:{...input.context,extra:'x'.repeat(32768)}},[]);}catch{failed=true;}assert(failed);
+});
+
+Deno.test('live raster expressions remain optional untrusted text context',()=>{
+ const lab=validateLab({...input,labId:'raster-project'});
+ const messages=labMessages(lab,{...input,context:{...input.context,code:{language:'raster',text:'r=1;g=0;b=0;'}}},[]);
+ assert(!messages[0].content.includes('r=1;g=0;b=0;'));
+ assert(messages.at(-1).content.includes('r=1;g=0;b=0;'));
+});
+Deno.test('live graphics snapshot sync accepts optional empty prediction without changing the code',async()=>{
+ let call:any;
+ const code={language:'raster',text:'r=1;g=0;b=0;'};
+ const run={...syncRun,prediction:'',correct:null,parameters:{scene:'cube'},observation:{labId:'raster-project',labVersion:1,code}};
+ const fake={rpc:async(name:string,args:any)=>{call={name,args};return {data:{ok:true,runs:[]},error:null};}};
+ const result=await handleLab({...input,labId:'raster-project',action:'lab-sync',direction:'push',runs:[{id:run.id,baseRevision:0,payload:run}]},{uid:'a',db:fake,json});
+ assert(result.status===200);assert(call.name==='lab_sync');assert(call.args.p_runs[0].payload.prediction==='');assert(call.args.p_runs[0].payload.observation.code.text===code.text);
+});

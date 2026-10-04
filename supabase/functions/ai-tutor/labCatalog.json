@@ -1668,6 +1668,3668 @@
         "allowed",
         "rejected"
       ]
+    },
+    {
+      "id": "shader-uv",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 1,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "UV 和 uniform：谁决定这个像素的颜色？",
+      "question": "UV 和 uniform：谁决定这个像素的颜色？",
+      "intro": "片元是独立调用，不是按顺序修改一张图片。UV 描述表面位置，uniform 是本次绘制共享的输入。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "固定时间为 0，预测左下与右上角的颜色差异，再把红色通道改成 1.0-uv.x。",
+      "variant": "保持代码不变，切换平面和球体；解释相同 UV 为什么投射为不同画面。",
+      "explanation": "一个片元程序可以看成函数：输入表面位置和共享参数，返回颜色。`vec3(uv,0.5)` 等价于 `vec3(uv.x,uv.y,0.5)`；`uv.yx` 交换两个分量。输出 `vec4(color,1.0)` 的最后一项是 alpha，但透明还需要混合状态。\n\n当 UV=(0.25,0.75)、time=0，示例得到 RGB=(0.25,0.75,0.5)。把红色改为 `1.0-uv.x` 后红色变成 0.75，绿色不变。这里分析的是给定 UV 的数学值，实际中心像素不一定恰好是 UV=(0.5,0.5)。\n\n屏幕坐标 `gl_FragCoord.xy/u_resolution` 随屏幕覆盖位置变化；表面 UV 随模型的展开变化。固定平面时两者可能看似相同，换成球体就能看到差别。\n\n验收：不用运行手算两个给定 UV 的 RGB；写出改变一个通道的 GLSL 并解释球面接缝；提交两次固定时间观测和修改行",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。片元着色器不是 CPU 的逐像素循环；球体 UV 接缝不是程序出错。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://thebookofshaders.com/06/",
+        "section": "Colors / vector components",
+        "question": "vec3、swizzle 和 mix 分别改变什么？"
+      }
+    },
+    {
+      "id": "shader-shapes",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 2,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "形状与 SDF：边缘为什么会出现锯齿？",
+      "question": "形状与 SDF：边缘为什么会出现锯齿？",
+      "intro": "把一个点到形状边界的距离变成覆盖程度，比较硬阈值和软过渡。",
+      "prerequisites": [
+        "shader-uv"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "将 smoothstep 换成 step，比较边缘；先预测半径变大会改变哪些像素。",
+      "variant": "改变预览分辨率，检查固定 epsilon 和 fwidth 的差别。",
+      "explanation": "先把 UV 变成以中心为原点的 `p=2*(uv-0.5)`。圆的距离 `d=length(p)-r`：中心 d=-r，边界 d=0，外部 d>0。硬覆盖为 `1-step(0,d)`；软覆盖使用过渡区间 [-epsilon,epsilon]。\n\n`smoothstep(a,b,x)` 先求 t=clamp((x-a)/(b-a),0,1)，再求 t*t*(3-2*t)。两端斜率为零，所以过渡比线性 mix 平顺，但不等于真实多样本面积积分。\n\n固定 epsilon=0.02 是固定坐标宽度；`fwidth(d)=abs(dFdx(d))+abs(dFdy(d))` 估计距离在相邻片元间的变化。用它控制过渡可以随缩放适应。只在合法片元导数上下文使用，避免不一致分支中的导数。\n\n验收：手算距离符号；独立完成环并比较 step/smoothstep；固定时间提交两种分辨率的边缘解释",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。把灰色过渡理解成半覆盖；不要把软边缘当作几何变圆了。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://thebookofshaders.com/07/",
+        "section": "Shapes / distance fields",
+        "question": "形状为何可以表达为一个标量距离？"
+      }
+    },
+    {
+      "id": "shader-patterns",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 3,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "变换与重复：为什么旋转方向和直觉相反？",
+      "question": "变换与重复：为什么旋转方向和直觉相反？",
+      "intro": "先变换采样坐标，再求形状；空间的变换和物体的变换是相反的视角。",
+      "prerequisites": [
+        "shader-shapes"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "暂停时间，去掉中心平移或交换旋转与重复的顺序，预测中心与接缝的变化。",
+      "variant": "用 floor 获取格子 ID，让相邻格子有不同颜色，再加入时间。",
+      "explanation": "在列向量约定下，常用逆时针旋转为 R*p=(c*x-s*y,s*x+c*y)。GLSL `mat2(c,s,-s,c)` 按列填写；示例 `mat2(c,-s,s,c)` 则把坐标顺时针旋转。图像位置由“哪些坐标满足形状条件”决定，所以图案运动可能与坐标变换方向相反。\n\n`fract(p*k)` 把每个坐标映射回 [0,1)，`floor(p*k)` 保留格子编号。先旋转再重复会改变整个网格方向；先重复再旋转会旋转每个格子内部的图案。它们不是可以交换的操作。\n\n围绕中心旋转应写 `R*(uv-0.5)+0.5`。先用一个偏离中心的点检查矩阵，再处理复杂图案，避免用完整画面猜符号。\n\n验收：手算旋转和负数 fract；实现格子 ID 配色；解释两个不能交换的变换顺序",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。UV 重复边界上的导数可能不连续；图案旋转不是网格旋转。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://thebookofshaders.com/08/",
+        "section": "2D Matrices；接着读 Patterns",
+        "question": "坐标旋转和图案旋转为何方向可能相反？"
+      }
+    },
+    {
+      "id": "shader-texture",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 4,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "纹理与颜色：插值前应该在哪个空间？",
+      "question": "纹理与颜色：插值前应该在哪个空间？",
+      "intro": "比较 nearest 与 linear，认识 UV、寻址方式和 sRGB／Linear 的不同职责。",
+      "prerequisites": [
+        "shader-patterns"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "切换过滤方式，放大格子，说明软边缘来自纹理采样还是 shape 函数。",
+      "variant": "把线性化过程移到乘亮度之后，用同一亮度对照结果。",
+      "explanation": "UV 指定连续位置，纹理只有离散 texel。nearest 选一个样本；bilinear 先沿 X 混合两组相邻 texel，再沿 Y 混合，最终涉及四个样本。它们仍来自同一 mip 层，不能解决远处高频纹理的欠采样。\n\n黑白两色线性混合 50% 得到线性光强 0.5；用近似 Gamma 2.2 编码后约为 0.73。直接对编码值求平均得到 0.5，表示的线性光强只有约 0.22，所以显得更暗。\n\n本示例的普通 RGBA 棋盘格在采样后手动近似解码；硬件 sRGB 纹理通常在过滤前对 texel 解码。本演示不能精确复现后者的过滤顺序；正式传递函数是分段的，不能用一次 pow 宣称完整色彩管理。\n\n验收：解释四 texel 采样；区分过滤、编码和亮度；记录转换顺序改变的证据",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。示例采用普通 RGBA 纹理并手动转换；不代表所有引擎都需要手动 pow。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [
+        "q-104"
+      ],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Getting-started/Textures",
+        "section": "Texture filtering / mipmaps",
+        "question": "为什么双线性不能独自消除缩小时的闪烁？"
+      }
+    },
+    {
+      "id": "shader-noise",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 5,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "随机到 fBM：怎样让图案连续且有层次？",
+      "question": "随机到 fBM：怎样让图案连续且有层次？",
+      "intro": "比较随机、插值噪声和多个频率的叠加，构造流动的程序化材质。",
+      "prerequisites": [
+        "shader-texture"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "先观察静态单层噪声，再实现四层 fBM；预测层数增加对细节的影响。",
+      "variant": "让时间只平移 X，然后同时平移 XY；解释为何增加时间数值不是同一种动画。",
+      "explanation": "hash 为每个整数格点提供伪随机标量。对同一格子四角值插值，位置跨过格界时连续；将小数部分变为 f*f*(3-2*f) 可以让边界的一阶导数更平顺。这里插值的是值，不是 Perlin 梯度。\n\n四层 fBM 的权重是 0.5、0.25、0.125、0.0625，总和 0.9375；不能假设输出覆盖完整 [0,1]。频率每层翻倍，细节增加同时更容易超过像素采样能力。\n\n`noise(p+vec2(t,0))` 改变采样位置，像是在移动一张纹理；`noise(p)+t` 则只改变亮度。时间进入坐标、阈值还是振幅，产生的是三种不同机制。\n\n验收：区分 hash、value noise 与 fBM；独立完成循环；解释时间进入坐标和输出的差异",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。频率超过像素可解析范围会产生闪烁；不是层数越高越好。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://thebookofshaders.com/13/",
+        "section": "Fractal Brownian Motion",
+        "question": "哪些参数控制细节，哪些控制对比度？"
+      }
+    },
+    {
+      "id": "shader-vertex",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 6,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "顶点形变：为什么片元无法改变轮廓？",
+      "question": "顶点形变：为什么片元无法改变轮廓？",
+      "intro": "先改顶点位置再计算坐标，观察网格密度与表面法线的作用。",
+      "prerequisites": [
+        "shader-noise"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "在顶点代码中补入波动；切换立方体与高密度球体，预测轮廓差异。",
+      "variant": "只在片元中扰动 UV，与顶点形变比较轮廓和纹理的不同。",
+      "explanation": "顶点阶段按网格顶点执行：先在物体空间改变 position，再变换到世界和裁剪空间。片元阶段只在被光栅化覆盖的位置执行；扰动 UV 不会让原轮廓之外产生片元。\n\n形变 x'=x+A*sin(k*y+t)，其关于 y 的导数为 A*k*cos(k*y+t)。这会改变切向量，原法线就不再垂直于表面。当前示例保留旧法线以暴露问题；修复需要根据形变的 Jacobian 或新的切向量重建法线。\n\n一般模型变换法线使用 transpose(inverse(M3))，因为要求变换后的 N 与切向量仍垂直。位置、方向、法线各有不同规则。比较立方体与密集球体时，既有网格密度差异，也有几何形状差异，不能把对照称为单纯的密度测量。\n\n验收：手算两个顶点的位移；给出轮廓变化与 UV 扰动对照；说明形变法线和网格密度的限制",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。uniform-scale 模型使用 mat3(model) 变换法线；非均匀缩放需逆转置矩阵。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Getting-started/Coordinate-Systems",
+        "section": "Local / World / Clip space",
+        "question": "顶点输出的哪个值真正决定轮廓？"
+      }
+    },
+    {
+      "id": "shader-light",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 7,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "基础光照：法线、高光与边缘光分别表达什么？",
+      "question": "基础光照：法线、高光与边缘光分别表达什么？",
+      "intro": "把亮度拆成漫反射、高光和视角相关边缘，检查空间与归一化。",
+      "prerequisites": [
+        "shader-vertex"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "删去 diffuse、specular、fresnel 中的一项，先预测球体哪一部分会改变。",
+      "variant": "改高光指数和光源方向，再比较未归一化法线产生的错误。",
+      "explanation": "单位向量点积等于夹角余弦。N·L=1 时正对光源，等于 0 时相切，小于 0 时背光，所以 Lambert 使用 max(N·L,0)。若 N 长度是 2，则点积也被放大，不能再作为余弦。\n\nBlinn-Phong 用 H=normalize(L+V)，让 N·H 决定高光。指数升高使高光变窄，当前公式没有规范化因子，不能推断总反射能量守恒。\n\n边缘项 `(1-max(N·V,0))^5` 模仿视角变化，但没有材质 F0 等完整物理参数。漫反射、高光、环境项和显示变换应分开调试；先显示 `N*0.5+0.5` 可以快速发现法线翻转。\n\n验收：独立写出 Lambert 与 Blinn-Phong；定位一个空间错误；不把简化边缘项称为完整 PBR",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。N、L、V 必须处在同一空间；示例亮度会 clamp，不能当作 HDR 结果。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [
+        "q-139"
+      ],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/PBR/Theory",
+        "section": "Reflectance equation / BRDF",
+        "question": "Phong 与能量守恒 BRDF 的差别在哪里？"
+      }
+    },
+    {
+      "id": "shader-project",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 8,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "结课项目：做一个可以解释的溶解材质",
+      "question": "结课项目：做一个可以解释的溶解材质",
+      "intro": "把噪声阈值、边缘带、纹理与基础光照组合，并迁移到 URP。",
+      "prerequisites": [
+        "shader-light"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "补齐溶解；固定时间保存 threshold=0.2 与 0.6 的两次实验，用源码快照解释差异。",
+      "variant": "移除边缘光、改变边缘宽度，并在 Unity 场景中复现。",
+      "explanation": "阈值先决定片元是否存在：n<threshold 时 discard。对于留下的片元，`1-smoothstep(threshold,threshold+width,n)` 只在阈值附近产生边缘带。把边缘色变黑不等于裁掉片元，仍可能写入深度。\n\n源码里的 threshold 是噪声值门槛，不是严格线性的消失比例。两次对照应固定时间、场景和噪声坐标，只改阈值，才能解释是哪一条件导致差异。\n\n迁移到 Unity 时除 fragment clip，还必须检查队列、深度 Pass 与 ShadowCaster 是否重复同一裁剪。首版示例没有完整阴影路径；应用课会用真实 URP 主光源检验这一环。\n\n验收：两份固定阈值证据、源码和解释；独立重建而不是只应用参考；Unity 对照注明版本与简化限制",
+      "boundary": "浏览器 GLSL 是实际 WebGL2 运行，不能替代 Unity HLSL 验收。交付源码、参数、两次观测和自己的解释；画面正确不自动代表独立掌握。",
+      "sources": [
+        "bookofshaders",
+        "radiant",
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 graphics/unity-shaderlab.zip，在现有 Unity 6000.0.28f1 / URP 17.0.1 工程中导入，运行 ShaderLabScene。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://radiant-shaders.com/learn",
+        "section": "逐机制重建效果的方法",
+        "question": "能否解释每个分支对覆盖与颜色分别做了什么？"
+      }
+    },
+    {
+      "id": "raster-coordinates",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 1,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "坐标空间：一个顶点经历了哪些变换？",
+      "question": "坐标空间：一个顶点经历了哪些变换？",
+      "intro": "从模型顶点追踪到世界、观察、裁剪、NDC 和像素坐标。",
+      "prerequisites": [],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "改变旋转角与相机距离，分别预测首顶点坐标和投影大小的变化。",
+      "variant": "在 C++ 中补齐矩阵向量乘法，用网页的同一场景核对。",
+      "explanation": "齐次坐标用四个分量统一表示变换。位置写 (x,y,z,1)，方向写 (x,y,z,0)，因此矩阵第四列的平移只影响位置。列向量约定意味着右侧先执行：P*V*M*p 先 M，后 V，最后 P。\n\nM 描述物体放在哪里；V 把世界表达成相机坐标，相当于相机变换的逆。lookAt 先用 eye-target 构造相机后向轴，再用世界上方向叉乘建立右轴和上轴，最后用点积求平移。\n\n透视投影令 clip.w=-view.z，距离越远 w 越大；除 w 后投影越小。裁剪必须先于这一步。NDC x/y 在 [-1,1]，像素位置为 `(ndc+1)*size/2`；像素采样中心再取 x+0.5。Canvas 的 Y 翻转是输出约定，不应偷偷改变世界或叉积方向。\n\n验收：解释位置 w=1、方向 w=0；手算一个平移和一次 viewport 映射；在 C++ 与网页核对同一首顶点",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。先检查 M，再检查 V/P；坐标仍是四维时不能误当作屏幕位置。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-coordinates --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Getting-started/Coordinate-Systems",
+        "section": "Coordinate systems / Perspective projection",
+        "question": "投影矩阵为什么必须产生不同于 1 的 w？"
+      }
+    },
+    {
+      "id": "raster-clipping",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 2,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "齐次裁剪：跨过近面的三角形为什么不能直接丢掉？",
+      "question": "齐次裁剪：跨过近面的三角形为什么不能直接丢掉？",
+      "intro": "先在齐次空间裁剪，再透视除法，避免穿过相机时的无限投影。",
+      "prerequisites": [
+        "raster-coordinates"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "triangle",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "将相机移近，比较启用与关闭裁剪；记录输出三角形数变化。",
+      "variant": "在 C++ 中补齐交点插值，验证一条边穿过近面的情况。",
+      "explanation": "左平面距离 x+w，右平面 w-x；同理构造 y、z 的两组距离。距离非负表示在半空间内。若一条边的距离 da、db 异号，令 da+t*(db-da)=0，得到 t=da/(da-db)。\n\n以 da=1、db=-3 为例，t=0.25，交点在 a 到 b 的四分之一处。交点位置、UV、world 和 normal 都用同一 t 插值；只改 clip 而不改属性会让裁剪边界出现纹理接缝。\n\n依次用六平面处理有序多边形；输出可能有超过三个点，需要扇形三角化。整个三角形都越过同一平面时才可以丢弃；跨近面时通常应该留下部分。w≈0 的顶点不能直接进入除法。\n\n验收：推导 t 而非背公式；检查每个输出点的六平面约束；跨近面场景提交错误与修复",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。w≤0 或退化三角形不能进入普通光栅化；关闭裁剪是受限错误演示。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-clipping --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "相机与软件管线；本课另补齐齐次裁剪",
+        "question": "为什么删除一个越界顶点不能表示裁剪？"
+      }
+    },
+    {
+      "id": "raster-coverage",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 3,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "光栅化：一个像素为什么属于这个三角形？",
+      "question": "光栅化：一个像素为什么属于这个三角形？",
+      "intro": "用边函数和重心坐标判断覆盖，观察像素中心与共边规则。",
+      "prerequisites": [
+        "raster-clipping"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "triangle",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "切换三角形场景，点击边缘附近像素，检查 b0+b1+b2 是否为 1。",
+      "variant": "在 C++ 中补齐 edge；用两个三角形拼成四边形，验证共边没有洞或双重覆盖。",
+      "explanation": "二维边函数 E(a,b,p) 是向量 b-a 与 p-a 的叉积，绝对值表示平行四边形面积。三个子面积除以总面积得到 b0、b1、b2，点在三角形内时非负且和为 1。\n\n对于 a=(0,0)、b=(1,0)、c=(0,1)、p=(0.25,0.25)，重心坐标是 (0.5,0.25,0.25)。它既判断覆盖，也作为屏幕属性插值权重。\n\n如果邻接三角形对等于零的边值都接受，共边会绘制两次；都拒绝则产生洞。top-left 为一条有向边指定唯一归属。规则依赖坐标方向；本实现底部为原点，等面积边只在一个方向被接受。退化三角形面积近零，不能除以面积。\n\n验收：手算内外点的重心坐标；解释共边计数为何比截图可靠；证明退化三角形不产生覆盖",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。正负面积依赖坐标方向；Canvas Y 向下只在输出层翻转。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-coverage --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "Triangle rasterization / Barycentric coordinates",
+        "question": "边函数为什么同时能判断覆盖和计算插值权重？"
+      }
+    },
+    {
+      "id": "raster-depth",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 4,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "深度缓冲：交换提交顺序会改变结果吗？",
+      "question": "深度缓冲：交换提交顺序会改变结果吗？",
+      "intro": "用每个像素的深度保留最近表面，对比 painter 式覆盖。",
+      "prerequisites": [
+        "raster-coverage"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "关闭 depth，看立方体和地面关系；再开启并解释遮挡依据。",
+      "variant": "在 C++ 中补齐深度比较，再修改模型的三角形提交顺序。",
+      "explanation": "本实现 depth=(ndc.z+1)/2，初始化为 1，使用 LESS。若新深度为 0.3、旧深度为 0.6，则通过并写入；交换不透明三角形顺序后，最近表面仍留下。深度相等的重叠表面则受规则和顺序影响。\n\n投影后的 NDC z 按屏幕重心坐标线性插值，普通 UV 等属性需要 1/w 修正。将二者混用会得到错误遮挡。深度精度也随透视投影非线性分布，near 过小会使远处精度恶化。\n\n测试决定是否接受片元，写入决定是否更新以后比较的值。透明片元通常保留测试、关闭写入并排序；仅有 LESS 不能解决透明混合顺序。\n\n验收：逐步执行单像素深度测试；给出交换顺序证据；说明透明还需要排序与混合",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。深度写入和深度测试是不同功能；透明排序不在这节的简化模型中。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-depth --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Blending",
+        "section": "Depth testing 与透明排序",
+        "question": "为什么把 alpha 设小不能绕开深度问题？"
+      }
+    },
+    {
+      "id": "raster-interpolation",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 5,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "透视插值：为什么倾斜的棋盘格会扭曲？",
+      "question": "透视插值：为什么倾斜的棋盘格会扭曲？",
+      "intro": "对比屏幕空间线性插值与先除 w 再归一化的属性插值。",
+      "prerequisites": [
+        "raster-depth"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "triangle",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "保持角度和相机不变，切换 perspective，比较倾斜面的棋盘格与命中像素 UV。",
+      "variant": "在 C++ 中补齐分母，确认所有 w 相等时退化为仿射插值。",
+      "explanation": "投影会让远处的同等世界距离缩短；屏幕权重不是原三维线段的权重。先插值 a/w 与 1/w，再相除，得到 a=(Σbi*ai/wi)/(Σbi/wi)。\n\n例如 b=(0.25,0.5,0.25)、a=(0,1,0)、w=(1,2,1)：分子 0.25，分母 0.75，结果 1/3；仿射直接得到 0.5。若 w 全相等，公共因子消去，两个方法一致。\n\n对 UV、world 和 normal 使用修正；法线之后还要归一化。NDC z 已经来自 z/w，按屏幕权重线性插值即可，不再套普通属性的相除步骤。\n\n验收：手算给定例子；证明相等 w 的退化情况；记录同像素 UV 和深度对照",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。不要把 clip-space z 再用属性公式处理为深度；法线插值后需要归一化。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-031"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-interpolation --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "Better camera / Shading",
+        "question": "投影后哪些属性需要修正，深度为何不同？"
+      }
+    },
+    {
+      "id": "raster-shading",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 6,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "采样与着色：覆盖正确为何颜色仍可能错误？",
+      "question": "采样与着色：覆盖正确为何颜色仍可能错误？",
+      "intro": "用插值后的 UV 和世界空间法线计算最终颜色。",
+      "prerequisites": [
+        "raster-interpolation"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "切换 filter 与 lighting，区分采样改变和光照改变。",
+      "variant": "在 C++ 中补齐漫反射，再将物体旋转验证法线和位置处于同一空间。",
+      "explanation": "覆盖正确只说明像素属于三角形。接下来先由 UV 采样颜色，再从 worldPos 指向固定点光源构造 L，计算 max(N·L,0)。本实现 intensity=0.18+0.82*diffuse，环境项用于避免完全黑色，并非间接光求解。\n\n检查顺序：覆盖→深度→UV→法线→颜色。若 UV 不连续，先修正裁剪和插值；若法线视图异常，先修正坐标空间和单位化；不要用调亮环境项掩盖上游错误。\n\nchecker 使用重复寻址，双线性采用 texel 中心偏移 u*32-0.5。当前 CPU 颜色为线性教学数值直接量化输出，没有完整 sRGB/HDR 管线，也没有光源距离衰减。\n\n验收：保持几何不变拆开两个阶段；同参数对照过滤与光照；注明当前色彩管理限制",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。这里没有距离衰减、能量守恒、Gamma 输出管理或 HDR，不能当作完整引擎光照。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [
+        "q-139"
+      ],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-shading --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-Lighting/Normal-Mapping",
+        "section": "Normal visualization / Tangent space",
+        "question": "法线视图能排除哪些颜色错误？"
+      }
+    },
+    {
+      "id": "raster-shadows",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 7,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "Shadow Mapping：阴影为何需要再画一次？",
+      "question": "Shadow Mapping：阴影为何需要再画一次？",
+      "intro": "先从光源写深度，再在相机着色时比较光源空间深度。",
+      "prerequisites": [
+        "raster-shading"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "启用 shadows，改变 bias，从 acne 到脱离现象保存两次观测。",
+      "variant": "在 C++ 中补齐光源深度比较；改变光源方向，并解释影子分辨率的影响。",
+      "explanation": "光源 pass 记录每条光线看到的最近深度；相机 pass 看到一个世界点后，把它变换到同一个光源空间。currentDepth-bias>storedDepth 表示前面还有更近遮挡物，因此减弱直接光。\n\n如果 currentDepth=0.51、storedDepth=0.50、bias=0.005，会被遮挡；bias=0.02 则通过。一个常量偏移难以适应所有倾斜程度，太小会 acne，太大产生 peter-panning。\n\n影子台阶来自光源纹理分辨率；PCF 会对多个“比较结果”平均，而不是先平均深度。当前基础课为单样本硬阴影；应用课提供 3×3 PCF 对照。相机深度和光源深度是两个不同缓冲。\n\n验收：手算深度比较；解释双 pass 和两个深度缓冲；保存倾斜面上的错误/修复证据",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。首版为单点采样硬阴影；PCF、级联和接收面修正作为进阶练习。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-shadows --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping",
+        "section": "Shadow acne / PCF",
+        "question": "先滤波深度再比较为什么不等价于 PCF？"
+      }
+    },
+    {
+      "id": "raster-project",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 8,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "结课项目：从三角形到可复现的软件渲染器",
+      "question": "结课项目：从三角形到可复现的软件渲染器",
+      "intro": "整合已有阶段，生成带纹理、深度、光照和阴影的可解释结果。",
+      "prerequisites": [
+        "raster-shadows"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        }
+      ],
+      "challenge": "补齐八个 C++ 练习阶段，生成 cube 场景；附源码、图片、观测和自己的阶段解释。",
+      "variant": "让三角形穿过近面、使用倾斜接收面、关闭透视插值，给出至少三个错误与修复证据。",
+      "explanation": "一个最小渲染器可以分为几何输入、变换、裁剪、覆盖、插值、深度、着色和输出。每阶段有自己的不变量：交点在半空间内，重心和为 1，单位法线长度为 1，深度有限，输出尺寸与参数匹配。\n\n先用一个三角形检查数学，再用立方体和倾斜接收面检查遮挡、采样与阴影。完整画面失败时回到最近一个正确的中间缓冲，而不是同时改多项参数。\n\n最终交付包括自己的练习源码、编译器版本、固定参数、输出图片、JSON 和三组错误/修复解释。参考自检只是有限场景，不为自己的 TODO 或独立理解背书。\n\n验收：八阶段实现源码与环境；三组固定输入的错误/修复；隔天不看参考重建一个核心函数",
+      "boundary": "网页是实际 CPU 光栅化，不是 GPU 或 Unity 渲染器测量。保留编译器、平台与参数；网页通过不代表本机实现通过。",
+      "sources": [
+        "tinyrenderer",
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 graphics/renderlab-cpp.zip，按 README 补全练习；python3 native/run.py --lab raster-project --mode default 生成本机图片与 JSON，再导入本实验。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "Software rendering from scratch",
+        "question": "能否从一个失败像素反推首次出错的阶段？"
+      }
+    },
+    {
+      "id": "shader-normal",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 9,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "法线贴图：纹理里的方向属于哪个空间？",
+      "question": "法线贴图：纹理里的方向属于哪个空间？",
+      "intro": "将程序化法线纹理从切线空间变换到世界空间。",
+      "prerequisites": [
+        "shader-light"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "amount=0 时预测法线贴图与几何法线的关系；切换 cube 与 sphere，保持光源。",
+      "variant": "在片元中解码 u_normal，再用 TBN 变换；将参考中的 normal 与 color 各自可视化。",
+      "explanation": "法线纹理把 [-1,1] 方向编码至 [0,1]，采样后先做 n=2*rgb-1，再归一化。它是数据纹理，不应做 sRGB 解码。TBN 的三列为表面切向 T、副切向 B 和法向 N，世界法线为 normalize(TBN*n)。\n\n本课用 worldPos/UV 的片元导数构造 cotangent frame，不增加网格 tangent 属性；UV 退化处使用安全后备。强度只缩放切线方向 XY，再单位化。程序化高度波生成法线纹理，轮廓不变。它不是完整引擎的 tangent/镜像 UV 管线。\n\n验收：同参数保存 TBN 开关对照；画出 T/B/N 并解释 normal 纹理格式；说明轮廓与 UV 退化限制",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 先核对 T/B/N 基和 Y 通道。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-Lighting/Normal-Mapping",
+        "section": "Normal mapping / Tangent space",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "shader-alpha",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 10,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "透明混合：alpha 为什么不能独自决定透明？",
+      "question": "透明混合：alpha 为什么不能独自决定透明？",
+      "intro": "比较 straight 与 premultiplied alpha，以及真实 WebGL 混合状态。",
+      "prerequisites": [
+        "shader-normal"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "blend",
+          "label": "混合模式",
+          "type": "select",
+          "value": "straight",
+          "options": [
+            "off",
+            "straight",
+            "premultiplied"
+          ]
+        },
+        {
+          "key": "premultiply",
+          "label": "源码预乘 Alpha",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "depthWrite",
+          "label": "深度写入",
+          "type": "checkbox",
+          "value": false
+        }
+      ],
+      "challenge": "平面 alpha=0.5、Cs=(1,0,0)，计算固定背景 Cd=(0.035,0.075,0.1) 的正确混合。",
+      "variant": "分别匹配 straight+未预乘和 premultiplied+预乘，保存中心像素。",
+      "explanation": "straight alpha 颜色保存未乘 alpha 的 RGB，结果 C=Cs*As+Cd*(1-As)。premultiplied alpha 已保存 Cs*As，所以源因子应为 ONE，不能再乘一次 alpha。\n\n本课的混合选项真正改变 WebGL 状态，源码的 Premultiply 参数决定是否预乘。背景为已清空的固定颜色，先用平面隔离单层混合，再用立方体研究深度写入。这里只按网格提交顺序绘制，没有通用透明排序；立方体的错误正是需要解释的边界。\n\n验收：手算单层混合；提交两种等价配对和一种错误配对；解释 alpha、discard、depthWrite 三者区别",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 匹配 SRC_ALPHA 或 ONE 与源码格式。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Blending",
+        "section": "Blending / transparent ordering",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "shader-post",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 11,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "后处理：为什么屏幕 UV 与材质 UV 不同？",
+      "question": "后处理：为什么屏幕 UV 与材质 UV 不同？",
+      "intro": "先将棋盘渲染到 FBO，再用可编辑 Shader 处理场景纹理。",
+      "prerequisites": [
+        "shader-alpha"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "passes",
+          "label": "后处理次数",
+          "type": "select",
+          "value": "one",
+          "options": [
+            "bypass",
+            "one",
+            "two"
+          ]
+        }
+      ],
+      "challenge": "选择 bypass 与单 pass，比较处理前后颜色；计算 128/512 的一个 texel 步长。",
+      "variant": "用 u_scene 采样中心和四邻域，构造边缘检测；通过 u_amount 混合原色和结果。",
+      "explanation": "先将程序化场景写入离屏颜色纹理，再让全屏三角形读取 u_scene。后处理 UV 属于屏幕，不依赖球体的展开。相邻 texel 的步长是 1/u_resolution，而不是固定 0.01。\n\n本课固定一个输入生成 pass，编辑器控制随后一个处理 pass。示例把颜色按权重转成灰度；独立练习可改为四邻域或九邻域卷积。颜色目标为 RGBA8，不能保存超出 [0,1] 的 HDR；tone mapping 另在 PBR 入门中演示。\n\n验收：画出两次 draw 的输入输出；实现一种卷积并保存分辨率对照；说明 RGBA8/HDR 限制",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 使用 1/u_resolution。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Framebuffers",
+        "section": "Framebuffer / post-processing",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "shader-multipass",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 12,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "多 Pass：横向再纵向为什么能得到二维模糊？",
+      "question": "多 Pass：横向再纵向为什么能得到二维模糊？",
+      "intro": "使用不同输入/输出纹理执行可分离滤波，检查真实 pass 次数。",
+      "prerequisites": [
+        "shader-post"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "plane",
+          "options": [
+            "plane"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "passes",
+          "label": "后处理次数",
+          "type": "select",
+          "value": "two",
+          "options": [
+            "bypass",
+            "one",
+            "two"
+          ]
+        }
+      ],
+      "challenge": "写出两次三点卷积组合后中心与角点权重；比较一次与两次的方向。",
+      "variant": "用 u_direction/u_resolution 作为采样偏移，补齐左右相邻样本并保持权重和为 1。",
+      "explanation": "二维 box 核 K(x,y)=kx(x)*ky(y) 可拆成横向和纵向两次卷积。每次三点权重为 1/3，组合成 3×3 九点核；两次需要 6 次采样，而直接计算需要 9 次。\n\n运行器先生成输入，再将用户 Shader 用 direction=(1,0) 渲染至中间纹理，随后用 direction=(0,1) 读中间纹理写屏幕。u_passIndex 区分用户 pass；这里不是跨帧反馈模拟，动画也不累积历史。尺寸改变时重新分配并检查 FBO。\n\n验收：实现可分离核；对照 bypass/单次/双次的实际 draw 数；解释为何不允许 attachment 自采样",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 用常量颜色验证能量缩放，再恢复归一化。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Framebuffers",
+        "section": "Framebuffer attachments / post-processing",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "shader-pbr",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 13,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "PBR 入门：粗糙度和金属度分别改变什么？",
+      "question": "PBR 入门：粗糙度和金属度分别改变什么？",
+      "intro": "用简化直接光 GGX/Smith/Schlick 模型观察材质参数。",
+      "prerequisites": [
+        "shader-multipass"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "roughness",
+          "label": "粗糙度",
+          "type": "range",
+          "value": 0.35,
+          "min": 0.05,
+          "max": 1,
+          "step": 0.05
+        }
+      ],
+      "challenge": "固定 metallic=0，比较 roughness=0.1/0.8；再固定 roughness 改 metallic。",
+      "variant": "拆开显示 D、F、diffuse 和 specular；按式子补齐 kD=(1-F)*(1-metallic)。",
+      "explanation": "微表面镜面项 f=D*G*F/(4*NdotL*NdotV)：D 描述法线分布，G 描述微表面遮蔽，F 描述随视角变化的反射比例。本例用 GGX、Smith-Schlick 和 Schlick Fresnel；F0=mix(0.04,baseColor,metallic)。\n\n粗糙度控制分布宽度，代码将 roughness 平方为 alpha，再在 D 中使用 alpha²，注意不能少一次或多一次平方。金属度减少漫反射并改变 F0；它不是简单的亮度滑杆。\n\n最终加一个很小的教学环境项，使用 Reinhard 映射与近似 Gamma 编码。本课只有一个固定直接光，没有 IBL、真实 HDR 目标、面积光或多重散射补偿，不代表完整 PBR 引擎。\n\n验收：解释 D/G/F 与 kD；给出粗糙度/金属度的独立对照；说明缺少 IBL 与完整色彩管理",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 检查 kD 而非压低最终亮度。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/PBR/Theory",
+        "section": "Microfacet BRDF / energy conservation",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "shader-urp",
+      "version": 1,
+      "workspace": "shader",
+      "lesson": 14,
+      "assessment": "reflection",
+      "track": "ShaderLab · 着色器",
+      "title": "URP 实战：材质、主光源与阴影 Pass 如何连接？",
+      "question": "URP 实战：材质、主光源与阴影 Pass 如何连接？",
+      "intro": "浏览器做简化材质对照，Unity 使用真实主光源和完整基础 Pass。",
+      "prerequisites": [
+        "shader-pbr"
+      ],
+      "controls": [
+        {
+          "key": "amount",
+          "label": "强度／阈值",
+          "type": "range",
+          "value": 0.4,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "time",
+          "label": "固定时间（秒）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 20,
+          "step": 0.25
+        },
+        {
+          "key": "scene",
+          "label": "预览场景",
+          "type": "select",
+          "value": "sphere",
+          "options": [
+            "plane",
+            "sphere",
+            "cube"
+          ]
+        },
+        {
+          "key": "resolution",
+          "label": "预览分辨率",
+          "type": "range",
+          "value": 256,
+          "min": 128,
+          "max": 512,
+          "step": 1
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear"
+          ]
+        },
+        {
+          "key": "mouseX",
+          "label": "鼠标 X（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "key": "mouseY",
+          "label": "鼠标 Y（归一化）",
+          "type": "range",
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ],
+      "challenge": "在网页固定光照记录一次；在 Unity 旋转真实主光，预测投影与漫反射变化。",
+      "variant": "按下载包说明创建 URP 场景，补齐主光阴影衰减乘法；捕获 pass 名称和材质参数。",
+      "explanation": "浏览器仍为固定光源的 GLSL 对照，不能验证 URP。在下载包 Unity 工程中，URPStudy.shader 用 GetMainLight(shadowCoord) 取主光源方向、颜色和 shadowAttenuation；clip 在 Forward、ShadowCaster、DepthOnly 中保持一致。\n\n先用平面接收影子、立方体投影；改变 Directional Light，而不是只改材质的固定向量。用 Frame Debugger 找到主光 shadow map、opaque 和 depth 绘制，逐项核对材质 pass。开启/关闭主光阴影是两次不同输入。\n\n本示例为基础 opaque/alpha-test Lambert，不是 URP Lit 的完整替代；没有附加灯、烘焙 GI、Meta/DepthNormals 或形变法线。暂保持 Depth Priming Disabled，完整工程还需补齐其需要的 pass。\n\n验收：注明 Unity/URP 版本和主光设置；截图/Frame Debugger 实际 pass 记录；本体和阴影裁剪一致，并列出未支持特性",
+      "boundary": "网页为实际 WebGL2；Unity 主光与多 Pass 需本机验证。 核对阴影 pass 同样采样和裁剪。",
+      "sources": [
+        "urp-shader"
+      ],
+      "questions": [],
+      "native": "下载 Unity 源码包，按 URP 实战说明运行并用 Frame Debugger 核对。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/urp/use-built-in-shader-methods-shadows.html",
+        "section": "GetMainLight / shadow coordinates",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-model",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 9,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "模型加载：OBJ 的三个索引为什么不能混为一个？",
+      "question": "模型加载：OBJ 的三个索引为什么不能混为一个？",
+      "intro": "解析自制小模型，再把面转换成逐顶点属性。",
+      "prerequisites": [
+        "raster-project"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "model",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "none",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "hard",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "为共享位置但不同 vt 的两张面画出角点记录；预测是否能仅按 v 去重。",
+      "variant": "在 C++ 小房子 OBJ 中移动一个顶点，用 --model 加载，保存来源摘要和画面。",
+      "explanation": "OBJ 的面角可以写 position/uv/normal，每个索引指向不同数组；同一个位置可以在 UV 接缝两侧使用不同 UV。正索引从 1 开始，负索引从当前数组末尾倒数。展开面角会复制一些位置，这是保留属性接缝的必要结果。\n\n本课加载独立编写的小房子 OBJ，支持 v、vt、vn 和凸多边形扇形三角化。缺 UV 使用 (0,0)，缺法线用面法线。拒绝越界索引、非有限数与不支持语句，不猜测 MTL、曲面、骨骼或凹多边形。C++ 可用 --model 指定本机 OBJ，不上传。\n\n验收：解释三个索引数组；提交本机模型摘要与变参画面；保存一个解析失败与修复案例",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 保留面角的独立索引。",
+      "sources": [
+        "tinyrenderer"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-model；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "More data / geometry input",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-cull",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 10,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "背面剔除：绕序与法线为什么不是同一个判断？",
+      "question": "背面剔除：绕序与法线为什么不是同一个判断？",
+      "intro": "比较真实几何剔除对覆盖工作量和画面的影响。",
+      "prerequisites": [
+        "raster-model"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "none",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "hard",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "固定 cube 和 angle，预测 cull 开关对最终深度与覆盖次数的影响。",
+      "variant": "在本机反转一个面角顺序，再对照 cull=true/false 和法线视图。",
+      "explanation": "本实现先做裁剪，再由屏幕边函数计算有向面积。面积≤0 且 cull 开启时跳过三角形；未开启时统一翻转负面积以保持覆盖规则。是否背面不由插值法线或 Lambert 亮度判断。\n\n对封闭立方体，背面被前面遮挡，因此开关剔除往往颜色近似不变，但覆盖次数降低。对单面三角形或朝向错误的 OBJ，剔除会让本该可见的部分消失。镜像变换改变绕序，不能只修法线。\n\n验收：记录 coveredSamples 开关对照；修复一个 OBJ 面绕序错误；解释剔除和深度测试区别",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 逐面检查屏幕面积。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-cull；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Face-culling",
+        "section": "Winding order / Face culling",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-lod",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 11,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "纹理 LOD：双线性为什么仍会闪烁？",
+      "question": "纹理 LOD：双线性为什么仍会闪烁？",
+      "intro": "构造棋盘 mip 链并比较固定 LOD 的预滤波结果。",
+      "prerequisites": [
+        "raster-cull"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "mip",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 2,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "none",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "hard",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "预测 1×1 mip 的 RGB，解释为什么位置变化不再改变颜色。",
+      "variant": "在 C++ 中实现 2×2 下采样或核对内置链；保持 distance=5，比较 lod=0/3/5。",
+      "explanation": "双线性只在一层读取四个 texel。一个远处像素覆盖许多 texel 时，四点不足以代表平均颜色。mipmap 每层用 2×2 box 滤波把尺寸减半；32→16→8→4→2→1，最后一层变成平均色。\n\n本课通过 lod 参数手动选层，mip 模式在相邻层双线性结果之间再插值。它是显式 LOD 教学，不实现基于 UV 导数的自动 footprint、各向异性或完整 sRGB 预滤波。用相同相机与尺寸比较 lod，避免把变参结果误认为自动选层。\n\n验收：手算最高 mip 平均值；记录三层同输入对照；说明手动 LOD 与自动/各向异性区别",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 比较固定高 LOD；自动 LOD 属于后续扩展。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-lod；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Getting-started/Textures",
+        "section": "Mipmap / trilinear filtering",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-aa",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 12,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "抗锯齿：多个样本怎样变成一个像素？",
+      "question": "抗锯齿：多个样本怎样变成一个像素？",
+      "intro": "实际用 2×2 超采样渲染并 resolve，检查颜色与诊断缓冲。",
+      "prerequisites": [
+        "raster-lod"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": false
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "ssaa2",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "hard",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "如果四个样本中两个为白、两个为黑，计算 resolve 结果；预测开销增长量。",
+      "variant": "实现 2×2 box resolve；低分辨率旋转 triangle，保存 none/ssaa2 对照。",
+      "explanation": "一个像素中心的单次覆盖是 0 或 1，所以边缘呈阶梯。2×2 SSAA 先把长宽各增倍，执行四倍采样与着色，再平均每个 2×2 区块颜色。部分覆盖边缘与背景混合，改善轮廓。\n\n这比 MSAA 更昂贵：MSAA 通常对覆盖/深度保留多个样本，但不必对所有样本重复完整着色。本课是 SSAA，不能把 coveredSamples 当 GPU 硬件 MSAA 计数。\n\n解析后的深度、UV、法线和 probe 用单中心样本保留，彩色画面来自多样本 resolve；统计 separately 给出 sampleResolution/resolvedPixels。量化在平均前已发生，有最多一个 8-bit 单位误差。\n\n验收：手算 resolve；同尺寸 none/SSAA 对照；注明不是硬件 MSAA 和性能测量",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 按输出像素读取 2×2 高分辨率颜色。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-aa；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing",
+        "section": "Multisampling / resolve",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-pcf",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 13,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "PCF：为什么要先比较，再平均？",
+      "question": "PCF：为什么要先比较，再平均？",
+      "intro": "在倾斜接收面比较单样本阴影与真实 3×3 PCF。",
+      "prerequisites": [
+        "raster-aa"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "cube",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "nearest",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 0,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "none",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "pcf3",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "九点中三点被挡，按本课强度计算 visibility；对比先平均深度再判断。",
+      "variant": "将中心深度比较扩成 3×3，坐标偏移一个光源 texel，保存 hard/pcf3。",
+      "explanation": "PCF 对邻近九个光源深度分别做 current-bias>storedDepth，然后平均遮挡比例。若九点中三点遮挡，visibility=1-0.75*(3/9)，保留本课程的最低亮度 0.25。\n\n先平均深度再比较只会得到一次 0/1 判定，无法表达覆盖比例。PCF 平滑固定核尺寸的边缘，不提供随距离变化的物理半影，也不等于 PCSS；bias 与接收面误差仍需单独处理。越界样本按不遮挡处理，本课明确没有级联和 slope-scale 偏移。\n\n验收：手算九点遮挡比例；相机 depth 相同的 hard/PCF 对照；解释 PCF、PCSS 与级联的区别",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 逐点比较后对 visibility 求均值。",
+      "sources": [
+        "learnopengl"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-pcf；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping",
+        "section": "Percentage-closer filtering",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
+    },
+    {
+      "id": "raster-engine",
+      "version": 1,
+      "workspace": "raster",
+      "lesson": 14,
+      "assessment": "reflection",
+      "track": "RenderLab · 软件渲染",
+      "title": "综合项目：可加载模型的抗锯齿渲染器",
+      "question": "综合项目：可加载模型的抗锯齿渲染器",
+      "intro": "整合 OBJ、剔除、mip、SSAA 与 PCF，建立 CPU 到 GPU 的对应。",
+      "prerequisites": [
+        "raster-pcf"
+      ],
+      "controls": [
+        {
+          "key": "scene",
+          "label": "场景",
+          "type": "select",
+          "value": "model",
+          "options": [
+            "triangle",
+            "cube",
+            "model"
+          ]
+        },
+        {
+          "key": "angle",
+          "label": "模型旋转（度）",
+          "type": "range",
+          "value": 25,
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "key": "distance",
+          "label": "相机距离",
+          "type": "range",
+          "value": 3,
+          "min": 0.35,
+          "max": 6,
+          "step": 0.05
+        },
+        {
+          "key": "resolution",
+          "label": "输出分辨率",
+          "type": "range",
+          "value": 128,
+          "min": 64,
+          "max": 384,
+          "step": 1
+        },
+        {
+          "key": "clip",
+          "label": "齐次裁剪",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "cull",
+          "label": "背面剔除",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "depth",
+          "label": "深度测试",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "perspective",
+          "label": "透视正确属性插值",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "lighting",
+          "label": "漫反射光照",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "shadows",
+          "label": "阴影 pass",
+          "type": "checkbox",
+          "value": true
+        },
+        {
+          "key": "bias",
+          "label": "阴影 bias",
+          "type": "range",
+          "value": 0.005,
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        },
+        {
+          "key": "filter",
+          "label": "纹理过滤",
+          "type": "select",
+          "value": "mip",
+          "options": [
+            "nearest",
+            "linear",
+            "mip"
+          ]
+        },
+        {
+          "key": "probeX",
+          "label": "检查像素 X",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "probeY",
+          "label": "检查像素 Y（从上到下）",
+          "type": "range",
+          "value": 64,
+          "min": 0,
+          "max": 383,
+          "step": 1
+        },
+        {
+          "key": "lod",
+          "label": "显式纹理 LOD（mip 模式）",
+          "type": "range",
+          "value": 2,
+          "min": 0,
+          "max": 5,
+          "step": 0.25
+        },
+        {
+          "key": "aa",
+          "label": "抗锯齿",
+          "type": "select",
+          "value": "ssaa2",
+          "options": [
+            "none",
+            "ssaa2"
+          ]
+        },
+        {
+          "key": "shadowFilter",
+          "label": "阴影过滤",
+          "type": "select",
+          "value": "pcf3",
+          "options": [
+            "hard",
+            "pcf3"
+          ]
+        }
+      ],
+      "challenge": "列出 OBJ→裁剪→剔除→深度/插值→光照/阴影→resolve 的依赖，预测每个开关影响哪些缓冲。",
+      "variant": "使用同一 house.obj 生成网页与本机结果，开启 mip/SSAA/PCF，保存环境、模型摘要、源码和 JSON。",
+      "explanation": "在八阶段基础实现上加入模型输入、剔除、预滤波、resolve 和阴影过滤。输入换为自制小房子 OBJ，固定相机、LOD、采样模式与 bias，逐项打开功能，每次保留参数和代码来源。\n\nCPU mesh 对应 GPU vertex/index buffer；插值与深度主要由光栅硬件完成；shadow pass 与后处理需要不同渲染目标。网页 CPU 运行不能证明 GPU 性能。继续做原有 DrawCall、状态/Pass、实例化实验，并在 Unity Frame Debugger 对照真实事件。\n\n结课不是“看见房子”，而是能解释一个失败像素从 OBJ 角点到 resolve 的数据来源。没有实现透明排序、自动 LOD、级联、IBL 和路径追踪，应把它们列为后续范围。\n\n验收：完整应用源码与同模型对照；三组错误/修复和闭卷重建；真实 WebGL/Unity 对照记录，明确 CPU 性能边界",
+      "boundary": "网页为实际 CPU；本机 C++ 对照不代表 GPU 性能。 核对模型 digest、sampleResolution 和 probe 约定。",
+      "sources": [
+        "tinyrenderer"
+      ],
+      "questions": [],
+      "native": "python3 native/render/run.py --lab raster-engine；本机图片与 JSON 不上传。",
+      "checkRules": [
+        "自由实验仅保存证据，不自动判断掌握或源码正确性"
+      ],
+      "reading": {
+        "url": "https://haqr.eu/tinyrenderer/",
+        "section": "Renderer integration；连接现有 WebGL 提交实验",
+        "question": "先完成本课实验，再用资料核对公式、约定和未覆盖范围。"
+      }
     }
   ],
   "sources": {
@@ -1854,6 +5516,54 @@
       "purpose": "区分事件对外暴露的订阅权限与发布者触发权限",
       "license": "仅链接；Microsoft Learn 内容条款",
       "checked": "2026-09-21"
+    },
+    "bookofshaders": {
+      "title": "The Book of Shaders",
+      "url": "https://thebookofshaders.com/",
+      "section": "Getting started / Algorithmic drawing / Generative designs",
+      "purpose": "用于 UV、形状、噪声等基础阅读；课程讲解自行编写",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
+    },
+    "radiant": {
+      "title": "Radiant Deep Dives",
+      "url": "https://radiant-shaders.com/learn",
+      "section": "Rain on Glass / Analog Drift",
+      "purpose": "进阶效果拆解；首版不运行或复制上游 HTML",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
+    },
+    "urp-shader": {
+      "title": "Unity 6.0 URP custom shaders",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/urp/writing-custom-shaders-urp.html",
+      "section": "Basic unlit / Varyings / Transformations",
+      "purpose": "核对 Unity ShaderLab 外壳与 HLSL 的实际用法",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
+    },
+    "tinyrenderer": {
+      "title": "TinyRenderer 作者课程",
+      "url": "https://haqr.eu/tinyrenderer/",
+      "section": "Triangle rasterization / Camera / Shading / Shadow mapping",
+      "purpose": "软件渲染学习路线；首版使用原创实现和程序化素材",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
+    },
+    "learnopengl": {
+      "title": "LearnOpenGL",
+      "url": "https://learnopengl.com/",
+      "section": "Coordinate systems / Depth testing / Shadow mapping",
+      "purpose": "将 CPU 光栅化概念连接到 GPU 管线",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
+    },
+    "pbr-book": {
+      "title": "Physically Based Rendering",
+      "url": "https://www.pbr-book.org/",
+      "section": "第四版在线书籍",
+      "purpose": "后续光线追踪与物理材质阅读",
+      "license": "仅链接，不复制文章或书籍正文；代码引入需单独保留许可证",
+      "checked": "2026-10-03"
     }
   }
 }

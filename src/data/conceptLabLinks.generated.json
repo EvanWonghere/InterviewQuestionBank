@@ -268,5 +268,47 @@
       "id": "cs-events",
       "title": "事件和委托字段的权限差在哪？"
     }
+  ],
+  "q-104": [
+    {
+      "id": "shader-texture",
+      "title": "纹理与颜色：插值前应该在哪个空间？"
+    }
+  ],
+  "q-031": [
+    {
+      "id": "shader-vertex",
+      "title": "顶点形变：为什么片元无法改变轮廓？"
+    },
+    {
+      "id": "raster-coordinates",
+      "title": "坐标空间：一个顶点经历了哪些变换？"
+    },
+    {
+      "id": "raster-clipping",
+      "title": "齐次裁剪：跨过近面的三角形为什么不能直接丢掉？"
+    },
+    {
+      "id": "raster-coverage",
+      "title": "光栅化：一个像素为什么属于这个三角形？"
+    },
+    {
+      "id": "raster-depth",
+      "title": "深度缓冲：交换提交顺序会改变结果吗？"
+    },
+    {
+      "id": "raster-interpolation",
+      "title": "透视插值：为什么倾斜的棋盘格会扭曲？"
+    }
+  ],
+  "q-139": [
+    {
+      "id": "shader-light",
+      "title": "基础光照：法线、高光与边缘光分别表达什么？"
+    },
+    {
+      "id": "raster-shading",
+      "title": "采样与着色：覆盖正确为何颜色仍可能错误？"
+    }
   ]
 }

@@ -2,7 +2,7 @@ export type TraceParams = Record<string, string | number | boolean | undefined>;
 export type TeachingLine = { text: string; key?: string; reveal?: boolean };
 export type TeachingTrace = {
   caption: string;
-  language: "cpp" | "csharp";
+  language: "cpp" | "csharp" | "glsl";
   lines: TeachingLine[];
   changedKeys: string[];
   changedLines: number[];
@@ -12,7 +12,7 @@ export type TeachingTrace = {
 };
 const CAPTION = "教学片段，浏览器不编译；本机 JSON 和 WebGL 才是实测。";
 type Spec = {
-  language: "cpp" | "csharp";
+  language: "cpp" | "csharp" | "glsl";
   lines: TeachingLine[];
   eventLines: number[];
   eventNodes?: (string | undefined)[];
@@ -709,6 +709,7 @@ export function teachingTrace(
                                                 : id.startsWith("spatial-")
                                                   ? spatialLab(id, p)
                                                   : (() => {
+                                                      if (id.startsWith("shader-") || id.startsWith("raster-")) return {language: id.startsWith("shader-") ? "glsl" as const : "cpp" as const, lines: [{text:"// 查看工作台中当前源码；此处不代替实际编译。"},{text:"// 运行器产生与参数和源码对应的观测。"},{text:"// 检查像素与阶段数据。"},{text:"// 保存证据；自由实验不自动判定源码正确性。"}],eventLines:[0,1,2,3]};
                                                       throw new Error(`unimplemented lab ${id}`);
                                                     })();
   return finish(
