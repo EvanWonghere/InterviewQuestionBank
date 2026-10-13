@@ -22,6 +22,7 @@ const TOP_LINKS = [
   { to: '/', label: '进度总览', match: (p) => p === '/' },
   { to: '/map', label: '闯关地图', match: (p) => p === '/map' || p === '/patrol' || p.startsWith('/stage/') },
   { to: '/quiz', label: '全部题目', match: (p) => p === '/quiz' },
+  { to: '/topics/gbits', label: '吉比特笔试专项', match: (p) => p === '/topics/gbits' },
   { to: '/random-practice', label: '随机刷题', match: (p) => p === '/random-practice' },
   { to: '/mock-interview', label: '模拟面试', match: (p) => p === '/mock-interview' },
 ];

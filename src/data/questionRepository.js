@@ -1,6 +1,7 @@
 import { loadQuestions as loadStaticQuestions } from '@/data/loadQuestions';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase';
 import { defaultQuestion } from '@/lib/questionSchema';
+import { normalizeStaticQuestion } from '@/lib/staticQuestion';
 
 function mapCloudQuestion(row) {
   return {
@@ -30,15 +31,7 @@ export async function listQuestions() {
     const data = await loadStaticQuestions();
     return {
       ...data,
-      questions: data.questions.map((question) => ({
-        ...question,
-        legacyId: question.id,
-        type: 'short_answer',
-        promptMd: question.question,
-        solution: { referenceAnswerMd: question.answer },
-        status: 'published',
-        visibility: 'public',
-      })),
+      questions: data.questions.map(normalizeStaticQuestion),
       source: 'static',
     };
   }

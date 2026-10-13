@@ -5,6 +5,8 @@ import QuestionCard from '@/components/quiz/QuestionCard';
 import { useProgressStore } from '@/store/progressStore';
 import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 import { findQuestionByStableId } from '@/lib/questionNavigation';
+import { selectTopicQuestions, topicIds } from '@/data/gbitsTopic';
+import GbitsPracticeHeader from '@/components/quiz/GbitsPracticeHeader';
 
 const LIST_STATUS_LABELS = {
   wrong: { title: '错题本', empty: '错题本暂无题目，去做题并加入错题本吧', cta: '去刷题' },
@@ -34,6 +36,9 @@ export default function QuizPage() {
   const { categoryId, status: listStatus } = useParams();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
+  const topic = searchParams.get('topic') ?? '';
+  const topicSection = searchParams.get('section') ?? '';
+  const topicSet = searchParams.get('set') ?? '';
   const requestedQuestionId = searchParams.get('questionId')?.trim() ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
@@ -45,13 +50,14 @@ export default function QuizPage() {
 
   const questionsByCategoryOrList = useMemo(() => {
     if (!allQuestions.length) return [];
+    if (topic) return topic === 'gbits' ? selectTopicQuestions(allQuestions, { section: topicSection, set: topicSet }) : [];
     const sorted = [...allQuestions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (listStatus && (listStatus === 'wrong' || listStatus === 'review' || listStatus === 'mastered')) {
       return sorted.filter((q) => progress[q.id] === listStatus);
     }
     if (categoryId) return sorted.filter((q) => q.categoryId === categoryId);
     return sorted;
-  }, [allQuestions, categoryId, listStatus, progress]);
+  }, [allQuestions, categoryId, listStatus, progress, topic, topicSection, topicSet]);
 
   const questionsFilteredBySearch = useMemo(() => {
     if (!searchQuery.trim()) return questionsByCategoryOrList;
@@ -96,7 +102,7 @@ export default function QuizPage() {
     setDifficultyFilter('');
     setTypeFilter('');
     setTagFilter('');
-  }, [categoryId, listStatus, searchQuery, requestedQuestionId]);
+  }, [categoryId, listStatus, searchQuery, requestedQuestionId, topic, topicSection, topicSet]);
 
   const currentId = current?.id;
   useEffect(() => {
@@ -161,7 +167,7 @@ export default function QuizPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
         <p className="type-body" style={{ color: 'var(--text-tertiary)' }}>
-          {listMeta ? listMeta.empty : '该分类下暂无题目'}
+          {listMeta ? listMeta.empty : topic ? '当前题库暂无此专题题目，请检查专题链接或等待题目发布。' : '该分类下暂无题目'}
         </p>
         <Link to="/quiz" className="btn-blue-outline">
           {listMeta ? listMeta.cta : '查看全部题目'}
@@ -259,6 +265,7 @@ export default function QuizPage() {
 
       {/* Question card */}
       <div className="min-w-0 flex-1">
+        {topic === 'gbits' && <GbitsPracticeHeader key={`${topicSection}:${topicSet}`} set={topicSet} available={questionsByCategoryOrList.length} expected={topicIds({ section: topicSection, set: topicSet }).length} />}
         <div key={current?.id} className="question-card-enter">
           <QuestionCard
             question={current}

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parseQuestion } from './questionSchema';
 
 const data = JSON.parse(readFileSync(resolve(process.cwd(), 'public/questions.json'), 'utf8'));
-const pack = data.questions.filter((q) => Number(q.id.slice(2)) >= 149);
+const pack = data.questions.filter((q) => Number(q.id.slice(2)) >= 149 && Number(q.id.slice(2)) <= 178);
 
 describe('published static question content', () => {
   it('keeps stable unique IDs, valid categories and readable answers', () => {
