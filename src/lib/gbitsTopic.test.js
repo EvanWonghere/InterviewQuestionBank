@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parseQuestion } from './questionSchema';
 import { normalizeStaticQuestion } from './staticQuestion';
 import { gradeObjective } from './grading';
-import { GBITS_TOPIC, selectTopicQuestions, topicIds } from '../data/gbitsTopic';
+import { GBITS_TOPIC, GBITS_PAPERS, isGbitsSupplement, selectTopicQuestions, topicIds } from '../data/gbitsTopic';
 
 const data = JSON.parse(readFileSync(resolve(process.cwd(), 'public/questions.json'), 'utf8'));
 const pack = data.questions.filter((q) => q.id.startsWith('gbits-'));
@@ -38,15 +38,30 @@ describe('G-bits training topic', () => {
     expect(selectTopicQuestions(cloud).map((q) => q.legacyId)).toEqual(local.map((q) => q.id));
     expect(selectTopicQuestions(cloud, { section: 'missing' })).toEqual([]);
     expect(selectTopicQuestions(cloud, { set: 'missing' })).toEqual([]);
+    expect(selectTopicQuestions(cloud, { scope: 'missing' })).toEqual([]);
     expect(selectTopicQuestions([], { set: 'paper' })).toEqual([]);
   });
   it('includes exactly 20 choices, 4 blanks and 2 algorithms in the training paper', () => {
-    const paper = selectTopicQuestions(data.questions, { set: 'paper' });
+    for (const entry of GBITS_PAPERS) {
+    const paper = selectTopicQuestions(data.questions, { set: entry.set });
     expect(paper).toHaveLength(26);
     expect(paper.filter((q) => q.type.endsWith('choice'))).toHaveLength(20);
     expect(paper.filter((q) => q.type === 'fill_blank')).toHaveLength(4);
     expect(paper.filter((q) => q.type === 'algorithm')).toHaveLength(2);
+    }
     expect(GBITS_TOPIC.startIds).toHaveLength(6);
+    expect(selectTopicQuestions(data.questions, { set: 'challenge' }).filter((q) => q.type === 'algorithm').map((q) => q.difficulty)).toEqual(['medium', 'hard']);
+  });
+  it('keeps engineering out of the default path while preserving all 78 stable IDs', () => {
+    const core = selectTopicQuestions(data.questions);
+    const supplement = selectTopicQuestions(data.questions, { scope: 'supplement' });
+    expect(core).toHaveLength(38);
+    expect(supplement).toHaveLength(40);
+    expect(core.some((q) => q.type === 'engineering' || q.type === 'short_answer' || q.id.startsWith('q-'))).toBe(false);
+    expect(new Set([...core, ...supplement].map((q) => q.id)).size).toBe(78);
+    expect(topicIds({ scope: 'all' })).toHaveLength(78);
+    expect(isGbitsSupplement({ id: 'cloud-uuid', legacyId: 'gbits-040' })).toBe(true);
+    expect(isGbitsSupplement({ id: 'gbits-020' })).toBe(false);
   });
   it('matches the insert-only migration to reviewed content', () => {
     const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261013000000_gbits_study_pack.sql'), 'utf8');

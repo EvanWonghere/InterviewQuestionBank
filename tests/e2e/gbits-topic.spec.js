@@ -30,7 +30,7 @@ test('practice timer starts by click and phone pages do not overflow', async ({ 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./#/topics/gbits');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('link', { name: '打开混合练习卷' }).click();
+  await page.getByRole('link', { name: '打开基础自测卷' }).click();
   await expect(page.getByLabel('剩余练习时间')).toHaveText('90:00');
   await page.getByRole('button', { name: '开始 90 分钟计时' }).click();
   await expect(page.getByRole('button', { name: '重新计时' })).toBeVisible();
@@ -38,4 +38,26 @@ test('practice timer starts by click and phone pages do not overflow', async ({ 
   await page.goto('./#/quiz?topic=gbits&section=algorithms&questionId=gbits-035');
   await expect(page.locator('article')).toContainText('多模式匹配');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('default path excludes engineering and supplement links show the boundary', async ({ page }) => {
+  await page.goto('./#/quiz?topic=gbits');
+  await expect(page.getByText('笔试基础与编程训练 · 列表当前 38 / 38 题', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '客户端方向：战斗场景资源加载', exact: true })).toHaveCount(0);
+  await page.goto('./#/quiz?topic=gbits&scope=supplement&section=client');
+  await expect(page.getByRole('note').filter({ hasText: '当前题属于' })).toContainText('三天冲刺可先跳过');
+  await expect(page.locator('article')).toContainText('战斗场景资源加载');
+  await page.goto('./#/quiz?topic=gbits&questionId=gbits-040');
+  await expect(page.getByRole('note').filter({ hasText: '当前题属于' })).toBeVisible();
+});
+
+test('advanced paper has a medium DP and a hard string problem', async ({ page }) => {
+  await page.goto('./#/topics/gbits');
+  await page.getByRole('link', { name: '打开进阶自测卷' }).click();
+  await expect(page.getByText('进阶自测卷 · 20 选择 / 4 填空 / 2 编程 · 列表当前 26 / 26 题', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '走格子：最小初始行动力', exact: true }).click();
+  await expect(page.locator('article')).toContainText('走格子');
+  await page.getByRole('button', { name: '多模式匹配：是否含任一模式', exact: true }).click();
+  await expect(page.locator('article')).toContainText('多模式匹配');
+  await expect(page.getByRole('note').filter({ hasText: '20 选择' })).toContainText('不是某场原卷复现');
 });

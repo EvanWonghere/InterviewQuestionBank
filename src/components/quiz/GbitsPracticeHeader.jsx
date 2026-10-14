@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GBITS_PAPERS, isGbitsSupplement } from '@/data/gbitsTopic';
 
 // A practice aid only. No automatic grades, forced submission or progress writes.
-export default function GbitsPracticeHeader({ set, available, expected }) {
+export default function GbitsPracticeHeader({ set, scope, question, available, expected }) {
   const [deadline, setDeadline] = useState(null);
   const [remaining, setRemaining] = useState(90 * 60);
+  const paper = GBITS_PAPERS.find((entry) => entry.set === set);
+  const supplement = scope === 'supplement' || isGbitsSupplement(question);
   useEffect(() => {
     if (!deadline) return;
     const update = () => setRemaining(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
@@ -14,9 +17,11 @@ export default function GbitsPracticeHeader({ set, available, expected }) {
   }, [deadline]);
   return <div className="surface-card p-4 space-y-3 mb-5">
     <Link to="/topics/gbits" className="type-caption">← 吉比特笔试专项</Link>
-    <p className="type-caption">{set === 'paper' ? '混合练习卷 · 20 选择 / 4 填空 / 2 编程' : set === 'start' ? '起步练习 · 先独立答这 6 题' : '按专题顺序练习'} · 当前 {available} / {expected} 题</p>
+    <p className="type-caption">{paper ? `${paper.title} · 20 选择 / 4 填空 / 2 编程` : set === 'start' ? '起步练习 · 先独立答这 6 题' : supplement ? '可选补充 · 面试与工程' : '笔试基础与编程训练'} · 列表当前 {available} / {expected} 题</p>
+    {paper && <p role="note" className="type-caption">{paper.description}</p>}
+    {supplement && <p role="note" className="type-caption">当前题属于机制口述、面试或工程补充，未核验为本批次笔试原题。三天冲刺可先跳过，<Link to="/quiz?topic=gbits">返回笔试基础与编程训练</Link>。</p>}
     {available < expected && <p role="alert">当前题库缺少 {expected - available} 道专题题目，已显示的列表不是完整练习卷。</p>}
-    {set === 'paper' && <div className="flex flex-wrap items-center gap-3">
+    {paper && <div className="flex flex-wrap items-center gap-3">
       <span className="font-mono tabular-nums" aria-label="剩余练习时间">{String(Math.floor(remaining / 60)).padStart(2, '0')}:{String(remaining % 60).padStart(2, '0')}</span>
       {!deadline && <button type="button" className="btn-neutral" disabled={available < expected} onClick={() => setDeadline(Date.now() + 90 * 60000)}>开始 90 分钟计时</button>}
       {deadline && <button type="button" className="btn-neutral" onClick={() => { setDeadline(null); setRemaining(90 * 60); }}>重新计时</button>}

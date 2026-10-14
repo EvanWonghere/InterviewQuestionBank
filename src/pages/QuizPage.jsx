@@ -39,6 +39,7 @@ export default function QuizPage() {
   const topic = searchParams.get('topic') ?? '';
   const topicSection = searchParams.get('section') ?? '';
   const topicSet = searchParams.get('set') ?? '';
+  const topicScope = searchParams.get('scope') ?? 'core';
   const requestedQuestionId = searchParams.get('questionId')?.trim() ?? '';
   const { questions: allQuestions, loading, error } = useQuestions();
   const progress = useProgressStore((s) => s.progress);
@@ -50,14 +51,14 @@ export default function QuizPage() {
 
   const questionsByCategoryOrList = useMemo(() => {
     if (!allQuestions.length) return [];
-    if (topic) return topic === 'gbits' ? selectTopicQuestions(allQuestions, { section: topicSection, set: topicSet }) : [];
+    if (topic) return topic === 'gbits' ? selectTopicQuestions(allQuestions, { section: topicSection, set: topicSet, scope: topicScope }) : [];
     const sorted = [...allQuestions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (listStatus && (listStatus === 'wrong' || listStatus === 'review' || listStatus === 'mastered')) {
       return sorted.filter((q) => progress[q.id] === listStatus);
     }
     if (categoryId) return sorted.filter((q) => q.categoryId === categoryId);
     return sorted;
-  }, [allQuestions, categoryId, listStatus, progress, topic, topicSection, topicSet]);
+  }, [allQuestions, categoryId, listStatus, progress, topic, topicSection, topicSet, topicScope]);
 
   const questionsFilteredBySearch = useMemo(() => {
     if (!searchQuery.trim()) return questionsByCategoryOrList;
@@ -102,7 +103,7 @@ export default function QuizPage() {
     setDifficultyFilter('');
     setTypeFilter('');
     setTagFilter('');
-  }, [categoryId, listStatus, searchQuery, requestedQuestionId, topic, topicSection, topicSet]);
+  }, [categoryId, listStatus, searchQuery, requestedQuestionId, topic, topicSection, topicSet, topicScope]);
 
   const currentId = current?.id;
   useEffect(() => {
@@ -265,7 +266,7 @@ export default function QuizPage() {
 
       {/* Question card */}
       <div className="min-w-0 flex-1">
-        {topic === 'gbits' && <GbitsPracticeHeader key={`${topicSection}:${topicSet}`} set={topicSet} available={questionsByCategoryOrList.length} expected={topicIds({ section: topicSection, set: topicSet }).length} />}
+        {topic === 'gbits' && <GbitsPracticeHeader key={`${topicSection}:${topicSet}:${topicScope}`} set={topicSet} scope={topicScope} question={current} available={questionsByCategoryOrList.length} expected={topicIds({ section: topicSection, set: topicSet, scope: topicScope }).length} />}
         <div key={current?.id} className="question-card-enter">
           <QuestionCard
             question={current}
