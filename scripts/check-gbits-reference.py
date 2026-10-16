@@ -92,6 +92,6 @@ with tempfile.TemporaryDirectory(prefix='gbits-cpp-') as temp:
             result=subprocess.run([str(binary)],input=item['input'],text=True,capture_output=True,check=True,timeout=3)
             assert result.stdout.strip()==item['output'].strip(),(key,item,result.stdout)
         return len(CASES[key])
-    algorithms=[q for q in DATA['questions'] if q['id'].startswith('gbits-') and q['type']=='algorithm']
+    algorithms=[q for q in DATA['questions'] if q['id'] in FIXTURES['programs'] and q['type']=='algorithm']
     with ThreadPoolExecutor(max_workers=4) as pool: counts=list(pool.map(check,algorithms))
     print(f'PASS: {len(algorithms)} actual C++17 answers; {sum(counts)} sample, boundary and differential cases')

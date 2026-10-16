@@ -3,6 +3,8 @@ import process from 'node:process';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // This fixture requires its dedicated synthetic Supabase build.
+  testIgnore: '**/gbits-written-cloud.spec.js',
   use: {
     baseURL: 'http://127.0.0.1:4173/quiz/',
     trace: 'retain-on-failure',

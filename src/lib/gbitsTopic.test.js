@@ -8,7 +8,7 @@ import { gradeObjective } from './grading';
 import { GBITS_TOPIC, GBITS_PAPERS, isGbitsSupplement, selectTopicQuestions, topicIds } from '../data/gbitsTopic';
 
 const data = JSON.parse(readFileSync(resolve(process.cwd(), 'public/questions.json'), 'utf8'));
-const pack = data.questions.filter((q) => q.id.startsWith('gbits-'));
+const pack = data.questions.filter((q) => /^gbits-0(?:0[1-9]|[12][0-9]|3[0-9]|4[0-2])$/.test(q.id));
 describe('G-bits training topic', () => {
   it('has valid typed questions, provenance and assessable solutions', () => {
     expect(pack).toHaveLength(42);

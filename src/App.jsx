@@ -17,6 +17,7 @@ import BossPage from '@/pages/BossPage';
 import DungeonPage from '@/pages/DungeonPage';
 import HandbookPage from '@/pages/HandbookPage';
 import GbitsTopicPage from '@/pages/GbitsTopicPage';
+import GbitsWrittenMockPage from '@/pages/GbitsWrittenMockPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
 import { useGameSync } from '@/hooks/useGameSync';
@@ -36,6 +37,7 @@ export default function App() {
         <CloudLearningInit />
         <HashRouter>
           <Routes>
+            <Route path="written-mock/:paperId" element={<GbitsWrittenMockPage />} />
             <Route path="mock-interview" element={<MockInterviewPage />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<DashboardPage />} />

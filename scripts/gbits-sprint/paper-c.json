@@ -1,0 +1,1386 @@
+[
+  {
+    "id": "gbits-090",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "数组引用保留长度",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体推导或操作未由本次可见题面确认，按预测训练处理。\n\nC++17完整程序的输出是什么？\n\n```cpp\n#include <iostream>\nvoid change(int (&a)[4]) { a[2] = 9; }\nint main() {\n    int a[4] = {1, 2, 2, 4};\n    change(a);\n    std::cout << sizeof(a) / sizeof(a[0]) << ' ' << a[2];\n}\n```",
+    "answer": "### 参考回答\nB\n\n正确B：引用绑定整个4元素数组，修改a[2]。A错误地忽略最后一个元素；C忽略引用修改；D数组引用合法。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。 技术依据：[C++17数组引用](https://timsong-cpp.github.io/cppwp/n4659/dcl.init.ref)。",
+    "difficulty": "medium",
+    "order": 268,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "数组引用",
+      "代码阅读"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题自主推导与独立验证",
+    "sourceUrl": "https://timsong-cpp.github.io/cppwp/n4659/dcl.init.ref",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "3 9"
+        },
+        {
+          "id": "B",
+          "text": "4 9"
+        },
+        {
+          "id": "C",
+          "text": "4 2"
+        },
+        {
+          "id": "D",
+          "text": "编译失败"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：引用绑定整个4元素数组，修改a[2]。A错误地忽略最后一个元素；C忽略引用修改；D数组引用合法。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。 技术依据：[C++17数组引用](https://timsong-cpp.github.io/cppwp/n4659/dcl.init.ref)。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-091",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "mutable值捕获与闭包复制",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\nC++17完整程序的输出是什么？\n\n```cpp\n#include <iostream>\nint main() {\n    int x = 5;\n    auto f = [x]() mutable { return ++x; };\n    auto g = f;\n    std::cout << f() << ' ' << g() << ' ' << f() << ' ' << x;\n}\n```",
+    "answer": "### 参考回答\nD\n\n正确D：f复制x=5，g复制f尚未调用时的状态；f第一次6，g第一次6，f第二次7，外部x仍5。A漏增量；C把所有状态共享；B误把g复制视作共享。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/expr.prim.lambda)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 269,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "Lambda",
+      "代码阅读"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "https://timsong-cpp.github.io/cppwp/n4659/expr.prim.lambda",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "5 6 7 5"
+        },
+        {
+          "id": "B",
+          "text": "6 7 7 5"
+        },
+        {
+          "id": "C",
+          "text": "6 7 8 8"
+        },
+        {
+          "id": "D",
+          "text": "6 6 7 5"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：f复制x=5，g复制f尚未调用时的状态；f第一次6，g第一次6，f第二次7，外部x仍5。A漏增量；C把所有状态共享；B误把g复制视作共享。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/expr.prim.lambda)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-092",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "重载匹配与整型提升",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\nC++17完整程序的输出是什么？\n\n```cpp\n#include <iostream>\nvoid f(int) { std::cout << 'I'; }\nvoid f(double) { std::cout << 'D'; }\nint main() {\n    short s = 2;\n    f(s);\n    f(2.0);\n}\n```",
+    "answer": "### 参考回答\nA\n\n正确A：short到int是整型提升，优于short到double的转换；double实参精确匹配double。B忽略第二次精确匹配；C颠倒优先级；D两次都有唯一最佳匹配。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/over.match.best)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 270,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "重载",
+      "代码阅读"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "https://timsong-cpp.github.io/cppwp/n4659/over.match.best",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "ID"
+        },
+        {
+          "id": "B",
+          "text": "II"
+        },
+        {
+          "id": "C",
+          "text": "DI"
+        },
+        {
+          "id": "D",
+          "text": "编译失败"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：short到int是整型提升，优于short到double的转换；double实参精确匹配double。B忽略第二次精确匹配；C颠倒优先级；D两次都有唯一最佳匹配。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/over.match.best)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-093",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "字符数组的容量和字符串长度",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018提前批：可见题面中的数组、字符串、static与整数算法；只使用已读到的考点类别，不复刻原文。\n\nC++17完整程序的输出是什么？\n\n```cpp\n#include <iostream>\n#include <cstring>\nint main() {\n    char a[] = \"frame\";\n    a[2] = '\\0';\n    std::cout << sizeof(a) << ' ' << std::strlen(a);\n}\n```",
+    "answer": "### 参考回答\nD\n\n正确D：字面量含结尾空字符，a容量6；把a[2]写为空字符后，strlen从首字符数到第一个空字符为2。A把sizeof当strlen；B漏结尾空字符；C忽略修改。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/c.strings)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 271,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "字符串",
+      "代码阅读"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018提前批：可见题面中的数组、字符串、static与整数算法",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11251616/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "2 2"
+        },
+        {
+          "id": "B",
+          "text": "5 2"
+        },
+        {
+          "id": "C",
+          "text": "6 5"
+        },
+        {
+          "id": "D",
+          "text": "6 2"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：字面量含结尾空字符，a容量6；把a[2]写为空字符后，strlen从首字符数到第一个空字符为2。A把sizeof当strlen；B漏结尾空字符；C忽略修改。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/c.strings)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-094",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "自动对象离开嵌套作用域",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\nC++17完整程序的输出是什么？\n\n```cpp\n#include <iostream>\nstruct Item {\n    int id;\n    ~Item() { std::cout << id << ' '; }\n};\nint main() {\n    Item a{1};\n    { Item b{2}; Item c{3}; }\n}\n```",
+    "answer": "### 参考回答\nA\n\n正确A：内层先构造b再c，因此离开内层按c、b逆序析构，最后a。C按构造顺序；B内层次序错；D既把外层提前又错内层。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/class.dtor)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 272,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "RAII",
+      "代码阅读"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "https://timsong-cpp.github.io/cppwp/n4659/class.dtor",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "3 2 1"
+        },
+        {
+          "id": "B",
+          "text": "2 3 1"
+        },
+        {
+          "id": "C",
+          "text": "1 2 3"
+        },
+        {
+          "id": "D",
+          "text": "1 3 2"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：内层先构造b再c，因此离开内层按c、b逆序析构，最后a。C按构造顺序；B内层次序错；D既把外层提前又错内层。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://timsong-cpp.github.io/cppwp/n4659/class.dtor)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-095",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "环形队列跨尾后的长度",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术B：可见题面中的环形队列、散列与最小生成树；只使用已读到的考点类别，不复刻原文。\n\n容量为8的数组实现环形队列，保留一个空位置区分满/空。head指向下一出队位置，tail指向下一入队位置。当前head=6、tail=2，队列中有多少元素？",
+    "answer": "### 参考回答\nD\n\n正确D：(tail-head+8)%8=4，对应槽位6、7、0、1。A把tail当长度；B多减一次；C把head当长度。保留空位只影响最大容量7，不再从当前长度减1。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术B：可见题面中的环形队列、散列与最小生成树](https://www.nowcoder.com/exam/test/11252373/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 273,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "环形队列"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术B：可见题面中的环形队列、散列与最小生成树",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "6"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：(tail-head+8)%8=4，对应槽位6、7、0、1。A把tail当长度；B多减一次；C把head当长度。保留空位只影响最大容量7，不再从当前长度减1。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术B：可见题面中的环形队列、散列与最小生成树](https://www.nowcoder.com/exam/test/11252373/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-096",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "由先序和中序确定后序",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体推导或操作未由本次可见题面确认，按预测训练处理。\n\n一棵节点值互异的二叉树，先序为M G D J T P W，中序为D G J M P T W。后序是什么？",
+    "answer": "### 参考回答\nC\n\n正确C：M为根；左子树G(D,J)，右子树T(P,W)；左右根得到D J G P W T M。B对子树用中序；A左右颠倒；D直接照抄先序。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+    "difficulty": "medium",
+    "order": 274,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "二叉树",
+      "遍历"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题自主推导与独立验证",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "J D G W P T M"
+        },
+        {
+          "id": "B",
+          "text": "D G J P T W M"
+        },
+        {
+          "id": "C",
+          "text": "D J G P W T M"
+        },
+        {
+          "id": "D",
+          "text": "M G D J T P W"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：M为根；左子树G(D,J)，右子树T(P,W)；左右根得到D J G P W T M。B对子树用中序；A左右颠倒；D直接照抄先序。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-097",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "依赖图中的合法执行顺序",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n有向无环图的边为A→C、B→C、C→D、B→E。以下哪项是合法拓扑序？",
+    "answer": "### 参考回答\nB\n\n正确B：A/B均在C前、C在D前、B在E前。A违反B→C；C违反C→D；D违反B→E。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 275,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "拓扑排序"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "A C B E D"
+        },
+        {
+          "id": "B",
+          "text": "B E A C D"
+        },
+        {
+          "id": "C",
+          "text": "B A D C E"
+        },
+        {
+          "id": "D",
+          "text": "E B A C D"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：A/B均在C前、C在D前、B在E前。A违反B→C；C违反C→D；D违反B→E。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-098",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "三角图的唯一最小生成树",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术B：可见题面中的环形队列、散列与最小生成树；只使用已读到的考点类别，不复刻原文。\n\n无向连通图只有A、B、C三个顶点，边AB=2、BC=5、AC=9。其最小生成树总权值是多少？",
+    "answer": "### 参考回答\nA\n\n正确A：选AB与BC，2+5=7。B和C为其余两棵树权值，均更大；D把三条边全选形成环。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术B：可见题面中的环形队列、散列与最小生成树](https://www.nowcoder.com/exam/test/11252373/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 276,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "最小生成树"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术B：可见题面中的环形队列、散列与最小生成树",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "7"
+        },
+        {
+          "id": "B",
+          "text": "11"
+        },
+        {
+          "id": "C",
+          "text": "14"
+        },
+        {
+          "id": "D",
+          "text": "16"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：选AB与BC，2+5=7。B和C为其余两棵树权值，均更大；D把三条边全选形成环。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术B：可见题面中的环形队列、散列与最小生成树](https://www.nowcoder.com/exam/test/11252373/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-099",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "线性探测的碰撞轨迹",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体推导或操作未由本次可见题面确认，按预测训练处理。\n\n长度7的空散列表，h(k)=k mod 7，碰撞后逐槽加1并对7取模；依次插入10、17、24、5。查找24（含首次槽检查），需检查几个槽？",
+    "answer": "### 参考回答\nC\n\n正确C：10在3、17在4、24在5；查24检查3、4、5共3次。A忽略冲突；B只数冲突次数；D把后来放在6的5也计入已成功查找。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+    "difficulty": "medium",
+    "order": 277,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "散列",
+      "线性探测"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题自主推导与独立验证",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "1"
+        },
+        {
+          "id": "B",
+          "text": "2"
+        },
+        {
+          "id": "C",
+          "text": "3"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：10在3、17在4、24在5；查24检查3、4、5共3次。A忽略冲突；B只数冲突次数；D把后来放在6的5也计入已成功查找。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-100",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "BST删除的后继替换",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\nBST依次插入40、20、60、50、70、45、55，删除节点40，规定用其中序后继的值替换。替换根节点的值是什么？",
+    "answer": "### 参考回答\nB\n\n正确B：后继为右子树最小值，沿60→50→45。A为左侧元素；C只走一次左边；D误以为右儿子就是后继。所有键互异。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 278,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "二叉搜索树"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "20"
+        },
+        {
+          "id": "B",
+          "text": "45"
+        },
+        {
+          "id": "C",
+          "text": "50"
+        },
+        {
+          "id": "D",
+          "text": "60"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：后继为右子树最小值，沿60→50→45。A为左侧元素；C只走一次左边；D误以为右儿子就是后继。所有键互异。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-101",
+    "categoryId": "os-fundamentals",
+    "type": "single_choice",
+    "title": "时间片轮转的完成时间",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术A：可见题面中的概率、几何与调度；只使用已读到的考点类别，不复刻原文。\n\n单核CPU，P1/P2/P3在t=0按此顺序入队，CPU总需求分别为5、3、1。时间片2，无切换开销，无I/O/新进程。未完成进程放队尾。P2在什么时刻完成？",
+    "answer": "### 参考回答\nD\n\n正确D：P1[0,2)，P2[2,4)，P3[4,5)完成，P1[5,7)，P2[7,8)完成，P1[8,9)。A忽略剩余1；B误用P1片段终点；C是全部完成时刻。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 279,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "CPU调度"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术A：可见题面中的概率、几何与调度",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "5"
+        },
+        {
+          "id": "B",
+          "text": "7"
+        },
+        {
+          "id": "C",
+          "text": "9"
+        },
+        {
+          "id": "D",
+          "text": "8"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：P1[0,2)，P2[2,4)，P3[4,5)完成，P1[5,7)，P2[7,8)完成，P1[8,9)。A忽略剩余1；B误用P1片段终点；C是全部完成时刻。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_D_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-102",
+    "categoryId": "os-fundamentals",
+    "type": "single_choice",
+    "title": "LRU三页框的缺页次数",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n初始页框均空，容量3。请求页序列为1,2,3,1,4,2,5，采用精确LRU，每次缺页计1次（含首次装入），缺页几次？",
+    "answer": "### 参考回答\nC\n\n正确C：前三次缺页；访问1命中；4淘汰2，2淘汰3，5淘汰1，后三次也缺页，总6。A/B漏计初装或把被淘汰2判命中；D把访问1也判缺页。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 280,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "LRU",
+      "页面置换"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "4"
+        },
+        {
+          "id": "B",
+          "text": "5"
+        },
+        {
+          "id": "C",
+          "text": "6"
+        },
+        {
+          "id": "D",
+          "text": "7"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：前三次缺页；访问1命中；4淘汰2，2淘汰3，5淘汰1，后三次也缺页，总6。A/B漏计初装或把被淘汰2判命中；D把访问1也判缺页。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-103",
+    "categoryId": "computer-networks",
+    "type": "single_choice",
+    "title": "TCP累计确认遇到中间缺口",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n忽略序号回绕，连接已建立，不考虑SYN/FIN。接收方下一个期望字节序号为1000，先收到字节1000–1099，再收到1200–1299，第二段之后要发送的累计ACK号是什么？",
+    "answer": "### 参考回答\nA\n\n正确A：TCP累计ACK指下一个期望字节，1100–1199仍缺失；仅收到后面的段不能越过缺口。B是最后连续收到字节；C为乱序段起点；D错误跨过缺口。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://www.rfc-editor.org/rfc/rfc9293.html)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 281,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "TCP",
+      "累计确认"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "https://www.rfc-editor.org/rfc/rfc9293.html",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "1100"
+        },
+        {
+          "id": "B",
+          "text": "1099"
+        },
+        {
+          "id": "C",
+          "text": "1200"
+        },
+        {
+          "id": "D",
+          "text": "1300"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：TCP累计ACK指下一个期望字节，1100–1199仍缺失；仅收到后面的段不能越过缺口。B是最后连续收到字节；C为乱序段起点；D错误跨过缺口。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://www.rfc-editor.org/rfc/rfc9293.html)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-104",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "SQL聚合忽略NULL的范围",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\nPostgreSQL表t只有一列v，四行依次为NULL、0、0、7；SELECT COUNT(*), COUNT(v), SUM(v) FROM t; 结果是什么？",
+    "answer": "### 参考回答\nA\n\n正确A：COUNT(*)计全部4行；COUNT(v)只计非NULL的3行；SUM忽略NULL得到7。C把NULL算入COUNT(v)；B忽略COUNT(*)中的NULL行；D把两个0当成同一行，只有DISTINCT才去重。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://www.postgresql.org/docs/current/functions-aggregate.html)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 282,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "数据库",
+      "聚合",
+      "NULL"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "https://www.postgresql.org/docs/current/functions-aggregate.html",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "4 3 7"
+        },
+        {
+          "id": "B",
+          "text": "3 3 7"
+        },
+        {
+          "id": "C",
+          "text": "4 4 7"
+        },
+        {
+          "id": "D",
+          "text": "4 2 7"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：COUNT(*)计全部4行；COUNT(v)只计非NULL的3行；SUM忽略NULL得到7。C把NULL算入COUNT(v)；B忽略COUNT(*)中的NULL行；D把两个0当成同一行，只有DISTINCT才去重。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n[本题为合理拓展预测；不主张历年考过](https://www.postgresql.org/docs/current/functions-aggregate.html)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-105",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "不放回抽取的条件概率",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术A：可见题面中的概率、几何与调度；只使用已读到的考点类别，不复刻原文。\n\n袋中3红2蓝，均匀不放回抽2球，已知至少一红。两球都是红的条件概率是多少？",
+    "answer": "### 参考回答\nB\n\n正确B：无序样本共C(5,2)=10；至少一红9种，双红C(3,2)=3种，3/9=1/3。A是无条件概率；C把两种颜色事件等概率化；D是单抽红概率。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 283,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "条件概率"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术A：可见题面中的概率、几何与调度",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "3/10"
+        },
+        {
+          "id": "B",
+          "text": "1/3"
+        },
+        {
+          "id": "C",
+          "text": "1/2"
+        },
+        {
+          "id": "D",
+          "text": "3/5"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：无序样本共C(5,2)=10；至少一红9种，双红C(3,2)=3种，3/9=1/3。A是无条件概率；C把两种颜色事件等概率化；D是单抽红概率。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-106",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "独立命中恰好两次",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术A：可见题面中的概率、几何与调度；只使用已读到的考点类别，不复刻原文。\n\n四次独立攻击，每次命中概率1/3。恰好命中两次的概率是多少？",
+    "answer": "### 参考回答\nD\n\n正确D：C(4,2)×(1/3)^2×(2/3)^2=24/81=8/27。A只计算一种固定命中位置；C遗漏未命中因素；B把单次未命中概率误当成恰好命中两次的概率。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 284,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "二项分布"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术A：可见题面中的概率、几何与调度",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "4/81"
+        },
+        {
+          "id": "B",
+          "text": "2/3"
+        },
+        {
+          "id": "C",
+          "text": "4/9"
+        },
+        {
+          "id": "D",
+          "text": "8/27"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：C(4,2)×(1/3)^2×(2/3)^2=24/81=8/27。A只计算一种固定命中位置；C遗漏未命中因素；B把单次未命中概率误当成恰好命中两次的概率。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-107",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "含边界区间的容斥计数",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n1至120的整数（含端点）中，可以被4或6整除的有多少个？",
+    "answer": "### 参考回答\nC\n\n正确C：floor(120/4)+floor(120/6)-floor(120/12)=30+20-10=40。B重复计公倍数；A计数依据错误；D只算4的倍数。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 285,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "容斥"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "60"
+        },
+        {
+          "id": "B",
+          "text": "50"
+        },
+        {
+          "id": "C",
+          "text": "40"
+        },
+        {
+          "id": "D",
+          "text": "30"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：floor(120/4)+floor(120/6)-floor(120/12)=30+20-10=40。B重复计公倍数；A计数依据错误；D只算4的倍数。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_A_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-108",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "由最大公约数与最小公倍数计数",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n正整数a、b满足a<b，gcd(a,b)=6且lcm(a,b)=180。满足条件的数对(a,b)共有多少组？gcd表示最大公约数，lcm表示最小公倍数。",
+    "answer": "### 参考回答\nD\n\n正确D：令a=6u、b=6v，得到uv=30且gcd(u,v)=1、u<v。四组互质因子对为(1,30)、(2,15)、(3,10)、(5,6)，对应(6,180)、(12,90)、(18,60)、(30,36)。A、B漏计合法因子对；C把(a,b)与(b,a)重复计数。仅用ab=1080不足以保证gcd和lcm条件。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 286,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "最大公约数与最小公倍数"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "8"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nD\n\n正确D：令a=6u、b=6v，得到uv=30且gcd(u,v)=1、u<v。四组互质因子对为(1,30)、(2,15)、(3,10)、(5,6)，对应(6,180)、(12,90)、(18,60)、(30,36)。A、B漏计合法因子对；C把(a,b)与(b,a)重复计数。仅用ab=1080不足以保证gcd和lcm条件。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "D"
+      ]
+    }
+  },
+  {
+    "id": "gbits-109",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "整数递推的模周期",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2023技术卷：可见题面中的树、栈、排序、模运算、TCP与索引；只使用已读到的考点类别，不复刻原文。\n\na0=1，a(n+1)=(2a(n)+1) mod 7。a2026是多少？",
+    "answer": "### 参考回答\nC\n\n正确C：序列从n=0起为1、3、0、1……周期3，2026 mod3=1，因此a2026=3。A错取n mod3=2；B把n当0或混淆下标；D不是轨迹中的状态。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2023技术卷：可见题面中的树、栈、排序、模运算、TCP与索引](https://www.nowcoder.com/exam/test/55263940/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 287,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "模运算",
+      "周期"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2023技术卷：可见题面中的树、栈、排序、模运算、TCP与索引",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/55263940/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "0"
+        },
+        {
+          "id": "B",
+          "text": "1"
+        },
+        {
+          "id": "C",
+          "text": "3"
+        },
+        {
+          "id": "D",
+          "text": "6"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：序列从n=0起为1、3、0、1……周期3，2026 mod3=1，因此a2026=3。A错取n mod3=2；B把n当0或混淆下标；D不是轨迹中的状态。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2023技术卷：可见题面中的树、栈、排序、模运算、TCP与索引](https://www.nowcoder.com/exam/test/55263940/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-110",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "不同对象排列的不相邻条件",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术A：可见题面中的概率、几何与调度；只使用已读到的考点类别，不复刻原文。\n\n五个互不相同的对象A/B/C/D/E排成一行。A和B不相邻的排列数是多少？",
+    "answer": "### 参考回答\nC\n\n正确C：总排列120；AB相邻用一块，内部两序，2×4!=48；不相邻120−48=72。A只取4!；B算相邻；D只减一种内部排列。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 288,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "排列组合"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术A：可见题面中的概率、几何与调度",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "24"
+        },
+        {
+          "id": "B",
+          "text": "48"
+        },
+        {
+          "id": "C",
+          "text": "72"
+        },
+        {
+          "id": "D",
+          "text": "96"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nC\n\n正确C：总排列120；AB相邻用一块，内部两序，2×4!=48；不相邻120−48=72。A只取4!；B算相邻；D只减一种内部排列。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-111",
+    "categoryId": "rendering-graphics",
+    "type": "single_choice",
+    "title": "点到非单位法向平面的距离",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018技术A：可见题面中的概率、几何与调度；只使用已读到的考点类别，不复刻原文。\n\n三维欧氏空间，平面2x−y+2z−6=0，点P=(2,1,4)。点到平面的距离是多少？",
+    "answer": "### 参考回答\nB\n\n正确B：代入分子|4−1+8−6|=5，法向长度sqrt(4+1+4)=3，距离5/3。A错误代入；C只取法向长度；D忘除法向长度。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 289,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "平面",
+      "法向量"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018技术A：可见题面中的概率、几何与调度",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "1"
+        },
+        {
+          "id": "B",
+          "text": "5/3"
+        },
+        {
+          "id": "C",
+          "text": "3"
+        },
+        {
+          "id": "D",
+          "text": "5"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：代入分子|4−1+8−6|=5，法向长度sqrt(4+1+4)=3，距离5/3。A错误代入；C只取法向长度；D忘除法向长度。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018技术A：可见题面中的概率、几何与调度](https://www.nowcoder.com/exam/test/11252349/summary)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-112",
+    "categoryId": "rendering-graphics",
+    "type": "single_choice",
+    "title": "最近点在线段端点之外",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n二维欧氏平面，线段A=(0,0)、B=(3,0)，P=(5,2)。P到线段AB的距离平方是多少？",
+    "answer": "### 参考回答\nB\n\n正确B：投影参数t=5/3>1，线段最近点是B；距离平方(5−3)^2+2^2=8。A是到无限直线距离平方；C误取(3,0)与(0,2)差；D是到A距离平方。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 290,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "向量",
+      "最近点"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "4"
+        },
+        {
+          "id": "B",
+          "text": "8"
+        },
+        {
+          "id": "C",
+          "text": "13"
+        },
+        {
+          "id": "D",
+          "text": "29"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nB\n\n正确B：投影参数t=5/3>1，线段最近点是B；距离平方(5−3)^2+2^2=8。A是到无限直线距离平方；C误取(3,0)与(0,2)差；D是到A距离平方。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-113",
+    "categoryId": "rendering-graphics",
+    "type": "single_choice",
+    "title": "叉积求三角形面积",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体推导或操作未由本次可见题面确认，按预测训练处理。\n\n二维点A=(1,1)、B=(5,2)、C=(2,4)，三角形面积是多少？",
+    "answer": "### 参考回答\nA\n\n正确A：AB=(4,1)、AC=(1,3)，二维叉积=4×3−1×1=11；面积为绝对值一半11/2。B忘除2；C减法或坐标差错；D只取外包矩形一半。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+    "difficulty": "medium",
+    "order": 291,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "叉积",
+      "面积"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题自主推导与独立验证",
+    "sourceUrl": "",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "11/2"
+        },
+        {
+          "id": "B",
+          "text": "11"
+        },
+        {
+          "id": "C",
+          "text": "5"
+        },
+        {
+          "id": "D",
+          "text": "6"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nA\n\n正确A：AB=(4,1)、AC=(1,3)，二维叉积=4×3−1×1=11；面积为绝对值一半11/2。B忘除2；C减法或坐标差错；D只取外包矩形一半。\n\n### 评分点\n选出唯一正确选项，并说明排除其他选项的理由。\n\n### 易错点\n按题目给定条件判断，不添加未声明的实现或概率假设。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测；该具体推导/操作未由可见历年题面确认。按题面规则自主推导并以独立模型验证。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-114",
+    "categoryId": "cpp-basics",
+    "type": "fill_blank",
+    "title": "static状态与循环跳过",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018提前批：可见题面中的数组、字符串、static与整数算法；只使用已读到的考点类别，不复刻原文。\n\nC++17完整程序，填写最后输出的两个整数。\n\n```cpp\n#include <iostream>\nint next() {\n    static int value = 1;\n    int old = value;\n    ++value;\n    return old;\n}\nint main() {\n    int a[5] = {};\n    for (int i = 0; i < 5; ++i) {\n        int v = next();\n        if (v == 3) continue;\n        a[i] = v;\n    }\n    int sum = 0;\n    int count = 0;\n    for (int v : a) {\n        sum += v;\n        if (v != 0) ++count;\n    }\n    std::cout << sum << ' ' << count;\n}\n```",
+    "answer": "### 参考回答\n输出为 `12 4`。\n\n`next`返回旧值再自增，五次返回1,2,3,4,5；跳过3后数组为1,2,0,4,5，总和12，非零数4。continue只跳过本次存储，不撤销函数调用。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/stmt.dcl)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 292,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "static",
+      "代码阅读"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018提前批：可见题面中的数组、字符串、static与整数算法",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11251616/summary",
+    "payload": {
+      "blanks": [
+        {
+          "id": "output",
+          "label": "完整输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出为 `12 4`。\n\n`next`返回旧值再自增，五次返回1,2,3,4,5；跳过3后数组为1,2,0,4,5，总和12，非零数4。continue只跳过本次存储，不撤销函数调用。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/stmt.dcl)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "output": [
+          "12 4"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-115",
+    "categoryId": "algorithms-datastructures",
+    "type": "fill_blank",
+    "title": "无乘法溢出的整数平方根",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018提前批：可见题面中的数组、字符串、static与整数算法；只使用已读到的考点类别，不复刻原文。\n\nC++17完整程序，填写输出。\n\n```cpp\n#include <iostream>\nlong long root(long long n) {\n    long long lo = 1;\n    long long hi = n;\n    long long ans = 0;\n    while (lo <= hi) {\n        long long mid = lo + (hi - lo) / 2;\n        if (mid <= n / mid) {\n            ans = mid;\n            lo = mid + 1;\n        } else {\n            hi = mid - 1;\n        }\n    }\n    return ans;\n}\nint main() {\n    long long n = 58;\n    std::cout << root(n);\n}\n```",
+    "answer": "### 参考回答\n输出为 `7`。\n\n程序在[1,58]寻找最大的m使m≤58/m，等价于m²≤58；左侧可行时保留m并向右找，返回floor(sqrt(58))=7。除数m始终正数。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/expr.mul)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 293,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "整数平方根",
+      "二分"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018提前批：可见题面中的数组、字符串、static与整数算法",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11251616/summary",
+    "payload": {
+      "blanks": [
+        {
+          "id": "output",
+          "label": "完整输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出为 `7`。\n\n程序在[1,58]寻找最大的m使m≤58/m，等价于m²≤58；左侧可行时保留m并向右找，返回floor(sqrt(58))=7。除数m始终正数。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/expr.mul)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "output": [
+          "7"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-116",
+    "categoryId": "algorithms-datastructures",
+    "type": "fill_blank",
+    "title": "快速幂的状态推进",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2018提前批：可见题面中的数组、字符串、static与整数算法；只使用已读到的考点类别，不复刻原文。\n\nC++17完整程序，填写输出的最终结果。\n\n```cpp\n#include <iostream>\nlong long power(long long a, long long b, long long m) {\n    long long result = 1;\n    a %= m;\n    while (b > 0) {\n        if ((b & 1) != 0) {\n            result = result * a % m;\n        }\n        a = a * a % m;\n        b >>= 1;\n    }\n    return result;\n}\nint main() {\n    long long base = 7;\n    long long exponent = 13;\n    long long modulus = 19;\n    std::cout << power(base, exponent, modulus);\n}\n```",
+    "answer": "### 参考回答\n输出为 `7`。\n\n计算7^13 mod19。每轮在指数当前位为1时乘当前底数，底数平方、指数右移；7^3 mod19=1，13 mod3=1，因此结果为7。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/expr.mul)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 294,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "快速幂"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2018提前批：可见题面中的数组、字符串、static与整数算法",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11251616/summary",
+    "payload": {
+      "blanks": [
+        {
+          "id": "output",
+          "label": "完整输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出为 `7`。\n\n计算7^13 mod19。每轮在指数当前位为1时乘当前底数，底数平方、指数右移；7^3 mod19=1，13 mod3=1，因此结果为7。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2018提前批：可见题面中的数组、字符串、static与整数算法](https://www.nowcoder.com/exam/test/11251616/summary)。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/expr.mul)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "output": [
+          "7"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-117",
+    "categoryId": "algorithms-datastructures",
+    "type": "fill_blank",
+    "title": "按邻接矩阵执行DFS",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。已读材料不能确认这段DFS执行轨迹的具体考点，按预测训练处理。\n\nC++17完整程序：节点编号0–3，邻居按编号升序扫描，填写从0出发的访问输出（无空格）。\n\n```cpp\n#include <iostream>\nint edge[4][4] = {\n    {0, 1, 1, 0},\n    {0, 0, 0, 1},\n    {0, 0, 0, 1},\n    {0, 0, 0, 0}\n};\nbool visited[4] = {};\nvoid dfs(int u) {\n    visited[u] = true;\n    std::cout << u;\n    for (int v = 0; v < 4; ++v) {\n        if (edge[u][v] != 0 && !visited[v]) {\n            dfs(v);\n        }\n    }\n}\nint main() {\n    dfs(0);\n}\n```",
+    "answer": "### 参考回答\n输出为 `0132`。\n\n先0，再最小未访问邻居1，再3。3没有出边，回到0后访问2，2→3但3已访问，停止。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，图与扫描规则按题面定义；没有已核实的历年完整DFS程序证据。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/stmt.iter)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 295,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "DFS",
+      "访问顺序"
+    ],
+    "sourceTitle": "预测考点·原创训练 / DFS程序轨迹；不主张历年考过",
+    "sourceUrl": "https://timsong-cpp.github.io/cppwp/n4659/stmt.iter",
+    "payload": {
+      "blanks": [
+        {
+          "id": "output",
+          "label": "完整输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出为 `0132`。\n\n先0，再最小未访问邻居1，再3。3没有出边，回到0后访问2，2→3但3已访问，停止。\n\n### 评分点\n写出完整输出；空格分隔各项。\n\n### 易错点\n逐步维护状态；中间值与最后输出不同，注意边界是否包含。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，图与扫描规则按题面定义；没有已核实的历年完整DFS程序证据。 技术依据：[规范/官方说明](https://timsong-cpp.github.io/cppwp/n4659/stmt.iter)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "output": [
+          "0132"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-118",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "批量补给后的区间资源查询",
+    "question": "**来源边界：【历年考点·原创变式】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。考点依据：2025-04-24第一手笔经：区间减法/前缀和编程回忆；只使用已读到的考点类别，不复刻原文。\n\n有n个位置，初值a[i]。先执行m次更新：给闭区间[l,r]的每个位置加x（x可为负）。所有更新结束后，再回答q次闭区间和查询。更新与查询不交错。\n\n**输入**：第一行n m q；第二行n个初值；接下来m行l r x；再q行l r。1≤n,m,q≤200000，1≤l≤r≤n，|a[i]|、|x|≤10^6。\n\n**输出**：每个查询一行最终区间和，使用64位整数。\n\n**样例输入**\n```text\n5 2 3\n3 0 2 1 4\n2 5 3\n1 3 -2\n1 5\n2 3\n5 5\n```\n**样例输出**\n```text\n16\n4\n7\n```",
+    "answer": "### 参考回答\n差分批量更新，再重建最终数组的前缀和。\n\n每次更新对diff[l]加x、diff[r+1]减x；累计diff得到每个位置的总增量。再前缀累加最终值，查询用pref[r]−pref[l−1]。\n\n**正确性**：一个更新仅在l开始生效，在r+1取消；累计差分因此恰好包含覆盖当前位置的更新。最终数组前缀相减正好得到查询区间。\n\n**复杂度**：O(n+m+q)时间，O(n)空间。最大最终绝对总和不超过200000×(10^6+200000×10^6)<4.1×10^16，long long足够。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n, m, q; cin >> n >> m >> q;\n    vector<long long> a(n + 1), diff(n + 2), pref(n + 1);\n    for (int i = 1; i <= n; ++i) cin >> a[i];\n    for (int j = 0; j < m; ++j) {\n        int l, r; long long x; cin >> l >> r >> x;\n        diff[l] += x;\n        diff[r + 1] -= x;\n    }\n    long long cur = 0;\n    for (int i = 1; i <= n; ++i) {\n        cur += diff[i];\n        pref[i] = pref[i - 1] + a[i] + cur;\n    }\n    while (q--) {\n        int l, r; cin >> l >> r;\n        cout << pref[r] - pref[l - 1] << '\\n';\n    }\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2025-04-24第一手笔经：区间减法/前缀和编程回忆](https://www.nowcoder.com/feed/main/detail/f3ad63377c7b4bee94641bcb9eb6efc7?sourceSSR=enterprise)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 296,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "历年考点·原创变式",
+      "差分",
+      "前缀和",
+      "原创条件"
+    ],
+    "sourceTitle": "历年考点·原创变式 / 2025-04-24第一手笔经：区间减法/前缀和编程回忆",
+    "sourceUrl": "https://www.nowcoder.com/feed/main/detail/f3ad63377c7b4bee94641bcb9eb6efc7?sourceSSR=enterprise",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：按题意从标准输入读取，向标准输出写出答案。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n差分批量更新，再重建最终数组的前缀和。\n\n每次更新对diff[l]加x、diff[r+1]减x；累计diff得到每个位置的总增量。再前缀累加最终值，查询用pref[r]−pref[l−1]。\n\n**正确性**：一个更新仅在l开始生效，在r+1取消；累计差分因此恰好包含覆盖当前位置的更新。最终数组前缀相减正好得到查询区间。\n\n**复杂度**：O(n+m+q)时间，O(n)空间。最大最终绝对总和不超过200000×(10^6+200000×10^6)<4.1×10^16，long long足够。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n, m, q; cin >> n >> m >> q;\n    vector<long long> a(n + 1), diff(n + 2), pref(n + 1);\n    for (int i = 1; i <= n; ++i) cin >> a[i];\n    for (int j = 0; j < m; ++j) {\n        int l, r; long long x; cin >> l >> r >> x;\n        diff[l] += x;\n        diff[r + 1] -= x;\n    }\n    long long cur = 0;\n    for (int i = 1; i <= n; ++i) {\n        cur += diff[i];\n        pref[i] = pref[i - 1] + a[i] + cur;\n    }\n    while (q--) {\n        int l, r; cin >> l >> r;\n        cout << pref[r] - pref[l - 1] << '\\n';\n    }\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n[2025-04-24第一手笔经：区间减法/前缀和编程回忆](https://www.nowcoder.com/feed/main/detail/f3ad63377c7b4bee94641bcb9eb6efc7?sourceSSR=enterprise)。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  },
+  {
+    "id": "gbits-119",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "带固定冷却的最多活动",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n一个角色可参加若干活动，每项占用半开区间[s,e)。完成一项后必须冷却c时间，下一项开始需s_next≥e_prev+c。第一项前不需冷却，最后一项后无需安排活动。所有活动等价值且不可拆分，求最多参加数量。\n\n**输入**：首行n c；之后n行s e。1≤n≤200000，0≤c≤10^9，0≤s<e≤10^9，整数。\n\n**输出**：最大数量。\n\n**样例输入**\n```text\n5 2\n0 3\n2 4\n5 6\n7 9\n8 10\n```\n**样例输出**\n```text\n3\n```",
+    "answer": "### 参考回答\n按结束时刻升序，依次选择开始时刻不早于当前可用时刻的活动。\n\n样例可选[0,3)、[5,6)、[8,10)。固定c使结束时刻越早，可用时刻e+c也越早。\n\n**交换证明**：任一最优可行序列的首项可换成所有可选活动中最早结束的一项，它的结束及冷却终点不晚，后续活动仍可选。删除已选项与不兼容项后重复，得到最优数量。结束相同按任意次序不影响结果。\n\n**复杂度**：O(n log n)时间，O(n)空间。ready用long long。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n; long long cool; cin >> n >> cool;\n    vector<pair<long long,long long>> jobs;\n    for (int i = 0; i < n; ++i) {\n        long long s, e; cin >> s >> e;\n        jobs.push_back({e, s});\n    }\n    sort(jobs.begin(), jobs.end());\n    long long ready = 0;\n    int ans = 0;\n    for (auto [e, s] : jobs) {\n        if (s >= ready) {\n            ++ans;\n            ready = e + cool;\n        }\n    }\n    cout << ans << '\\n';\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 297,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "贪心",
+      "区间调度",
+      "固定冷却"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：按题意从标准输入读取，向标准输出写出答案。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n按结束时刻升序，依次选择开始时刻不早于当前可用时刻的活动。\n\n样例可选[0,3)、[5,6)、[8,10)。固定c使结束时刻越早，可用时刻e+c也越早。\n\n**交换证明**：任一最优可行序列的首项可换成所有可选活动中最早结束的一项，它的结束及冷却终点不晚，后续活动仍可选。删除已选项与不兼容项后重复，得到最优数量。结束相同按任意次序不影响结果。\n\n**复杂度**：O(n log n)时间，O(n)空间。ready用long long。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n; long long cool; cin >> n >> cool;\n    vector<pair<long long,long long>> jobs;\n    for (int i = 0; i < n; ++i) {\n        long long s, e; cin >> s >> e;\n        jobs.push_back({e, s});\n    }\n    sort(jobs.begin(), jobs.end());\n    long long ready = 0;\n    int ans = 0;\n    for (auto [e, s] : jobs) {\n        if (s >= ready) {\n            ++ans;\n            ready = e + cool;\n        }\n    }\n    cout << ans << '\\n';\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  },
+  {
+    "id": "gbits-120",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "保持顺序的资源分组上限",
+    "question": "**来源边界：【预测考点·原创训练】。** 本题题干、选项、数值与解答均为原创训练，不是官方原题，也不代表今年会考。该具体考点未由本次已读历年材料确认，按预测训练处理。\n\n给定n个非负任务耗费，必须保持原顺序，切成恰好k个非空连续组。每组耗费为组内之和，求所有组耗费最大值的最小可能值。任务不能拆分，也不能重新排序。\n\n**输入**：第一行n k；第二行n个a[i]。1≤k≤n≤200000，0≤a[i]≤10^9。\n\n**输出**：最小上限，64位整数。\n\n**样例输入**\n```text\n5 3\n4 0 7 2 5\n```\n**样例输出**\n```text\n7\n```",
+    "answer": "### 参考回答\n二分最大组和上限，用从左到右尽量装满的贪心判定所需最少组数是否≤k。\n\n样例切为[4,0]、[7]、[2,5]，上限7。\n\n**判定正确性**：在非负前提下，当前组能纳入的最长前缀不会使后面需要更多组。任何同上限方案第一组不会结束得比它更晚；逐组交换可知贪心使用最少组。若最少组数≤k，因为k≤n，可以不断拆分含多个元素的组达到恰好k；非负数保证拆后组和不增。因此判定单调，最小可行上限可二分。\n\n**边界**：下界max(a)，上界sum(a)；全零时两界均0；k=n时结果max(a)。允许负数时该证明不成立，本题明确非负。\n\n**复杂度**：O(n log(sum(a)+1))时间，O(n)空间；sum最大2×10^14。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\n#include <algorithm>\n#include <numeric>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n, k; cin >> n >> k;\n    vector<long long> a(n);\n    for (auto &x : a) cin >> x;\n    long long lo = *max_element(a.begin(), a.end());\n    long long hi = accumulate(a.begin(), a.end(), 0LL);\n    auto feasible = [&](long long cap) {\n        int groups = 1;\n        long long sum = 0;\n        for (long long x : a) {\n            if (sum + x > cap) { ++groups; sum = x; }\n            else sum += x;\n        }\n        return groups <= k;\n    };\n    while (lo < hi) {\n        long long mid = lo + (hi - lo) / 2;\n        if (feasible(mid)) hi = mid;\n        else lo = mid + 1;\n    }\n    cout << lo << '\\n';\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+    "difficulty": "medium",
+    "order": 298,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺C卷",
+      "预测考点·原创训练",
+      "二分答案",
+      "连续分组",
+      "非负数组"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 本题为合理拓展预测；不主张历年考过",
+    "sourceUrl": "",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：按题意从标准输入读取，向标准输出写出答案。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n二分最大组和上限，用从左到右尽量装满的贪心判定所需最少组数是否≤k。\n\n样例切为[4,0]、[7]、[2,5]，上限7。\n\n**判定正确性**：在非负前提下，当前组能纳入的最长前缀不会使后面需要更多组。任何同上限方案第一组不会结束得比它更晚；逐组交换可知贪心使用最少组。若最少组数≤k，因为k≤n，可以不断拆分含多个元素的组达到恰好k；非负数保证拆后组和不增。因此判定单调，最小可行上限可二分。\n\n**边界**：下界max(a)，上界sum(a)；全零时两界均0；k=n时结果max(a)。允许负数时该证明不成立，本题明确非负。\n\n**复杂度**：O(n log(sum(a)+1))时间，O(n)空间；sum最大2×10^14。\n\n**参考实现**\n```cpp\n#include <iostream>\n#include <vector>\n#include <algorithm>\n#include <numeric>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n, k; cin >> n >> k;\n    vector<long long> a(n);\n    for (auto &x : a) cin >> x;\n    long long lo = *max_element(a.begin(), a.end());\n    long long hi = accumulate(a.begin(), a.end(), 0LL);\n    auto feasible = [&](long long cap) {\n        int groups = 1;\n        long long sum = 0;\n        for (long long x : a) {\n            if (sum + x > cap) { ++groups; sum = x; }\n            else sum += x;\n        }\n        return groups <= k;\n    };\n    while (lo < hi) {\n        long long mid = lo + (hi - lo) / 2;\n        if (feasible(mid)) hi = mid;\n        else lo = mid + 1;\n    }\n    cout << lo << '\\n';\n}\n```\n\n### 评分点\n正确建模与边界、证明或解释正确性、满足复杂度，样例和边界均正确。\n\n### 易错点\n注意闭区间端点、64位累计值以及相等时的判断；本题不是在线判题。\n\n### 验证\n`python3 scripts/gbits-sprint/verify-c.py` 读取本题实际JSON，代码题以C++17编译运行；数学和结构题用独立计算，算法以独立暴力对拍。具体覆盖与限制见 `docs/GBITS_PAPER_C_VERIFICATION.md`。\n\n### 来源与适用范围\n本题为原创预测，数学/结构规则按题面定义，自主推导并用独立计算复核。 题面中给定的规则优先；代码按C++17。历年来源只证明所列考点曾可见，不证明本题或今年题型。",
+      "rubricMd": "按参考回答中的建模、过程、边界与复杂度自查；算法由学习者自评，不自动判AC。",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  }
+]

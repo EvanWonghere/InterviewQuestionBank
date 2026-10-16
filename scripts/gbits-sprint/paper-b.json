@@ -1,0 +1,912 @@
+[
+  {
+    "id": "gbits-069",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "const 引用看到的是快照吗",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2023技术卷可见引用相关代码填空；本题原创比较别名与值快照。\n\n下面程序输出什么？\n```cpp\n#include <iostream>\nint main() {\n    int x = 2;\n    const int& observed = x;\n    int snapshot = observed;\n    x += 5;\n    std::cout << observed << \" \" << snapshot;\n}\n```",
+    "answer": "### 参考回答\nobserved仍是x的别名，只是不能通过observed修改x；通过非const的x合法修改后读到7。snapshot是独立值2。A把引用当快照；C把值拷贝也当别名；D把只读访问路径误当对象被冻结。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023技术卷可见引用相关代码填空；本题原创比较别名与值快照。\n\n[技术依据](https://eel.is/c++draft/dcl.ref)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 247,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "const引用观察"
+    ],
+    "sourceTitle": "2023技术卷可见引用相关代码填空；本题原创比较别名与值快照。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/55263940/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "2 2"
+        },
+        {
+          "id": "B",
+          "text": "7 2"
+        },
+        {
+          "id": "C",
+          "text": "7 7"
+        },
+        {
+          "id": "D",
+          "text": "无法编译：const引用绑定后x不能修改"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nobserved仍是x的别名，只是不能通过observed修改x；通过非const的x合法修改后读到7。snapshot是独立值2。A把引用当快照；C把值拷贝也当别名；D把只读访问路径误当对象被冻结。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023技术卷可见引用相关代码填空；本题原创比较别名与值快照。\n\n[技术依据](https://eel.is/c++draft/dcl.ref)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 B\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-070",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "数组切片中的指针距离",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 历年材料可见数组与短程序，但未找到本题指针距离规则的直接题面证据。\n\n下面程序只在同一个数组内做指针运算，输出是什么？\n```cpp\n#include <iostream>\nint main() {\n    int a[] = {4, 7, 11, 16, 22};\n    int* p = a + 1;\n    int* q = a + 4;\n    std::cout << q - p << \" \" << *(p + 2);\n}\n```",
+    "answer": "### 参考回答\n同数组指针相减得到元素个数3，p+2指向下标3的16。A把元素距离误当字节；B漏了一次偏移；D把端点算成闭区间数量。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/exam/test/11251616/summary)：2018 提前批可见数组与短 C/C++ 程序计算；本题为明确同数组边界的原创变式。\n\n[技术依据](https://eel.is/c++draft/expr.add)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+    "difficulty": "easy",
+    "order": 248,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "数组指针"
+    ],
+    "sourceTitle": "原创预测训练 / 数组指针",
+    "sourceUrl": "https://eel.is/c++draft/expr.add",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "12 16"
+        },
+        {
+          "id": "B",
+          "text": "3 11"
+        },
+        {
+          "id": "C",
+          "text": "3 16"
+        },
+        {
+          "id": "D",
+          "text": "4 22"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n同数组指针相减得到元素个数3，p+2指向下标3的16。A把元素距离误当字节；B漏了一次偏移；D把端点算成闭区间数量。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/exam/test/11251616/summary)：2018 提前批可见数组与短 C/C++ 程序计算；本题为明确同数组边界的原创变式。\n\n[技术依据](https://eel.is/c++draft/expr.add)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+      "rubricMd": "- 正确选 C\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-071",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "函数内静态状态的连续调用",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2017 技术卷与2018提前批可见 static 程序计算，两个样本有重叠，不作为独立频次证据。\n\n下面三次调用写在三个完整语句中，输出是什么？\n```cpp\n#include <iostream>\nint next(int step) {\n    static int total = 2;\n    total += step;\n    return total;\n}\nint main() {\n    int a = next(3);\n    int b = next(-1);\n    int c = next(a);\n    std::cout << a << \" \" << b << \" \" << c;\n}\n```",
+    "answer": "### 参考回答\n静态total初始化一次，依次2→5→4→9。A每次重新从2起算；C最后忽略当前4；D忽略静态初值与累计效果。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/6128323/summary)：2017 技术卷与2018提前批可见 static 程序计算，两个样本有重叠，不作为独立频次证据。\n\n[技术依据](https://eel.is/c++draft/stmt.dcl)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 249,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "static程序阅读"
+    ],
+    "sourceTitle": "2017 技术卷与2018提前批可见 static 程序计算，两个样本有重叠，不作为独立频次证据。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/6128323/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "5 1 7"
+        },
+        {
+          "id": "B",
+          "text": "5 4 9"
+        },
+        {
+          "id": "C",
+          "text": "5 4 7"
+        },
+        {
+          "id": "D",
+          "text": "3 -1 5"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n静态total初始化一次，依次2→5→4→9。A每次重新从2起算；C最后忽略当前4；D忽略静态初值与累计效果。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/6128323/summary)：2017 技术卷与2018提前批可见 static 程序计算，两个样本有重叠，不作为独立频次证据。\n\n[技术依据](https://eel.is/c++draft/stmt.dcl)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 B\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-072",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "范围 for 中的值与引用",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 本题是根据基础知识作出的备考预测；未找到该具体考点在已核看吉比特历年题面的直接证据。\n\n下面程序输出什么？\n```cpp\n#include <iostream>\n#include <vector>\nint main() {\n    std::vector<int> a = {1, 2, 3};\n    for (auto x : a) x *= 2;\n    for (auto& x : a) x += 1;\n    std::cout << a[0] << \" \" << a[1] << \" \" << a[2];\n}\n```",
+    "answer": "### 参考回答\n第一轮x为每个元素的值副本，不改a；第二轮x为元素引用，把a变成[2,3,4]。A错误认为第一轮也修改原元素；B忽略第二轮；D只执行了本来无效的翻倍。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://eel.is/c++draft/stmt.ranged)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 250,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "范围for与引用"
+    ],
+    "sourceTitle": "原创预测训练 / 范围for与引用",
+    "sourceUrl": "https://eel.is/c++draft/stmt.ranged",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "3 5 7"
+        },
+        {
+          "id": "B",
+          "text": "1 2 3"
+        },
+        {
+          "id": "C",
+          "text": "2 3 4"
+        },
+        {
+          "id": "D",
+          "text": "2 4 6"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n第一轮x为每个元素的值副本，不改a；第二轮x为元素引用，把a变成[2,3,4]。A错误认为第一轮也修改原元素；B忽略第二轮；D只执行了本来无效的翻倍。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://eel.is/c++draft/stmt.ranged)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 C\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-073",
+    "categoryId": "cpp-basics",
+    "type": "single_choice",
+    "title": "switch 的贯穿与 break",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 历年材料可见基础程序阅读，但未找到本题 switch 贯穿规则的直接题面证据。\n\n下面程序输出什么？\n```cpp\n#include <iostream>\nint score(int x) {\n    int s = 0;\n    switch (x) {\n        case 1: s += 2;\n        case 2: s += 3; break;\n        default: s = 9;\n    }\n    return s;\n}\nint main() {\n    int a = score(1);\n    int b = score(2);\n    int c = score(0);\n    std::cout << a << \" \" << b << \" \" << c;\n}\n```",
+    "answer": "### 参考回答\ncase1没有break，先加2再贯穿case2加3，得5；case2直接得3；0走default得9。A擅自把case末尾当break；C越过已有break；D把case2也当作先走case1。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/exam/test/11251616/summary)：2018提前批可见分支与循环等短程序阅读；本题原创训练switch贯穿。\n\n[技术依据](https://eel.is/c++draft/stmt.switch)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+    "difficulty": "easy",
+    "order": 251,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "switch贯穿"
+    ],
+    "sourceTitle": "原创预测训练 / switch贯穿",
+    "sourceUrl": "https://eel.is/c++draft/stmt.switch",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "2 3 9"
+        },
+        {
+          "id": "B",
+          "text": "5 3 9"
+        },
+        {
+          "id": "C",
+          "text": "14 12 9"
+        },
+        {
+          "id": "D",
+          "text": "5 5 9"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\ncase1没有break，先加2再贯穿case2加3，得5；case2直接得3；0走default得9。A擅自把case末尾当break；C越过已有break；D把case2也当作先走case1。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/exam/test/11251616/summary)：2018提前批可见分支与循环等短程序阅读；本题原创训练switch贯穿。\n\n[技术依据](https://eel.is/c++draft/stmt.switch)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+      "rubricMd": "- 正确选 B\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-074",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "按升序访问邻点的 BFS 队列",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2023 技术卷可见图遍历类算法；本题原创固定扫描顺序的队列轨迹。\n\n无向图顶点0–5，边为(0,1),(0,3),(1,2),(1,4),(3,4),(4,5)。从0做BFS，顶点在**入队时**标记，各点邻点按编号升序扫描。出队顺序是哪一项？",
+    "answer": "### 参考回答\n0先入1、3；1再入2、4；3遇到已入队4不重复；4入5。故0,1,3,2,4,5。A类似深度优先；C违反升序；D交换了2和4的入队顺序。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023 技术卷可见图遍历类算法；本题原创固定扫描顺序的队列轨迹。\n\n[技术依据](https://algs4.cs.princeton.edu/41graph/BreadthFirstPaths.java.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 252,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "BFS队列"
+    ],
+    "sourceTitle": "2023 技术卷可见图遍历类算法；本题原创固定扫描顺序的队列轨迹。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/55263940/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "0,1,2,4,3,5"
+        },
+        {
+          "id": "B",
+          "text": "0,1,3,2,4,5"
+        },
+        {
+          "id": "C",
+          "text": "0,3,1,4,2,5"
+        },
+        {
+          "id": "D",
+          "text": "0,1,3,4,2,5"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n0先入1、3；1再入2、4；3遇到已入队4不重复；4入5。故0,1,3,2,4,5。A类似深度优先；C违反升序；D交换了2和4的入队顺序。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023 技术卷可见图遍历类算法；本题原创固定扫描顺序的队列轨迹。\n\n[技术依据](https://algs4.cs.princeton.edu/41graph/BreadthFirstPaths.java.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 B\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-075",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "自底向上建堆后的数组",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 B卷可见堆程序、2025回忆含小根堆题；仅用2018 B可见堆考点支持本变式。\n\n用下标从0开始的小根堆。初始数组[9,4,7,1,3]，从最后一个非叶结点向前逐个下沉；每次与较小的孩子交换，直到满足堆序。建堆结束数组是哪项？",
+    "answer": "### 参考回答\ni=1时4与1交换得到[9,1,7,4,3]；i=0时9与1，再与3交换，得到[1,3,7,4,9]。C是其他合法堆但不是指定过程结果；B的根右孩子3来自不存在的交换；D结点4大于其孩子3，不满足堆序。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷可见堆程序、2025回忆含小根堆题；仅用2018 B可见堆考点支持本变式。\n\n[技术依据](https://algs4.cs.princeton.edu/24pq/)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 253,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "自底向上建堆"
+    ],
+    "sourceTitle": "2018 B卷可见堆程序、2025回忆含小根堆题；仅用2018 B可见堆考点支持本变式。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "[1,3,7,4,9]"
+        },
+        {
+          "id": "B",
+          "text": "[1,4,3,9,7]"
+        },
+        {
+          "id": "C",
+          "text": "[1,3,7,9,4]"
+        },
+        {
+          "id": "D",
+          "text": "[1,4,7,9,3]"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\ni=1时4与1交换得到[9,1,7,4,3]；i=0时9与1，再与3交换，得到[1,3,7,4,9]。C是其他合法堆但不是指定过程结果；B的根右孩子3来自不存在的交换；D结点4大于其孩子3，不满足堆序。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷可见堆程序、2025回忆含小根堆题；仅用2018 B可见堆考点支持本变式。\n\n[技术依据](https://algs4.cs.princeton.edu/24pq/)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 A\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-076",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "线性探测删除后的查找",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 B卷可见散列查找；本题原创考线性探测删除标记，不复用旧题的泛谈冲突。\n\n散列表长7，h(k)=k mod 7，冲突向右循环探测。依次插入10、17、24，随后删除17。现在查找24时，以下哪种删除设计能保持查找正确，且仍允许“遇从未用过的槽就结束”？",
+    "answer": "### 参考回答\n三键依次在3、4、5。删除槽4须留下墓碑，或另做重新散列；在题给查找规则下墓碑可跨过。A破坏哈希起点；B使查找在4过早结束；D原始起点3仍是10。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷可见散列查找；本题原创考线性探测删除标记，不复用旧题的泛谈冲突。\n\n[技术依据](https://algs4.cs.princeton.edu/34hash/)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 254,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "线性探测删除"
+    ],
+    "sourceTitle": "2018 B卷可见散列查找；本题原创考线性探测删除标记，不复用旧题的泛谈冲突。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "把槽3标记为从未用过"
+        },
+        {
+          "id": "B",
+          "text": "把槽4标记为从未用过"
+        },
+        {
+          "id": "C",
+          "text": "把槽4留下删除标记，查找继续跨过该标记"
+        },
+        {
+          "id": "D",
+          "text": "删除17后只检查24的哈希起点就能找到"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n三键依次在3、4、5。删除槽4须留下墓碑，或另做重新散列；在题给查找规则下墓碑可跨过。A破坏哈希起点；B使查找在4过早结束；D原始起点3仍是10。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷可见散列查找；本题原创考线性探测删除标记，不复用旧题的泛谈冲突。\n\n[技术依据](https://algs4.cs.princeton.edu/34hash/)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 C\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-077",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "非负加权图的最短距离",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 本题预测 Dijkstra 与加权最短路；不把历年出现图遍历当作该具体考点的直接证据。\n\n无向图有0–4共5个顶点，6条边。以下三元组为(端点u,端点v,权重w)：\n\n(0,1,4)、(0,2,1)、(2,1,2)、(1,3,1)、(2,3,7)、(3,4,3)。\n\n权重均非负，路径长度为沿途边权之和。用Dijkstra求从0到4的最短路径，其距离是多少？",
+    "answer": "### 参考回答\n正确选A，最短路径0→2→1→3→4，总权重1+2+1+3=7。Dijkstra依次确定的最短距离为d(0)=0、d(2)=1、d(1)=3、d(3)=4、d(4)=7。B对应0→1→3→4，虽然边数更少却更重；C对应0→2→3→4；D只是到3的距离，尚未到终点4。\n\n### 评分点\n- 正确选 A\n- 按边权求和而不是按边数\n- 能通过松弛更新1和3的距离\n\n### 易错点\n无权BFS只保证最少边数；本题边权不同。Dijkstra要求非负边权，不能把第一次发现顶点时的暂定距离当成最终距离。\n\n### 验证\nverify-b.py读取本题实际边集，使用Floyd全点对动态规划及枚举全部简单路径两种独立模型，均得0到4距离7；并用错误答案临时副本确认检查会失败。\n\n### 来源与适用范围\n本题标签为预测；没有具体历年题面支持，不声称该Dijkstra过程题曾考过。[算法作者资料](https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/DijkstraUndirectedSP.html)明确非负加权无向图的适用范围。本题给定完整边集，按路径边权总和定义距离。",
+    "difficulty": "medium",
+    "order": 255,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "Dijkstra加权最短路"
+    ],
+    "sourceTitle": "原创预测训练 / Dijkstra非负加权最短路",
+    "sourceUrl": "https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/DijkstraUndirectedSP.html",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "7"
+        },
+        {
+          "id": "B",
+          "text": "8"
+        },
+        {
+          "id": "C",
+          "text": "11"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n正确选A，最短路径0→2→1→3→4，总权重1+2+1+3=7。Dijkstra依次确定的最短距离为d(0)=0、d(2)=1、d(1)=3、d(3)=4、d(4)=7。B对应0→1→3→4，虽然边数更少却更重；C对应0→2→3→4；D只是到3的距离，尚未到终点4。\n\n### 评分点\n- 正确选 A\n- 按边权求和而不是按边数\n- 能通过松弛更新1和3的距离\n\n### 易错点\n无权BFS只保证最少边数；本题边权不同。Dijkstra要求非负边权，不能把第一次发现顶点时的暂定距离当成最终距离。\n\n### 验证\nverify-b.py读取本题实际边集，使用Floyd全点对动态规划及枚举全部简单路径两种独立模型，均得0到4距离7；并用错误答案临时副本确认检查会失败。\n\n### 来源与适用范围\n本题标签为预测；没有具体历年题面支持，不声称该Dijkstra过程题曾考过。[算法作者资料](https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/DijkstraUndirectedSP.html)明确非负加权无向图的适用范围。本题给定完整边集，按路径边权总和定义距离。",
+      "rubricMd": "- 正确选 A\n- 按边权求和而不是按边数\n- 能通过松弛更新1和3的距离",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-078",
+    "categoryId": "os-fundamentals",
+    "type": "single_choice",
+    "title": "可抢占 SRTF 的平均等待时间",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 A/B可见进程调度；这里只据此支持调度大类，不声称原卷使用本题的SRTF条件。\n\n单核**可抢占SRTF（最短剩余时间优先）**，调度开销为0。进程分别为P1(0,7)、P2(2,4)、P3(4,1)，括号为(到达时刻,所需CPU时间)，单位相同。任何新进程到达时，都从已到达且未完成的进程选择剩余时间最短者，可以立即抢占当前进程；剩余时间相同时先选到达更早者。\n\n等待时间=完成时刻−到达时刻−所需CPU时间。三个进程的平均等待时间是多少？",
+    "answer": "### 参考回答\n正确选C。执行区间为[0,2)P1、[2,4)P2、[4,5)P3、[5,7)P2、[7,12)P1。三个完成时刻分别为12、7、5，等待时间依次12−0−7=5、7−2−4=1、5−4−1=0，平均(5+1+0)/3=2。A只计P1的5而漏P2等待；B多算等待；D为4也不满足各完成时刻与题给等待公式。\n\n### 评分点\n- 正确选 C\n- t=2和t=4均按更短剩余时间抢占\n- 等待时间包含被抢占后的等待\n\n### 易错点\n这是可抢占SRTF，不能照非抢占SJF让P1一直运行到7；也不能把首次开始时间减到达时间当全部等待时间。\n\n### 验证\nverify-b.py从本题实际进程参数提取到达/服务时间，逐CPU单位重选最短剩余进程，独立模拟完成时刻与平均等待2，并核对完整执行序列。错误答案临时副本必须被拒绝。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)仅支持进程调度类别。本题的可抢占规则、数值与轨迹是原创训练。[OSTEP调度章节](https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf)区分非抢占SJF与加入抢占的STCF/SRTF。规则以本题明示为准，未提供今年正式考试规则。",
+    "difficulty": "medium",
+    "order": 256,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "SRTF抢占调度"
+    ],
+    "sourceTitle": "预测考点·原创训练 / 具体操作未由已读历年材料确认",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "5/3"
+        },
+        {
+          "id": "B",
+          "text": "8/3"
+        },
+        {
+          "id": "C",
+          "text": "2"
+        },
+        {
+          "id": "D",
+          "text": "4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n正确选C。执行区间为[0,2)P1、[2,4)P2、[4,5)P3、[5,7)P2、[7,12)P1。三个完成时刻分别为12、7、5，等待时间依次12−0−7=5、7−2−4=1、5−4−1=0，平均(5+1+0)/3=2。A只计P1的5而漏P2等待；B多算等待；D为4也不满足各完成时刻与题给等待公式。\n\n### 评分点\n- 正确选 C\n- t=2和t=4均按更短剩余时间抢占\n- 等待时间包含被抢占后的等待\n\n### 易错点\n这是可抢占SRTF，不能照非抢占SJF让P1一直运行到7；也不能把首次开始时间减到达时间当全部等待时间。\n\n### 验证\nverify-b.py从本题实际进程参数提取到达/服务时间，逐CPU单位重选最短剩余进程，独立模拟完成时刻与平均等待2，并核对完整执行序列。错误答案临时副本必须被拒绝。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)仅支持进程调度类别。本题的可抢占规则、数值与轨迹是原创训练。[OSTEP调度章节](https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf)区分非抢占SJF与加入抢占的STCF/SRTF。规则以本题明示为准，未提供今年正式考试规则。",
+      "rubricMd": "- 正确选 C\n- t=2和t=4均按更短剩余时间抢占\n- 等待时间包含被抢占后的等待",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-079",
+    "categoryId": "computer-networks",
+    "type": "single_choice",
+    "title": "TCP 有效窗口内还能发多少新字节",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 B卷与2023技术卷可见TCP基础；本题原创训练发送窗口与在途数据，不声称此数值题曾出现。\n\n忽略序号回绕。发送端最早未确认字节序号为1000，下一个从未发送过的字节序号为1600；当前用于限制发送的有效窗口大小已确定为900字节（可理解为题设已经取好流量/拥塞限制）。暂不重传且尚未收到新ACK，最多还能发送多少**新数据**字节？",
+    "answer": "### 参考回答\n已发未确认字节数1600-1000=600；窗口总容量900，剩900-600=300。B把已占用量当剩余；C忽略在途数据；D把窗口与在途量相加。窗口右边界为1900（不含），新发范围1600–1899。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷与2023技术卷可见TCP基础；本题原创训练发送窗口与在途数据，不声称此数值题曾出现。\n\n[技术依据](https://www.rfc-editor.org/rfc/rfc9293.html#section-3.3.1)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 257,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "TCP发送窗口"
+    ],
+    "sourceTitle": "2018 B卷与2023技术卷可见TCP基础；本题原创训练发送窗口与在途数据，不声称此数值题曾出现。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252373/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "300"
+        },
+        {
+          "id": "B",
+          "text": "600"
+        },
+        {
+          "id": "C",
+          "text": "900"
+        },
+        {
+          "id": "D",
+          "text": "1500"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n已发未确认字节数1600-1000=600；窗口总容量900，剩900-600=300。B把已占用量当剩余；C忽略在途数据；D把窗口与在途量相加。窗口右边界为1900（不含），新发范围1600–1899。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252373/summary)：2018 B卷与2023技术卷可见TCP基础；本题原创训练发送窗口与在途数据，不声称此数值题曾出现。\n\n[技术依据](https://www.rfc-editor.org/rfc/rfc9293.html#section-3.3.1)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 A\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-080",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "索引树模型的容量",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 本题是根据基础知识作出的备考预测；未找到该具体考点在已核看吉比特历年题面的直接证据。\n\n某索引仅按以下抽象模型计数，不假定任何具体数据库实现：根到叶恰有3条边；每个内部结点恰有4个孩子；每个叶页能存32条索引记录。所有叶页满时能存多少条记录？",
+    "answer": "### 参考回答\n3条边意味着叶页数4^3=64，记录64×32=2048。A把分支指数乘成3×4；B少算一层；D多算一层。这是给定模型容量，不等于真实B+树在任意数据下的容量或IO次数。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://www.postgresql.org/docs/current/btree.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 258,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "数据库索引模型"
+    ],
+    "sourceTitle": "原创预测训练 / 数据库索引模型",
+    "sourceUrl": "https://www.postgresql.org/docs/current/btree.html",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "384"
+        },
+        {
+          "id": "B",
+          "text": "512"
+        },
+        {
+          "id": "C",
+          "text": "2048"
+        },
+        {
+          "id": "D",
+          "text": "8192"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n3条边意味着叶页数4^3=64，记录64×32=2048。A把分支指数乘成3×4；B少算一层；D多算一层。这是给定模型容量，不等于真实B+树在任意数据下的容量或IO次数。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://www.postgresql.org/docs/current/btree.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 C\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-081",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "两次均匀抽样的最大值期望",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 A卷可见概率与组合计数；本题原创离散最大值期望，原卷没有此具体分布的证据。\n\nX、Y独立且各自等概率取1、2、3、4。M=max(X,Y)，E[M]是多少？",
+    "answer": "### 参考回答\n16个有序对等概率；M=k的对数为k²-(k-1)²=2k-1。因此E[M]=(1×1+2×3+3×5+4×7)/16=50/16=25/8。A是单次抽样均值；B把最大值简单取整；D对应52/16，权重求和错误。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252349/summary)：2018 A卷可见概率与组合计数；本题原创离散最大值期望，原卷没有此具体分布的证据。\n\n[技术依据](https://seeing-theory.brown.edu/basic-probability/index.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 259,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "离散期望"
+    ],
+    "sourceTitle": "2018 A卷可见概率与组合计数；本题原创离散最大值期望，原卷没有此具体分布的证据。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "5/2"
+        },
+        {
+          "id": "B",
+          "text": "3"
+        },
+        {
+          "id": "C",
+          "text": "25/8"
+        },
+        {
+          "id": "D",
+          "text": "13/4"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n16个有序对等概率；M=k的对数为k²-(k-1)²=2k-1。因此E[M]=(1×1+2×3+3×5+4×7)/16=50/16=25/8。A是单次抽样均值；B把最大值简单取整；D对应52/16，权重求和错误。\n\n### 评分点\n- 正确选 C\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252349/summary)：2018 A卷可见概率与组合计数；本题原创离散最大值期望，原卷没有此具体分布的证据。\n\n[技术依据](https://seeing-theory.brown.edu/basic-probability/index.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 C\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "C"
+      ]
+    }
+  },
+  {
+    "id": "gbits-082",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "幂的模周期",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2023技术卷可见模运算；此题原创组合两个幂周期。\n\n求 7^2027 + 3^2027 除以10的余数。",
+    "answer": "### 参考回答\n7的末位周期7,9,3,1；2027 mod4=3，得3。3的周期3,9,7,1，第3项7，合10余0。B、C、D均与按4循环得到的3与7不符；可分别按2027次模乘独立排除，不能只看底数相加为10就断言任意指数都余0（偶数指数不是）。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023技术卷可见模运算；此题原创组合两个幂周期。\n\n[技术依据](https://mathworld.wolfram.com/Congruence.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 260,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "模运算"
+    ],
+    "sourceTitle": "2023技术卷可见模运算；此题原创组合两个幂周期。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/55263940/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "0"
+        },
+        {
+          "id": "B",
+          "text": "2"
+        },
+        {
+          "id": "C",
+          "text": "4"
+        },
+        {
+          "id": "D",
+          "text": "8"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n7的末位周期7,9,3,1；2027 mod4=3，得3。3的周期3,9,7,1，第3项7，合10余0。B、C、D均与按4循环得到的3与7不符；可分别按2027次模乘独立排除，不能只看底数相加为10就断言任意指数都余0（偶数指数不是）。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/55263940/summary)：2023技术卷可见模运算；此题原创组合两个幂周期。\n\n[技术依据](https://mathworld.wolfram.com/Congruence.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 A\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-083",
+    "categoryId": "algorithms-datastructures",
+    "type": "single_choice",
+    "title": "相同任务分配到不同机器",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2018 A卷可见组合计数；本题原创强调相同任务与机器可区分。\n\n5个完全相同任务分给3台不同机器，每台至少1个，任务不可分，顺序不计。分配方案数是多少？",
+    "answer": "### 参考回答\n设xi≥1且x1+x2+x3=5，先各放1，余2个分3台；隔板法C(4,2)=6。B、C、D分别给出10、15、25，都不等于正整数解数6；允许空机器会得到C(7,2)=21，把任务当不同对象会得到150，二者也都不符合题意。可以枚举(1,1,3)的3个排列和(1,2,2)的3个排列直接排除所有干扰项。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252349/summary)：2018 A卷可见组合计数；本题原创强调相同任务与机器可区分。\n\n[技术依据](https://mathworld.wolfram.com/StarsandBars.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 261,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "组合计数"
+    ],
+    "sourceTitle": "2018 A卷可见组合计数；本题原创强调相同任务与机器可区分。",
+    "sourceUrl": "https://www.nowcoder.com/exam/test/11252349/summary",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "6"
+        },
+        {
+          "id": "B",
+          "text": "10"
+        },
+        {
+          "id": "C",
+          "text": "15"
+        },
+        {
+          "id": "D",
+          "text": "25"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n设xi≥1且x1+x2+x3=5，先各放1，余2个分3台；隔板法C(4,2)=6。B、C、D分别给出10、15、25，都不等于正整数解数6；允许空机器会得到C(7,2)=21，把任务当不同对象会得到150，二者也都不符合题意。可以枚举(1,1,3)的3个排列和(1,2,2)的3个排列直接排除所有干扰项。\n\n### 评分点\n- 正确选 A\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/exam/test/11252349/summary)：2018 A卷可见组合计数；本题原创强调相同任务与机器可区分。\n\n[技术依据](https://mathworld.wolfram.com/StarsandBars.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 A\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "A"
+      ]
+    }
+  },
+  {
+    "id": "gbits-084",
+    "categoryId": "rendering-graphics",
+    "type": "single_choice",
+    "title": "单位法线上的完全镜面反射",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 本题是根据基础知识作出的备考预测；未找到该具体考点在已核看吉比特历年题面的直接证据。\n\n二维速度v=(3,-4)碰到水平墙，指向可行区域的单位法线n=(0,1)。完全弹性且无摩擦，使用r=v-2(v·n)n。反射速度r是多少？",
+    "answer": "### 参考回答\nv·n=-4，减去(0,-8)得(3,4)。切向x保持，法向y反向。A额外反转切向；C未反射；D只反转切向。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Reflect.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "easy",
+    "order": 262,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "向量反射"
+    ],
+    "sourceTitle": "原创预测训练 / 向量反射",
+    "sourceUrl": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Reflect.html",
+    "payload": {
+      "options": [
+        {
+          "id": "A",
+          "text": "(-3,4)"
+        },
+        {
+          "id": "B",
+          "text": "(3,4)"
+        },
+        {
+          "id": "C",
+          "text": "(3,-4)"
+        },
+        {
+          "id": "D",
+          "text": "(-3,-4)"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\nv·n=-4，减去(0,-8)得(3,4)。切向x保持，法向y反向。A额外反转切向；C未反射；D只反转切向。\n\n### 评分点\n- 正确选 B\n- 能说明其他三个选项错误的原因\n\n### 易错点\n不要把手算顺序、标准保证和实现细节混为一谈。\n\n### 验证\n有代码的题由 verify-b.py 提取题干 C++17 编译执行；其余按解答所列独立计算核对。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[技术依据](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Reflect.html)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 正确选 B\n- 能说明其他三个选项错误的原因",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "correctOptionIds": [
+        "B"
+      ]
+    }
+  },
+  {
+    "id": "gbits-085",
+    "categoryId": "cpp-basics",
+    "type": "fill_blank",
+    "title": "三次局部反转后的数组输出",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2024亲历仅确认两道程序输出填空，未公开程序；数组三次反转是原创预测考点。\n\n逐句执行下面程序，填写唯一一行输出（两个整数以空格隔开）。\n```cpp\n#include <iostream>\n#include <vector>\nusing namespace std;\nvoid reverseRange(vector<int>& a, int l, int r) {\n    while (l < r) {\n        int t = a[l];\n        a[l] = a[r];\n        a[r] = t;\n        ++l;\n        --r;\n    }\n}\nint main() {\n    vector<int> a = {2, 4, 6, 8, 10, 12};\n    int k = 2;\n    reverseRange(a, 0, k - 1);\n    reverseRange(a, k, static_cast<int>(a.size()) - 1);\n    reverseRange(a, 0, static_cast<int>(a.size()) - 1);\n    int value = 0;\n    for (int i = 0; i < 3; ++i) {\n        value = value * 10 + a[i] / 2;\n    }\n    cout << value << \" \" << a.back();\n}\n```",
+    "answer": "### 参考回答\n输出 `345 4`。三次反转把前2项移到末尾：最终[6,8,10,12,2,4]，前三项除2依次3,4,5，拼成345。\n\n### 评分点\n- 数组最终顺序正确\n- 拼接结果与末尾值都正确\n\n### 易错点\n第二段反转不包含前k项；最后反转整个数组，不能把它误看成右移2位。\n\n### 验证\nverify-b.py直接提取题干代码，C++17编译执行并与acceptedAnswers逐项核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端亲历明确两道程序输出填空，未公开原程序；本题仅仿照输出题型，数组反转内容为原创。\n\n[技术依据](https://eel.is/c++draft/expr.add)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+    "difficulty": "medium",
+    "order": 263,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "数组程序阅读"
+    ],
+    "sourceTitle": "原创预测训练 / 数组程序阅读",
+    "sourceUrl": "https://eel.is/c++draft/expr.add",
+    "payload": {
+      "blanks": [
+        {
+          "id": "out",
+          "label": "整行输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出 `345 4`。三次反转把前2项移到末尾：最终[6,8,10,12,2,4]，前三项除2依次3,4,5，拼成345。\n\n### 评分点\n- 数组最终顺序正确\n- 拼接结果与末尾值都正确\n\n### 易错点\n第二段反转不包含前k项；最后反转整个数组，不能把它误看成右移2位。\n\n### 验证\nverify-b.py直接提取题干代码，C++17编译执行并与acceptedAnswers逐项核对。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端亲历明确两道程序输出填空，未公开原程序；本题仅仿照输出题型，数组反转内容为原创。\n\n[技术依据](https://eel.is/c++draft/expr.add)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+      "rubricMd": "- 数组最终顺序正确\n- 拼接结果与末尾值都正确",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "out": [
+          "345 4"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-086",
+    "categoryId": "cpp-basics",
+    "type": "fill_blank",
+    "title": "过滤字符后重新计算连续段",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2024亲历仅确认两道程序输出填空，未公开程序；过滤后分组计数是原创预测考点。\n\n填写下面程序的整行输出（三个整数以空格隔开）。引用参数 longest 会在函数内赋值。\n```cpp\n#include <iostream>\n#include <string>\nusing namespace std;\nstring compact(const string& s, char skip) {\n    string t;\n    for (char c : s) {\n        if (c != skip) t.push_back(c);\n    }\n    return t;\n}\nint groups(const string& s, int& longest) {\n    int count = 0;\n    int run = 0;\n    longest = 0;\n    for (int i = 0; i < static_cast<int>(s.size()); ++i) {\n        if (i == 0 || s[i] != s[i - 1]) {\n            ++count;\n            run = 1;\n        } else {\n            ++run;\n        }\n        if (run > longest) longest = run;\n    }\n    return count;\n}\nint main() {\n    string t = compact(\"a#abb##aa#b\", '#');\n    int best;\n    int n = groups(t, best);\n    cout << n << \" \" << best << \" \" << t.size();\n}\n```",
+    "answer": "### 参考回答\n输出 `4 2 7`。过滤得到aabbaab，连续段依次aa、bb、aa、b，共4段；最长2，长度7。\n\n### 评分点\n- 先过滤再分段\n- 正确处理引用输出参数\n- 三个数正确\n\n### 易错点\n删掉字符可能把原本隔开的同字符连接起来；最长段不是某字符出现总次数。\n\n### 验证\nverify-b.py直接提取C++17代码运行。独立字符串分组模型核对4段、最长2、总长7。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端亲历明确两道程序输出填空；没有原程序证据，本题只参考题型，字符串分组为原创。\n\n[技术依据](https://eel.is/c++draft/dcl.ref)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+    "difficulty": "medium",
+    "order": 264,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "字符串程序阅读"
+    ],
+    "sourceTitle": "原创预测训练 / 字符串程序阅读",
+    "sourceUrl": "https://eel.is/c++draft/dcl.ref",
+    "payload": {
+      "blanks": [
+        {
+          "id": "out",
+          "label": "整行输出"
+        }
+      ]
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n输出 `4 2 7`。过滤得到aabbaab，连续段依次aa、bb、aa、b，共4段；最长2，长度7。\n\n### 评分点\n- 先过滤再分段\n- 正确处理引用输出参数\n- 三个数正确\n\n### 易错点\n删掉字符可能把原本隔开的同字符连接起来；最长段不是某字符出现总次数。\n\n### 验证\nverify-b.py直接提取C++17代码运行。独立字符串分组模型核对4段、最长2、总长7。\n\n### 来源与适用范围\n[题型或大类参考，非该具体考点的历史证据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端亲历明确两道程序输出填空；没有原程序证据，本题只参考题型，字符串分组为原创。\n\n[技术依据](https://eel.is/c++draft/dcl.ref)。代码按 C++17；原题未明规则均以本题明确条件为准。本题标签为预测；以上历年材料只支持题型或大类，不能证明此具体考点曾考过。",
+      "rubricMd": "- 先过滤再分段\n- 正确处理引用输出参数\n- 三个数正确",
+      "explanationMd": "",
+      "caseSensitive": false,
+      "acceptedAnswers": {
+        "out": [
+          "4 2 7"
+        ]
+      }
+    }
+  },
+  {
+    "id": "gbits-087",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "不同进制带符号长整数的精确比较",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2024客户端第一手回忆包含不同进制数比较；带符号、前导零归一、超64位是本题原创预测拓展，不声称原题包含这些条件。\n\n精确比较两个不同进制的**带符号长整数**。每个数可带一个前导+或-，其后至少一位数字；也可不带符号，允许前导零。进制2–10，各位均为合法数字。去掉符号后1–200位。`-000`与`+0`都表示零。不能假设值能装进64位整数。\n\n### 输入\n首行T（1≤T≤100）。之后每行 `b1 s1 b2 s2`，分别为两个进制和对应整数串。\n\n### 输出\n每组一行 `<`、`=` 或 `>`。\n\n### 样例输入\n```text\n4\n2 -101 10 -4\n8 +0017 10 15\n2 -000 10 +0\n10 99999999999999999999 2 11111111\n```\n\n### 样例输出\n```text\n<\n=\n=\n>\n```\n\n请给出复杂度与C++17实现。",
+    "answer": "### 参考回答\n先分离符号；把绝对值按value=value×base+digit逐位累积到自写非负大整数中。所有零统一为sign=0。异号按-1<0<1比较；同为正按绝对值比较，同为负反转绝对值结果。用10^9进位数组，单次小整数乘法中间值小于10^10，uint64_t足够。\n\n时间O(L²)，空间O(L)，L为数字长度上界，按每组计。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <string>\n#include <vector>\n#include <cstdint>\nusing namespace std;\nusing Big = vector<uint64_t>;\nconst uint64_t BASE = 1000000000ULL;\nstruct Number { int sign; Big magnitude; };\nNumber parse(string s, int base) {\n    int sign = 1;\n    size_t pos = 0;\n    if (s[0] == '+' || s[0] == '-') {\n        sign = s[0] == '-' ? -1 : 1;\n        pos = 1;\n    }\n    Big a(1, 0);\n    for (; pos < s.size(); ++pos) {\n        uint64_t carry = s[pos] - '0';\n        for (auto& x : a) {\n            uint64_t cur = x * base + carry;\n            x = cur % BASE;\n            carry = cur / BASE;\n        }\n        if (carry) a.push_back(carry);\n    }\n    while (a.size() > 1 && a.back() == 0) a.pop_back();\n    if (a.size() == 1 && a[0] == 0) sign = 0;\n    return {sign, a};\n}\nint compareMagnitude(const Big& a, const Big& b) {\n    if (a.size() != b.size()) return a.size() < b.size() ? -1 : 1;\n    for (int i = static_cast<int>(a.size()) - 1; i >= 0; --i)\n        if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;\n    return 0;\n}\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int t; cin >> t;\n    while (t--) {\n        int b1,b2; string s1,s2; cin >> b1 >> s1 >> b2 >> s2;\n        Number a=parse(s1,b1), b=parse(s2,b2);\n        int cmp;\n        if (a.sign != b.sign) cmp = a.sign < b.sign ? -1 : 1;\n        else if (a.sign == 0) cmp = 0;\n        else cmp = a.sign * compareMagnitude(a.magnitude,b.magnitude);\n        cout << (cmp < 0 ? \"<\" : cmp > 0 ? \">\" : \"=\") << '\\n';\n    }\n}\n```\n\n### 评分点\n- 不依赖64位能容纳整个数\n- 转换进制正确\n- 负数比较反向、负零归一正确\n- 前导零与相等情况正确\n\n### 易错点\n不能按原字符串长度比较不同进制；两负数绝对值越大反而越小；-0不能小于0。\n\n### 验证\nverify-b.py提取本参考代码，和Python任意精度int解析的独立模型做固定边界、固定种子随机对拍，并执行样例。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端第一手回忆包含不同进制数比较；带符号、前导零归一、超64位是本题原创预测拓展，不声称原题包含这些条件。\n\n[技术依据](https://gmplib.org/manual/Integer-Functions)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 265,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "进制与大整数"
+    ],
+    "sourceTitle": "2024客户端第一手回忆包含不同进制数比较；带符号、前导零归一、超64位是本题原创预测拓展，不声称原题包含这些条件。",
+    "sourceUrl": "https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：请实现 main，按题面标准输入输出。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n先分离符号；把绝对值按value=value×base+digit逐位累积到自写非负大整数中。所有零统一为sign=0。异号按-1<0<1比较；同为正按绝对值比较，同为负反转绝对值结果。用10^9进位数组，单次小整数乘法中间值小于10^10，uint64_t足够。\n\n时间O(L²)，空间O(L)，L为数字长度上界，按每组计。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <string>\n#include <vector>\n#include <cstdint>\nusing namespace std;\nusing Big = vector<uint64_t>;\nconst uint64_t BASE = 1000000000ULL;\nstruct Number { int sign; Big magnitude; };\nNumber parse(string s, int base) {\n    int sign = 1;\n    size_t pos = 0;\n    if (s[0] == '+' || s[0] == '-') {\n        sign = s[0] == '-' ? -1 : 1;\n        pos = 1;\n    }\n    Big a(1, 0);\n    for (; pos < s.size(); ++pos) {\n        uint64_t carry = s[pos] - '0';\n        for (auto& x : a) {\n            uint64_t cur = x * base + carry;\n            x = cur % BASE;\n            carry = cur / BASE;\n        }\n        if (carry) a.push_back(carry);\n    }\n    while (a.size() > 1 && a.back() == 0) a.pop_back();\n    if (a.size() == 1 && a[0] == 0) sign = 0;\n    return {sign, a};\n}\nint compareMagnitude(const Big& a, const Big& b) {\n    if (a.size() != b.size()) return a.size() < b.size() ? -1 : 1;\n    for (int i = static_cast<int>(a.size()) - 1; i >= 0; --i)\n        if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;\n    return 0;\n}\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int t; cin >> t;\n    while (t--) {\n        int b1,b2; string s1,s2; cin >> b1 >> s1 >> b2 >> s2;\n        Number a=parse(s1,b1), b=parse(s2,b2);\n        int cmp;\n        if (a.sign != b.sign) cmp = a.sign < b.sign ? -1 : 1;\n        else if (a.sign == 0) cmp = 0;\n        else cmp = a.sign * compareMagnitude(a.magnitude,b.magnitude);\n        cout << (cmp < 0 ? \"<\" : cmp > 0 ? \">\" : \"=\") << '\\n';\n    }\n}\n```\n\n### 评分点\n- 不依赖64位能容纳整个数\n- 转换进制正确\n- 负数比较反向、负零归一正确\n- 前导零与相等情况正确\n\n### 易错点\n不能按原字符串长度比较不同进制；两负数绝对值越大反而越小；-0不能小于0。\n\n### 验证\nverify-b.py提取本参考代码，和Python任意精度int解析的独立模型做固定边界、固定种子随机对拍，并执行样例。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端第一手回忆包含不同进制数比较；带符号、前导零归一、超64位是本题原创预测拓展，不声称原题包含这些条件。\n\n[技术依据](https://gmplib.org/manual/Integer-Functions)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- 不依赖64位能容纳整个数\n- 转换进制正确\n- 负数比较反向、负零归一正确\n- 前导零与相等情况正确",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  },
+  {
+    "id": "gbits-088",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "带一次半伤护盾的最低初始资源",
+    "question": "**【历年考点·原创变式】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 2024客户端第一手回忆包含右/下网格最低初始资源；一次半伤护盾为原创预测拓展，不是历年原题条件。\n\nn×m整数格子，左上角起步，每次只能向右或向下，最终到右下角。初始资源为正整数；**起点和终点都必须结算**，进入每格把格子值加到资源上，结算后始终至少为1。\n\n你有一次可选护盾：在结算任意一个负值格子前使用，把该格损耗L减少为floor(L/2)，例如-5变成-2，-1变成0。护盾最多用一次，也可不用。求最小初始资源。\n\n### 输入\n首行n m（1≤n,m≤200）。随后n行，每行m个整数，-10^6≤a[i][j]≤10^6。\n\n### 输出\n最小初始资源，一个整数。\n\n### 样例输入\n```text\n2 2\n-5 -8\n-2 -3\n```\n\n### 样例输出\n```text\n8\n```\n\n最优向下再向右，在起点用护盾，累计资源变化-2,-4,-7，初值8恰好合法。\n",
+    "answer": "### 参考回答\n逆向DP。dp[i][j][0]表示进入当前格前护盾已用完所需资源；dp[i][j][1]表示护盾尚可用。分别取右/下邻居相同状态的最小需求next[k]；不使用护盾时max(1,next[k]-a)。当前负格使用护盾则转入已用状态：max(1,next[0]-a/2)，与保留护盾取小。终点后需求设为1。\n\n时间O(nm)，空间O(nm)，使用long long。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <vector>\n#include <array>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n,m; cin >> n >> m;\n    vector<vector<long long>> a(n, vector<long long>(m));\n    for (auto& row : a) for (auto& x : row) cin >> x;\n    const long long INF = (1LL << 60);\n    vector<vector<array<long long,2>>> dp(n, vector<array<long long,2>>(m));\n    for (int i=n-1; i>=0; --i) for (int j=m-1; j>=0; --j) {\n        long long next[2] = {INF, INF};\n        if (i==n-1 && j==m-1) next[0] = next[1] = 1;\n        else for (int k=0; k<2; ++k) {\n            if (i+1<n) next[k] = min(next[k], dp[i+1][j][k]);\n            if (j+1<m) next[k] = min(next[k], dp[i][j+1][k]);\n        }\n        dp[i][j][0] = max(1LL, next[0] - a[i][j]);\n        dp[i][j][1] = max(1LL, next[1] - a[i][j]);\n        if (a[i][j] < 0)\n            dp[i][j][1] = min(dp[i][j][1], max(1LL, next[0] - a[i][j]/2));\n    }\n    cout << dp[0][0][1] << '\\n';\n}\n```\n\n### 评分点\n- DP状态区分护盾可用/已用\n- 逆向需求与始终至少1正确\n- 起点、终点与负奇数半伤规则正确\n- 合并路径时分别按护盾状态选择后继\n\n### 易错点\n不能只求路径总和；中途资源也须正。C++17负数整数除法向零截断，负格a/2正好是负的floor(L/2)。\n\n### 验证\nverify-b.py枚举小网格所有右下路径及每个护盾位置，以前缀最小值算初值，对参考DP随机对拍；另验大规模边界。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端第一手回忆包含右/下网格最低初始资源；一次半伤护盾为原创预测拓展，不是历年原题条件。\n\n[技术依据](https://eel.is/c++draft/expr.mul)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 266,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "历年考点·原创变式",
+      "二维动态规划"
+    ],
+    "sourceTitle": "2024客户端第一手回忆包含右/下网格最低初始资源；一次半伤护盾为原创预测拓展，不是历年原题条件。",
+    "sourceUrl": "https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：请实现 main，按题面标准输入输出。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n逆向DP。dp[i][j][0]表示进入当前格前护盾已用完所需资源；dp[i][j][1]表示护盾尚可用。分别取右/下邻居相同状态的最小需求next[k]；不使用护盾时max(1,next[k]-a)。当前负格使用护盾则转入已用状态：max(1,next[0]-a/2)，与保留护盾取小。终点后需求设为1。\n\n时间O(nm)，空间O(nm)，使用long long。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <vector>\n#include <array>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n,m; cin >> n >> m;\n    vector<vector<long long>> a(n, vector<long long>(m));\n    for (auto& row : a) for (auto& x : row) cin >> x;\n    const long long INF = (1LL << 60);\n    vector<vector<array<long long,2>>> dp(n, vector<array<long long,2>>(m));\n    for (int i=n-1; i>=0; --i) for (int j=m-1; j>=0; --j) {\n        long long next[2] = {INF, INF};\n        if (i==n-1 && j==m-1) next[0] = next[1] = 1;\n        else for (int k=0; k<2; ++k) {\n            if (i+1<n) next[k] = min(next[k], dp[i+1][j][k]);\n            if (j+1<m) next[k] = min(next[k], dp[i][j+1][k]);\n        }\n        dp[i][j][0] = max(1LL, next[0] - a[i][j]);\n        dp[i][j][1] = max(1LL, next[1] - a[i][j]);\n        if (a[i][j] < 0)\n            dp[i][j][1] = min(dp[i][j][1], max(1LL, next[0] - a[i][j]/2));\n    }\n    cout << dp[0][0][1] << '\\n';\n}\n```\n\n### 评分点\n- DP状态区分护盾可用/已用\n- 逆向需求与始终至少1正确\n- 起点、终点与负奇数半伤规则正确\n- 合并路径时分别按护盾状态选择后继\n\n### 易错点\n不能只求路径总和；中途资源也须正。C++17负数整数除法向零截断，负格a/2正好是负的floor(L/2)。\n\n### 验证\nverify-b.py枚举小网格所有右下路径及每个护盾位置，以前缀最小值算初值，对参考DP随机对拍；另验大规模边界。\n\n### 来源与适用范围\n[历年风格与考点依据](https://www.nowcoder.com/feed/main/detail/5740c288da3140d3878f04dc3382073e)：2024客户端第一手回忆包含右/下网格最低初始资源；一次半伤护盾为原创预测拓展，不是历年原题条件。\n\n[技术依据](https://eel.is/c++draft/expr.mul)。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- DP状态区分护盾可用/已用\n- 逆向需求与始终至少1正确\n- 起点、终点与负奇数半伤规则正确\n- 合并路径时分别按护盾状态选择后继",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  },
+  {
+    "id": "gbits-089",
+    "categoryId": "algorithms-datastructures",
+    "type": "algorithm",
+    "title": "最长无重复子串及最优起点数量",
+    "question": "**【预测考点·原创训练】来源边界：本题为原创冲刺训练，不是真题原文，也不是今年已考题。** 本题是根据基础知识作出的备考预测；未找到该具体考点在已核看吉比特历年题面的直接证据。\n\n给定仅含小写英文字母的非空字符串，求不含重复字符的连续子串的最大长度L，并统计有多少个不同起始位置能得到长度L的不重复子串。相同内容但起始位置不同也分别计数。\n\n### 输入\n首行T（1≤T≤20）。随后每行一个字符串，单串长度1–200000，所有串长度之和≤400000。\n\n### 输出\n每组一行 `L count`。\n\n### 样例输入\n```text\n3\nabca\naaaa\nabcabcbb\n```\n\n### 样例输出\n```text\n3 2\n1 4\n3 4\n```\n",
+    "answer": "### 参考回答\n维护当前无重复后缀[left,right]与每字符上次位置last。读入c时left=max(left,last[c]+1)，然后更新last。每个右端点的最长无重复后缀若刷新全局长度则计数重置1，相同则计数加1。每个最长子串有唯一右端点，故不会重复计数。\n\n时间O(|s|)，额外空间O(26)。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <string>\n#include <array>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int t; cin >> t;\n    while (t--) {\n        string s; cin >> s;\n        array<int,26> last; last.fill(-1);\n        int left=0, best=0, count=0;\n        for (int right=0; right<static_cast<int>(s.size()); ++right) {\n            int c=s[right]-'a';\n            left=max(left,last[c]+1);\n            last[c]=right;\n            int len=right-left+1;\n            if (len>best) { best=len; count=1; }\n            else if (len==best) ++count;\n        }\n        cout << best << ' ' << count << '\\n';\n    }\n}\n```\n\n### 评分点\n- left单调不后退，last初始化为-1\n- 更新全局最优时重置计数，相等累加\n- 起点计数而不是去重子串内容\n- 线性复杂度\n\n### 易错点\n看到重复字符时不能无条件left=last+1，否则abba会退回左边；同内容不同起点分别计数。\n\n### 验证\nverify-b.py独立枚举所有子串检查字符唯一性，核对最大长度和起点计数；包含单字母、全相同、重复回退陷阱与长串边界。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[C++数组容器语义](https://eel.is/c++draft/array.overview)；滑窗正确性证明见本解答，独立穷举结果见验证台账。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+    "difficulty": "medium",
+    "order": 267,
+    "tags": [
+      "吉比特冲刺预测",
+      "冲刺B卷",
+      "预测考点·原创训练",
+      "滑动窗口"
+    ],
+    "sourceTitle": "原创预测训练 / 滑动窗口",
+    "sourceUrl": "https://eel.is/c++draft/array.overview",
+    "payload": {
+      "language": "cpp",
+      "starterCode": "// C++17：请实现 main，按题面标准输入输出。\n"
+    },
+    "solution": {
+      "referenceAnswerMd": "### 参考回答\n维护当前无重复后缀[left,right]与每字符上次位置last。读入c时left=max(left,last[c]+1)，然后更新last。每个右端点的最长无重复后缀若刷新全局长度则计数重置1，相同则计数加1。每个最长子串有唯一右端点，故不会重复计数。\n\n时间O(|s|)，额外空间O(26)。\n\n### C++17参考实现\n```cpp\n#include <iostream>\n#include <string>\n#include <array>\n#include <algorithm>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int t; cin >> t;\n    while (t--) {\n        string s; cin >> s;\n        array<int,26> last; last.fill(-1);\n        int left=0, best=0, count=0;\n        for (int right=0; right<static_cast<int>(s.size()); ++right) {\n            int c=s[right]-'a';\n            left=max(left,last[c]+1);\n            last[c]=right;\n            int len=right-left+1;\n            if (len>best) { best=len; count=1; }\n            else if (len==best) ++count;\n        }\n        cout << best << ' ' << count << '\\n';\n    }\n}\n```\n\n### 评分点\n- left单调不后退，last初始化为-1\n- 更新全局最优时重置计数，相等累加\n- 起点计数而不是去重子串内容\n- 线性复杂度\n\n### 易错点\n看到重复字符时不能无条件left=last+1，否则abba会退回左边；同内容不同起点分别计数。\n\n### 验证\nverify-b.py独立枚举所有子串检查字符唯一性，核对最大长度和起点计数；包含单字母、全相同、重复回退陷阱与长串边界。\n\n### 来源与适用范围\n证据标签为预测，不声称历史命中。\n\n[C++数组容器语义](https://eel.is/c++draft/array.overview)；滑窗正确性证明见本解答，独立穷举结果见验证台账。代码按 C++17；原题未明规则均以本题明确条件为准。历年来源只支持考点类别，不能证明本原创条件曾考过。",
+      "rubricMd": "- left单调不后退，last初始化为-1\n- 更新全局最优时重置计数，相等累加\n- 起点计数而不是去重子串内容\n- 线性复杂度",
+      "explanationMd": "",
+      "caseSensitive": false
+    }
+  }
+]
