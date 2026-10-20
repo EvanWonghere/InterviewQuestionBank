@@ -14,8 +14,18 @@ const InterviewReport = lazy(() => import('@/components/ai/InterviewReport'));
 const COUNT_OPTIONS = [5, 10, 20];
 const DEFAULT_COUNT = 10;
 
+function shuffle(list) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /**
- * 从题目池中按分类均匀抽取，优先非已掌握。返回打乱顺序的题目数组。
+ * 从题目池中按分类均匀抽取，优先非已掌握，同一优先级内随机。返回打乱顺序的题目数组。
+ * 只从传入的 categories 中抽题，传入单个分类即为专项练习。
  * @param {Array<{ id: string, categoryId: string, order?: number }>} allQuestions
  * @param {Array<{ id: string, order: number }>} categories
  * @param {Record<string, string>} progress
@@ -31,26 +41,22 @@ function pickQuestions(allQuestions, categories, progress, count) {
   });
 
   const sortedCategories = [...(categories || [])].sort((a, b) => a.order - b.order);
-  const sortByPreferNonMastered = (list) =>
-    [...list].sort((a, b) => {
-      const aMastered = progress[a.id] === 'mastered' ? 1 : 0;
-      const bMastered = progress[b.id] === 'mastered' ? 1 : 0;
-      if (aMastered !== bMastered) return aMastered - bMastered;
-      return (a.order ?? 0) - (b.order ?? 0);
-    });
+  const preferNonMastered = (list) => {
+    const shuffled = shuffle(list);
+    return [
+      ...shuffled.filter((q) => progress[q.id] !== 'mastered'),
+      ...shuffled.filter((q) => progress[q.id] === 'mastered'),
+    ];
+  };
 
   const perCat = Math.ceil(count / Math.max(1, sortedCategories.length));
-  let selected = [];
+  const selected = [];
   sortedCategories.forEach((cat) => {
-    const list = sortByPreferNonMastered(byCategory[cat.id] || []);
+    const list = preferNonMastered(byCategory[cat.id] || []);
     selected.push(...list.slice(0, perCat));
   });
 
-  for (let i = selected.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [selected[i], selected[j]] = [selected[j], selected[i]];
-  }
-  return selected.slice(0, count);
+  return shuffle(selected).slice(0, count);
 }
 
 export default function MockInterviewPage() {
@@ -62,6 +68,8 @@ export default function MockInterviewPage() {
 
   const [phase, setPhase] = useState('setup');
   const [count, setCount] = useState(DEFAULT_COUNT);
+  // null = 全部分类
+  const [categoryId, setCategoryId] = useState(null);
   const [deck, setDeck] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [, setShowAnswer] = useState(false);
@@ -69,15 +77,28 @@ export default function MockInterviewPage() {
   // Groups this round's AI evaluations so the summary can build one report.
   const [sessionId, setSessionId] = useState(null);
 
+  const sortedCategories = useMemo(
+    () => [...(categories || [])].sort((a, b) => a.order - b.order),
+    [categories]
+  );
+  const countByCategory = useMemo(() => {
+    const counts = {};
+    (allQuestions || []).forEach((q) => {
+      counts[q.categoryId] = (counts[q.categoryId] || 0) + 1;
+    });
+    return counts;
+  }, [allQuestions]);
+
   const startInterview = useCallback(() => {
-    const picked = pickQuestions(allQuestions, categories, progress, count);
+    const pool = categoryId ? sortedCategories.filter((c) => c.id === categoryId) : sortedCategories;
+    const picked = pickQuestions(allQuestions, pool, progress, count);
     setDeck(picked);
     setCurrentIndex(0);
     setShowAnswer(false);
     setRoundResults({});
     setSessionId(crypto.randomUUID());
     setPhase('interviewing');
-  }, [allQuestions, categories, progress, count]);
+  }, [allQuestions, sortedCategories, categoryId, progress, count]);
 
   const currentQuestion = deck[currentIndex] ?? null;
   const total = deck.length;
@@ -163,6 +184,35 @@ export default function MockInterviewPage() {
               className="type-eyebrow mb-3"
               style={{ color: 'var(--text-quaternary)' }}
             >
+              分类
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCategoryId(null)}
+                className={`filter-pill ${categoryId === null ? 'is-active' : ''}`}
+              >
+                全部
+              </button>
+              {sortedCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategoryId(cat.id)}
+                  className={`filter-pill ${categoryId === cat.id ? 'is-active' : ''}`}
+                >
+                  {cat.name}{' '}
+                  <span className="ml-1 tabular-nums">{countByCategory[cat.id] ?? 0}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-7">
+            <p
+              className="type-eyebrow mb-3"
+              style={{ color: 'var(--text-quaternary)' }}
+            >
               题目数量
             </p>
             <div className="flex gap-2">
@@ -184,7 +234,7 @@ export default function MockInterviewPage() {
           <button
             type="button"
             onClick={startInterview}
-            disabled={!allQuestions?.length}
+            disabled={!allQuestions?.length || (categoryId !== null && !countByCategory[categoryId])}
             className="btn-blue-large w-full"
           >
             开始模拟面试
