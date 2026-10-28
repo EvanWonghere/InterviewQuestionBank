@@ -23,6 +23,7 @@ const TOP_LINKS = [
   { to: '/map', label: '闯关地图', match: (p) => p === '/map' || p === '/patrol' || p.startsWith('/stage/') },
   { to: '/quiz', label: '全部题目', match: (p) => p === '/quiz' },
   { to: '/topics/gbits', label: '吉比特笔试专项', match: (p) => p === '/topics/gbits' },
+  { to: '/topics/minigame-client', label: '小游戏客户端', match: (p) => p === '/topics/minigame-client' },
   { to: '/random-practice', label: '随机刷题', match: (p) => p === '/random-practice' },
   { to: '/mock-interview', label: '模拟面试', match: (p) => p === '/mock-interview' },
 ];

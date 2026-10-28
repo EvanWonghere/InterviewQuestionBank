@@ -14,8 +14,8 @@ const bank = new Map(data.questions.map((q) => [q.id, q]));
 const pack = ids.map((id) => bank.get(id));
 describe('G-bits sprint content and insertion artifact', () => {
   it('contains 78 new, schema-valid questions with honest per-question provenance and no unchanged old prompts', () => {
-    expect(data.questions).toHaveLength(298);
-    expect(new Set(data.questions.map((q) => q.id)).size).toBe(298);
+    expect(data.questions).toHaveLength(306);
+    expect(new Set(data.questions.map((q) => q.id)).size).toBe(306);
     expect(pack).toEqual(parts.flat());
     const oldPrompts = new Set(data.questions.filter((q) => !ids.includes(q.id)).map((q) => q.question));
     for (const raw of pack) {

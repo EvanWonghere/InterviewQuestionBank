@@ -17,6 +17,7 @@ import BossPage from '@/pages/BossPage';
 import DungeonPage from '@/pages/DungeonPage';
 import HandbookPage from '@/pages/HandbookPage';
 import GbitsTopicPage from '@/pages/GbitsTopicPage';
+import MinigameTopicPage from '@/pages/MinigameTopicPage';
 import GbitsWrittenMockPage from '@/pages/GbitsWrittenMockPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { useCloudLearning } from '@/hooks/useCloudLearning';
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="dungeon" element={<DungeonPage />} />
               <Route path="handbook" element={<HandbookPage />} />
               <Route path="topics/gbits" element={<GbitsTopicPage />} />
+              <Route path="topics/minigame-client" element={<MinigameTopicPage />} />
               <Route path="quiz" element={<QuizPage />} />
               <Route path="quiz/:categoryId" element={<QuizPage />} />
               <Route path="list/:status" element={<QuizPage />} />

@@ -7,6 +7,7 @@ import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 import { findQuestionByStableId } from '@/lib/questionNavigation';
 import { selectTopicQuestions, topicIds } from '@/data/gbitsTopic';
 import GbitsPracticeHeader from '@/components/quiz/GbitsPracticeHeader';
+import { isMinigameQuestion, minigameTopicIds, selectMinigameQuestions } from '@/data/minigameTopic';
 
 const LIST_STATUS_LABELS = {
   wrong: { title: '错题本', empty: '错题本暂无题目，去做题并加入错题本吧', cta: '去刷题' },
@@ -51,7 +52,9 @@ export default function QuizPage() {
 
   const questionsByCategoryOrList = useMemo(() => {
     if (!allQuestions.length) return [];
-    if (topic) return topic === 'gbits' ? selectTopicQuestions(allQuestions, { section: topicSection, set: topicSet, scope: topicScope }) : [];
+    if (topic === 'gbits') return selectTopicQuestions(allQuestions, { section: topicSection, set: topicSet, scope: topicScope });
+    if (topic === 'minigame-client') return selectMinigameQuestions(allQuestions, { section: topicSection, set: topicSet, scope: topicScope });
+    if (topic) return [];
     const sorted = [...allQuestions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     if (listStatus && (listStatus === 'wrong' || listStatus === 'review' || listStatus === 'mastered')) {
       return sorted.filter((q) => progress[q.id] === listStatus);
@@ -79,7 +82,8 @@ export default function QuizPage() {
   // and status changes (rating a question out of 错题本) must not swap the question being answered.
   const [selection, setSelection] = useState(() => ({ id: requestedQuestionId || null, index: 0 }));
   const [showAnswer, setShowAnswer] = useState(false);
-  const selectedQuestion = selection.id ? findQuestionByStableId(allQuestions, selection.id) : null;
+  const selectedCandidate = selection.id ? findQuestionByStableId(allQuestions, selection.id) : null;
+  const selectedQuestion = topic === 'minigame-client' && !isMinigameQuestion(selectedCandidate, { section: topicSection, set: topicSet, scope: topicScope }) ? null : selectedCandidate;
   const foundIndex = selectedQuestion ? questions.findIndex((q) => q.id === selectedQuestion.id) : -1;
   const detached = selectedQuestion && foundIndex < 0 ? selectedQuestion : null;
   const currentIndex = foundIndex >= 0 ? foundIndex : Math.min(selection.index, Math.max(0, questions.length - 1));
@@ -159,6 +163,14 @@ export default function QuizPage() {
           未找到题目「{requestedQuestionId}」，链接可能已失效或题目已归档。不会自动打开其他题目。
         </p>
         <Link to="/quiz" className="btn-blue-outline">查看全部题目</Link>
+      </div>
+    );
+  }
+  if (requestedQuestionId && topic === 'minigame-client' && !isMinigameQuestion(requestedQuestion, { section: topicSection, set: topicSet, scope: topicScope })) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
+        <p role="alert" className="type-body">所选题目不属于当前专题范围，不会自动打开其他题目。</p>
+        <Link to="/topics/minigame-client" className="btn-blue-outline">返回小游戏客户端专题</Link>
       </div>
     );
   }
@@ -267,6 +279,11 @@ export default function QuizPage() {
       {/* Question card */}
       <div className="min-w-0 flex-1">
         {topic === 'gbits' && <GbitsPracticeHeader key={`${topicSection}:${topicSet}:${topicScope}`} set={topicSet} scope={topicScope} question={current} available={questionsByCategoryOrList.length} expected={topicIds({ section: topicSection, set: topicSet, scope: topicScope }).length} />}
+        {topic === 'minigame-client' && <div className="surface-card p-4 space-y-2 mb-5">
+          <Link to="/topics/minigame-client" className="type-caption">← 小游戏客户端专题</Link>
+          <p className="type-caption">当前可用 {questionsByCategoryOrList.length} / {minigameTopicIds({ section: topicSection, set: topicSet, scope: topicScope }).length} 题</p>
+          {questionsByCategoryOrList.length < minigameTopicIds({ section: topicSection, set: topicSet, scope: topicScope }).length && <p role="alert">当前题库缺少部分专题题目，显示的列表不是完整模块。</p>}
+        </div>}
         <div key={current?.id} className="question-card-enter">
           <QuestionCard
             question={current}
