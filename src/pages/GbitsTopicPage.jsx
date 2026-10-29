@@ -25,6 +25,7 @@ export default function GbitsTopicPage() {
         <div className="flex flex-wrap gap-3">
           <Link to="/quiz?topic=gbits&set=start" className="btn-blue">先做 6 题 · 30 分钟起步</Link>
           <Link to="/quiz?topic=gbits" className="btn-neutral">练笔试基础与编程</Link>
+          <Link to="/quiz?topic=gbits&mode=fast" className="btn-neutral">速刷笔试基础与编程</Link>
         </div>
       </header>
       <section className="space-y-4" aria-label="两天冲刺新卷">
@@ -40,7 +41,7 @@ export default function GbitsTopicPage() {
         {GBITS_PAPERS.map((paper) => <div key={paper.set} className="surface-card p-5 space-y-3">
           <h2 className="type-title">{paper.title}</h2>
           <p className="type-body">{paper.description}</p>
-          {paper.ids.every((id) => availableIds.has(id)) ? <Link to={`/quiz?topic=gbits&set=${paper.set}`} className="btn-neutral">打开{paper.title}</Link> : <p className="type-caption">等待题目加载或发布。</p>}
+          {paper.ids.every((id) => availableIds.has(id)) ? <div className="flex flex-wrap gap-2"><Link to={`/quiz?topic=gbits&set=${paper.set}`} className="btn-neutral">打开{paper.title}</Link><Link to={`/quiz?topic=gbits&set=${paper.set}&mode=fast`} className="btn-neutral">速刷{paper.title}</Link></div> : <p className="type-caption">等待题目加载或发布。</p>}
         </div>)}
       </section>
       <section className="space-y-4" aria-label="笔试训练模块">
@@ -49,14 +50,14 @@ export default function GbitsTopicPage() {
           const practised = available.filter((question) => states[question.id]).length;
           return <div key={section.id} className="divider-subtle pt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1 min-w-0"><h2 className="type-title">{section.title}</h2><p className="type-caption">{section.description}</p><p className="type-micro">已练 {practised} / {available.length} 题 · 建议一次练习 {section.minutes} 分钟</p></div>
-            <Link className="btn-neutral" to={`/quiz?topic=gbits&section=${section.id}`}>练习这个模块</Link>
+            <div className="flex flex-wrap gap-2"><Link className="btn-neutral" to={`/quiz?topic=gbits&section=${section.id}`}>练习这个模块</Link><Link className="btn-neutral" to={`/quiz?topic=gbits&section=${section.id}&mode=fast`}>速刷这个模块</Link></div>
           </div>;
         })}
       </section>
       <details className="surface-card p-5 space-y-4">
         <summary className="cursor-pointer type-title">可选补充 · 机制口述、面试与工程（40 题）</summary>
         <p className="type-body">这部分用于深入理解或后续面试，不作为两天笔试冲刺的必做清单。资源加载方向的线索来自附件中可信度为“中”的单篇二手复盘，完整工程要求由训练编写；Unity 文档支持机制，不证明公司考过本题。</p>
-        {GBITS_TOPIC.sections.map((section) => <p key={section.id}><Link to={`/quiz?topic=gbits&scope=supplement&section=${section.id}`} className="btn-neutral">{section.supplementTitle} · {section.supplementIds.length} 题</Link></p>)}
+        {GBITS_TOPIC.sections.map((section) => <p key={section.id}><Link to={`/quiz?topic=gbits&scope=supplement&section=${section.id}`} className="btn-neutral">{section.supplementTitle} · {section.supplementIds.length} 题</Link> <Link to={`/quiz?topic=gbits&scope=supplement&section=${section.id}&mode=fast`} className="btn-neutral">速刷{section.supplementTitle}</Link></p>)}
       </details>
       <section className="space-y-3 divider-subtle pt-5">
         <h2 className="type-title">两天冲刺怎么取舍</h2>

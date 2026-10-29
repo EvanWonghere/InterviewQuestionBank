@@ -97,3 +97,18 @@ describe('QuizPage current question', () => {
     expect(screen.getByRole('button', { name: '下一题' })).toBeDisabled();
   });
 });
+
+describe('fast mode navigation', () => {
+  it('switches modes without losing the current question or difficulty filter', () => {
+    state.questions = [q('a', 1, 'A'), { ...q('b', 2, 'B'), difficulty: 'easy' }, q('c', 3, 'C')];
+    render(view('/quiz'));
+    fireEvent.click(screen.getByRole('button', { name: '简单', exact: true }));
+    expect(heading()).toBe('B');
+    fireEvent.click(screen.getByRole('button', { name: '速刷', exact: true }));
+    expect(screen.getByRole('button', { name: '速刷', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(heading()).toBe('B');
+    expect(screen.getByText('1 / 1')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: '练习', exact: true }));
+    expect(heading()).toBe('B');
+  });
+});

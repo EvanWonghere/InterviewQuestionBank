@@ -1,5 +1,6 @@
 import QuestionContent from './QuestionContent';
 import AnswerPanel from './AnswerPanel';
+import FastAnswerPanel from './FastAnswerPanel';
 import ConceptLabLinks from './ConceptLabLinks';
 import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
 
@@ -11,7 +12,7 @@ import { QUESTION_TYPE_LABELS } from '@/lib/questionSchema';
  *   cardRef?: import('react').RefObject<HTMLDivElement | null>,
  * }} props
  */
-export default function QuestionCard({ question, cardRef, onRated }) {
+export default function QuestionCard({ question, cardRef, onRated, fast = false }) {
   if (!question) return null;
 
   const difficultyLabel = {
@@ -36,7 +37,8 @@ export default function QuestionCard({ question, cardRef, onRated }) {
         </div>
 
         <ConceptLabLinks question={question} />
-        <AnswerPanel question={question} onRated={onRated} />
+        <div hidden={fast}><AnswerPanel question={question} onRated={onRated} assistantEnabled={!fast} /></div>
+        {fast && <FastAnswerPanel key={question.id} question={question} />}
       </div>
     </article>
   );

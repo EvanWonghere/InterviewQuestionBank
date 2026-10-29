@@ -128,3 +128,12 @@ export async function gradeCloudQuestion(questionId, submission) {
   if (error) throw error;
   return data;
 }
+
+// Reveal a single authorised question without creating a submission or a grade.
+export async function revealCloudQuestion(questionId) {
+  const { data, error } = await requireSupabase().rpc('reveal_question', {
+    p_question_id: questionId,
+  });
+  if (error) throw error;
+  return data;
+}

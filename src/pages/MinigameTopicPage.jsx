@@ -20,7 +20,7 @@ export default function MinigameTopicPage() {
         {error && <p role="alert">加载失败：{error}</p>}
         {!loading && !error && <p className="type-caption">已练 {done} / 当前可用 {selected.length} 题 · 选择掌握程度后才计入历史。</p>}
         {!loading && !error && selected.length < expected && <p role="alert">当前题库缺少 {expected - selected.length} 道专题题目，下方只显示已发布的题目。</p>}
-        {!loading && !error && selected.length > 0 && <Link to="/quiz?topic=minigame-client" className="btn-blue">开始练习全部可用题</Link>}
+        {!loading && !error && selected.length > 0 && <div className="flex flex-wrap gap-2"><Link to="/quiz?topic=minigame-client" className="btn-blue">开始练习全部可用题</Link><Link to="/quiz?topic=minigame-client&mode=fast" className="btn-neutral">速刷全部可用题</Link></div>}
       </header>
       <section className="space-y-4" aria-label="小游戏客户端复习模块">
         {MINIGAME_TOPIC.sections.map((section) => {
@@ -33,7 +33,7 @@ export default function MinigameTopicPage() {
                 <p className="type-caption">{section.description}</p>
                 {!loading && !error && <p className="type-micro">已练 {practised} / 可用 {available.length} / 计划 {section.ids.length} 题</p>}
               </div>
-              {!loading && !error && available.length > 0 && <Link className="btn-neutral" to={`/quiz?topic=minigame-client&section=${section.id}`}>练习{section.title}</Link>}
+              {!loading && !error && available.length > 0 && <div className="flex flex-wrap gap-2"><Link className="btn-neutral" to={`/quiz?topic=minigame-client&section=${section.id}`}>练习{section.title}</Link><Link className="btn-neutral" to={`/quiz?topic=minigame-client&section=${section.id}&mode=fast`}>速刷{section.title}</Link></div>}
             </div>
           );
         })}

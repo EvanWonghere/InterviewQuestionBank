@@ -23,3 +23,15 @@ describe('admin-only lazy entry',()=>{
   expect(screen.queryByRole('button')).toBeNull();
  });
 });
+
+it('unregisters the pet opener and closes an open tutor when disabled', async () => {
+ const { usePetStore } = await import('@/store/petStore');
+ state.auth={user:{id:'admin'},isAdmin:true,loading:false};
+ const {rerender}=render(<TutorEntry primary enabled question={{id:'q'}}/>);
+ expect(usePetStore.getState().opener).toBeTypeOf('function');
+ fireEvent.click(screen.getByText('问学习助手'));
+ await waitFor(()=>expect(screen.getByText('Loaded tutor q')).toBeVisible());
+ rerender(<TutorEntry primary enabled={false} question={{id:'q'}}/>);
+ expect(screen.queryByText('Loaded tutor q')).toBeNull();
+ expect(usePetStore.getState().opener).toBeNull();
+});

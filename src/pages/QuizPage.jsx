@@ -35,7 +35,8 @@ function matchKeyword(question, keyword) {
 
 export default function QuizPage() {
   const { categoryId, status: listStatus } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fast = searchParams.get('mode') === 'fast';
   const searchQuery = searchParams.get('q') ?? '';
   const topic = searchParams.get('topic') ?? '';
   const topicSection = searchParams.get('section') ?? '';
@@ -284,9 +285,14 @@ export default function QuizPage() {
           <p className="type-caption">当前可用 {questionsByCategoryOrList.length} / {minigameTopicIds({ section: topicSection, set: topicSet, scope: topicScope }).length} 题</p>
           {questionsByCategoryOrList.length < minigameTopicIds({ section: topicSection, set: topicSet, scope: topicScope }).length && <p role="alert">当前题库缺少部分专题题目，显示的列表不是完整模块。</p>}
         </div>}
+        <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="练习模式">
+          <button type="button" className={!fast ? 'btn-blue' : 'btn-neutral'} aria-pressed={!fast} onClick={() => { const params = new URLSearchParams(searchParams); params.delete('mode'); setSearchParams(params, { replace: true }); }}>练习</button>
+          <button type="button" className={fast ? 'btn-blue' : 'btn-neutral'} aria-pressed={fast} onClick={() => { const params = new URLSearchParams(searchParams); params.set('mode', 'fast'); setSearchParams(params, { replace: true }); }}>速刷</button>
+        </div>
         <div key={current?.id} className="question-card-enter">
           <QuestionCard
             question={current}
+            fast={fast}
             showAnswer={showAnswer}
             onToggleAnswer={toggleAnswer}
             cardRef={cardContainerRef}
